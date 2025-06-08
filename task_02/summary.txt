@@ -1,0 +1,13 @@
+## Maltego Graph Summary
+
+- Central Domain: vulnweb.com
+- Subdomains & Related URLs:
+  - testphp.vulnweb.com
+  - www.vulnweb.com
+- WHOIS Records: Found multiple records associated with the domain and subdomains.
+- IP Addresses: Multiple resolved IPs including 44.228.249.3
+- Email Addresses Discovered:
+  - admin@acunetix.com
+  - info@acunetix.com
+- Tools: Maltego CE + Built-in Transforms
+- See screenshot: `screenshots/maltego_full_graph.png`
