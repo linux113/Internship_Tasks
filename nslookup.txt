@@ -1,0 +1,9 @@
+Server:		192.168.83.235
+Address:	192.168.83.235#53
+
+Non-authoritative answer:
+Name:	testphp.vulnweb.com
+Address: 44.228.249.3
+Name:	testphp.vulnweb.com
+Address: 64:ff9b::2ce4:f903
+
