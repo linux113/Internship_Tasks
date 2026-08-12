@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="100" r="88" stroke="#c4a574" stroke-width="2"/>
+  <circle cx="100" cy="100" r="74" stroke="#c4a574" stroke-opacity="0.4"/>
+  <text x="100" y="106" text-anchor="middle" fill="#c4a574" font-family="Arial Narrow, sans-serif" font-size="16" letter-spacing="1.5">TPI READY</text>
+</svg>

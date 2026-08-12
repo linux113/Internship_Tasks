@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 48" fill="none">
+  <rect x="2" y="6" width="36" height="36" stroke="currentColor" stroke-width="1.6"/>
+  <path d="M10 30V18h4.2l4.1 7.4L22.4 18H26.6v12h-3.4v-7.1L19.4 30h-2.6l-3.8-7.1V30H10z" fill="currentColor"/>
+  <text x="50" y="32" fill="currentColor" font-family="Arial Narrow, Barlow Condensed, sans-serif" font-size="22" letter-spacing="4">HELVIX</text>
+</svg>

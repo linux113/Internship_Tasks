@@ -1,40 +1,24 @@
-<<<<<<< HEAD
 # Internship_Tasks
-=======
-# Internship Task - Kali Linux Hands-on
 
-## 🔗 Target Website
-http://testphp.vulnweb.com/
+This repository now includes a production-style B2B industrial website:
 
-This is a purposely vulnerable site used for practicing ethical hacking techniques. DO NOT use any tools against unauthorized websites.
+## Helvix Industrial
 
----
+Premium fastener manufacturer / exporter website + admin CMS.
 
-## 🧰 Tools Used
+```bash
+cd helvix-industrial
+npm install
+npx tsx prisma/seed.ts
+npm run dev
+```
 
-| Tool     | Purpose                        |
-|----------|--------------------------------|
-| whois    | Domain and registrant info     |
-| nslookup | DNS record lookup              |
-| nmap     | Port scanning and version detect |
-| whatweb  | Detect web technologies        |
-| nikto    | Web server vulnerability scan  |
-| sqlmap   | SQL Injection testing          |
+- Public site: [http://localhost:3000](http://localhost:3000)
+- Admin: [http://localhost:3000/admin](http://localhost:3000/admin)
+- Login: `nina.v@example.com` / `HelvixAdmin2026!`
 
----
-
-## 📂 Output Files
-
-- `whois.txt`
-- `nslookup.txt`
-- `nmap.txt`
-- `whatweb.txt`
-- `nikto.txt`
-- `sqlmap.txt`
+See `helvix-industrial/README.md` for architecture, CMS, SEO and deployment notes.
 
 ---
 
-## 📌 Notes
-
-All scans were done ethically on an allowed test domain. Each command’s output is saved for review and evaluation. This task is part of a hands-on Linux and cybersecurity internship.
->>>>>>> f6f8c1e (Initial commit for Kali Linux internship task)
+Earlier internship reconnaissance notes (`whois.txt`, `nmap.txt`, `task_02`, `task_03`, …) remain in the repository root.
