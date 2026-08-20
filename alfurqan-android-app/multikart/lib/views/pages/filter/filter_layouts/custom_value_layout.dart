@@ -18,7 +18,8 @@ class CustomValueLayout extends StatelessWidget {
                 height: AppScreenUtil().screenHeight(25),
                 width: AppScreenUtil().size(45),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFFF4C3B).withOpacity(.2),
+                    // Brand green tint (pehle purana red #FF4C3B tha)
+                    color: const Color(0xFF044015).withOpacity(.2),
                     borderRadius: BorderRadius.circular(
                         AppScreenUtil().borderRadius(5))),
                 padding:

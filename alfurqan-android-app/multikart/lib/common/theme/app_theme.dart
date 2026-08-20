@@ -81,8 +81,11 @@ class AppTheme {
         return AppTheme(
           isDark: false,
           txt: const Color(0xFF001928),
-          primary: const Color(0xFFFF4C3B),
-          primaryLight: const Color(0xFFFFF4F4),
+          // AL FURQAN brand green — logo ke Arabic text se liya gaya exact
+          // color code (#044015 / rgb(1-4, 62-65, 20-21)).
+          primary: const Color(0xFF044015),
+          // Logo green ka bahut halka tint (selected backgrounds/chips ke liye)
+          primaryLight: const Color(0xFFE9F2EB),
           secondary: const Color(0xFF6EBAE7),
           accentTxt: const Color(0xFF001928),
           bg1: Colors.white,
@@ -114,7 +117,9 @@ class AppTheme {
         return AppTheme(
           isDark: true,
           txt: Colors.white,
-          primary: const Color(0xFFFF4C3B),
+          // Logo green ka bright version — dark background par bhi buttons
+          // saaf dikhe (light theme wala dark green dark bg pe dab jata hai).
+          primary: const Color(0xFF079A32),
           primaryLight: const Color(0xFF202020),
           secondary: const Color(0xFF6EBAE7),
           accentTxt: const Color(0xFF001928),

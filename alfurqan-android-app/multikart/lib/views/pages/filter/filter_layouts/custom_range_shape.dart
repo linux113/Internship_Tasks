@@ -7,7 +7,7 @@ class CustomThumbShape implements RangeSliderThumbShape {
 
   CustomThumbShape({
     this.radius = 15.0,
-    this.ringColor = Colors.red,
+    this.ringColor = const Color(0xFF044015), // AL FURQAN brand green
   });
 
   /// Outer radius of thumb
