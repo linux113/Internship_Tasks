@@ -1,5 +1,7 @@
 /// Server har jagah image isi shape me deta hai:
 /// { "id":.., "name":.., "asset_url": "https://...jpg", "original_url": "media/..." }
+import '../env.dart';
+
 class AssetImageModel {
   final int? id;
   final String? name;
@@ -18,5 +20,9 @@ class AssetImageModel {
   }
 
   /// Direct usable image url — UI me isi ko CachedNetworkImage me lagana hai.
-  String get url => assetUrl ?? originalUrl ?? '';
+  /// asset_url full hota hai, original_url relative — use baseUrl ke sath jodo.
+  String get url {
+    if (assetUrl != null && assetUrl!.isNotEmpty) return assetUrl!;
+    return buildMediaUrl(originalUrl);
+  }
 }

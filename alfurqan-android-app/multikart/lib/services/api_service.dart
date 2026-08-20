@@ -190,10 +190,16 @@ class ApiService {
     final resBody = response.data;
 
     if (resBody is Map<String, dynamic>) {
-      final bool success = resBody['isSuccess'] == true;
-      final String message = resBody['message']?.toString() ?? '';
-      final int? code = resBody['code'] is int ? resBody['code'] as int : response.statusCode;
-      final dynamic rawData = resBody['data'];
+      // Backend mostly lowercase keys deta hai, par kuch responses (jaise
+      // 401 "Login required.") capitalized keys me aate hai — dono handle karo.
+      final bool success =
+          resBody['isSuccess'] == true || resBody['IsSuccess'] == true;
+      final String message = (resBody['message'] ?? resBody['Message'])
+              ?.toString() ??
+          '';
+      final dynamic rawCode = resBody['code'] ?? resBody['Code'];
+      final int? code = rawCode is int ? rawCode : response.statusCode;
+      final dynamic rawData = resBody['data'] ?? resBody['Data'];
 
       T? parsedData;
       if (rawData != null) {
@@ -218,9 +224,11 @@ class ApiService {
   }
 
   String _handleDioError(DioException e) {
-    // Backend agar error ke sath bhi { message: "..." } bhejta hai to wahi dikhao
-    if (e.response?.data is Map && (e.response?.data as Map)['message'] != null) {
-      return (e.response?.data as Map)['message'].toString();
+    // Backend agar error ke sath bhi { message/Message: "..." } bhejta hai to wahi dikhao
+    if (e.response?.data is Map) {
+      final data = e.response?.data as Map;
+      final msg = data['message'] ?? data['Message'];
+      if (msg != null) return msg.toString();
     }
 
     switch (e.type) {
