@@ -87,7 +87,10 @@ class ShopController extends GetxController {
 
     if (res.isSuccess && res.data != null) {
       productList.addAll(res.data!.data);
-      hasMore = res.data!.hasMore;
+      // NOTE: live api ka last_page hamesha 1 aata hai (backend bug), isliye
+      // hasMore us par bharosa nahi karte — poora page (12) aaya to agla
+      // page bhi assume karo.
+      hasMore = res.data!.hasMore || res.data!.data.length >= 12;
     }
 
     update();

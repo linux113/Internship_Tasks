@@ -245,7 +245,7 @@ class HomeController extends GetxController {
     return !isLiked;
   }
 
-  //sub category list by category id
+    //sub category list by category id
   subCategoryList(index, categoryId) async {
     loginWidth = 40.0;
     loginHeight = 40.0;
@@ -262,6 +262,11 @@ class HomeController extends GetxController {
           findStyleCategoryList[i].categoryId.toString()) {
         findStyleCategoryCategoryWiseList.add(findStyleCategoryList[i]);
       }
+    }
+    // agar is category me koi item na mile (kam products me possible),
+    // to grid khaali na dikhe — saare products dikha do
+    if (findStyleCategoryCategoryWiseList.isEmpty) {
+      findStyleCategoryCategoryWiseList = List.of(findStyleCategoryList);
     }
     loginWidth = ScreenUtil().screenWidth;
     loginHeight = 500.w;
