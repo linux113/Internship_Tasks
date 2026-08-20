@@ -59,7 +59,10 @@ class LoginController extends GetxController {
       update();
 
       socialLoginCtrl.showToast(res.message.isNotEmpty ? res.message : 'Login successful');
-      Get.toNamed(routeName.dashboard);
+      // FIX: Get.toNamed se login page stack me pada rehta tha — back dabane
+      // par user phir se login page par aa jata tha ("logout jaisa" feel).
+      // Ab offAll se saara purana stack clear karke dashboard kholte hai.
+      Get.offAllNamed(routeName.dashboard);
     } else {
       // e.g. "Invalid email or password" jo bhi backend bhejega
       socialLoginCtrl.showToast(res.message.isNotEmpty ? res.message : 'Login failed. Please try again.');

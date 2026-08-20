@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../config.dart';
 import '../../models/product_api_model.dart';
 import '../../services/api_endpoints.dart';
@@ -11,9 +13,16 @@ class SearchScreenController extends GetxController {
 
   TextEditingController controller = TextEditingController();
   int selectRecommended = 0;
-  List recentSearchList = [];
   List recommendedList = [];
   List innerCategoryProduct = [];
+
+  // ---------------- Real "Recent Search" (user ki asli searches) ----------------
+  // Pehle yaha fashion demo items ("Pink Hoodie" etc) aate the — ab user
+  // jo bhi actually search karke product kholta hai wahi yaha save/dikhta
+  // hai (SharedPreferences me, app band karne ke baad bhi bana rehta hai).
+  List<String> recentSearches = [];
+  static const String _recentKey = 'recent_searches';
+  final _storage = LocalStorage();
 
   // ---------------- Real search (client-side, abhi backend me search
   // param kaam nahi karta — isliye products lekar app me filter karte hai)
@@ -25,16 +34,47 @@ class SearchScreenController extends GetxController {
 
   @override
   void onReady() {
-    recentSearchList = AppArray().recentSearchList;
     recommendedList = AppArray().recommendedList;
     innerCategoryProduct = AppArray().innerCategoryProduct;
     // har keystroke pe filter — widget me koi change nahi karna pada
     controller.addListener(() => onSearchChanged(controller.text));
+    _loadRecentSearches();
     update();
     // "Recommended for you" chips fashion naam (Denim/Skirts) dikhati thin —
     // ab real alfurqan.ae categories se bharo.
     _loadRecommended();
     super.onReady();
+  }
+
+  /// Storage se recent searches lao (max 6 rakhte hai).
+  void _loadRecentSearches() {
+    try {
+      final raw = _storage.read(_recentKey);
+      if (raw is String && raw.isNotEmpty) {
+        recentSearches =
+            (jsonDecode(raw) as List).map((e) => e.toString()).toList();
+      }
+    } catch (_) {}
+  }
+
+  /// Nayi search sabse upar add karo (duplicate pehle hata kar), max 6 tak.
+  Future<void> saveRecentSearch(String q) async {
+    final query = q.trim();
+    if (query.isEmpty) return;
+    recentSearches.remove(query);
+    recentSearches.insert(0, query);
+    if (recentSearches.length > 6) {
+      recentSearches = recentSearches.take(6).toList();
+    }
+    await _storage.write(_recentKey, jsonEncode(recentSearches));
+    update();
+  }
+
+  /// ✕ dabane par ek recent search hatao.
+  Future<void> removeRecentSearch(String q) async {
+    recentSearches.remove(q);
+    await _storage.write(_recentKey, jsonEncode(recentSearches));
+    update();
   }
 
   /// Recommended chips <- real top categories (tap = us category ka shop page).
@@ -56,6 +96,16 @@ class SearchScreenController extends GetxController {
   /// Saare products ek baar fetch karke cache karo (paginate=50 pages loop).
   Future<void> _loadAllProducts() async {
     if (_allApiProducts.isNotEmpty) return;
+    // flaky mobile network ke liye — pehla page hi fail ho to 1 retry
+    for (var attempt = 0; attempt < 2 && _allApiProducts.isEmpty; attempt++) {
+      await _fetchAllPagesOnce();
+      if (_allApiProducts.isEmpty && attempt == 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+    }
+  }
+
+  Future<void> _fetchAllPagesOnce() async {
     int page = 1;
     while (page <= 6) {
       final res = await ApiService().request<ProductListResponseModel>(
@@ -83,6 +133,10 @@ class SearchScreenController extends GetxController {
     }
   }
 
+  /// Products load na ho paye (internet/api issue) to ye true hoga — UI
+  /// "No products found" ki jagah sahi error dikhayega.
+  bool loadFailed = false;
+
   /// Textfield me type karte hi call hota hai — name/description me filter.
   Future<void> onSearchChanged(String text) async {
     final q = text.trim();
@@ -96,8 +150,14 @@ class SearchScreenController extends GetxController {
       return;
     }
     isSearchLoading = true;
+    loadFailed = false;
     update();
     await _loadAllProducts();
+    if (_allApiProducts.isEmpty) {
+      // api se kuch nahi aaya — user ko sahi error dikhao (aankh band karke
+      // "no products" mat dikhao)
+      loadFailed = true;
+    }
     final lower = query.toLowerCase();
     searchResultApi = _allApiProducts
         .where((p) =>

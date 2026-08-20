@@ -31,7 +31,10 @@ class Search extends StatelessWidget {
                     padding: const EdgeInsets.all(40),
                     child: Center(
                       child: LatoFontStyle(
-                          text: "No products found for '${searchCtrl.query}'",
+                          // api se load hi nahi hua to sahi bat batao
+                          text: searchCtrl.loadFailed
+                              ? "Could not load products. Please check your internet and try again."
+                              : "No products found for '${searchCtrl.query}'",
                           fontSize: FontSizes.f14,
                           color: searchCtrl.appCtrl.appTheme.contentColor),
                     ),
@@ -47,8 +50,12 @@ class Search extends StatelessWidget {
                         data: searchCtrl.searchResults[index],
                         index: index,
                         // tap karte hi wahi real product detail page pe jaye
-                        onTap: () => searchCtrl.appCtrl.goToProductDetail(
-                            arguments: searchCtrl.searchResultApi[index]),
+                        // (aur ye query recent-search history me save ho jaye)
+                        onTap: () {
+                          searchCtrl.saveRecentSearch(searchCtrl.query);
+                          searchCtrl.appCtrl.goToProductDetail(
+                              arguments: searchCtrl.searchResultApi[index]);
+                        },
                       );
                     },
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -62,12 +69,21 @@ class Search extends StatelessWidget {
                       horizontal: AppScreenUtil().screenWidth(15),
                       vertical: AppScreenUtil().screenHeight(10)),
               ] else ...[
-                //recent search list layout
-                SearchWidget().commonText(SearchFont().recentSearch),
-                ...searchCtrl.recentSearchList.map((e) {
-                  return RecentSearchCard(data: e);
-                }).toList(),
-                const Space(0,20),
+                //recent search list layout — sirf tab dikhao jab user ne
+                // kabhi kuch search karke product khola ho (real history).
+                if (searchCtrl.recentSearches.isNotEmpty) ...[
+                  SearchWidget().commonText(SearchFont().recentSearch),
+                  ...searchCtrl.recentSearches.map((q) {
+                    return RecentSearchCard(
+                      title: q,
+                      // row tap -> wahi query dobara search karo
+                      onTap: () => searchCtrl.controller.text = q,
+                      // ✕ tap -> list se hatao
+                      onRemove: () => searchCtrl.removeRecentSearch(q),
+                    );
+                  }).toList(),
+                  const Space(0, 20),
+                ],
                 SearchWidget().commonText(SearchFont().recommendedForYou),
                 //recommended list layout
                 const RecommendedLayout(),

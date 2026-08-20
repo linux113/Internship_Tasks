@@ -26,20 +26,23 @@ class AppBarActionLayout extends StatelessWidget {
           if (appCtrl.isHeart)
             HeartIcon(
               color: appCtrl.appTheme.blackColor,
-            ).gestures(onTap: ()async{
-              appCtrl.isShimmer = true;
+            ).gestures(onTap: () {
+              // FIX: pehle Get.toNamed(dashboard) se current stack ke UPAR ek
+              // naya dashboard push ho jata tha — isliye (1) wishlist dikhte
+              // hi lagta tha par kaam nahi karta tha, (2) back dabane par
+              // dashboard ke andar dashboard aate rehte the.
+              // Ab stack ko pehle dashboard tak WAPAS pop karo, phir
+              // wishlist tab (3) select karo.
               appCtrl.selectedIndex = 3;
               appCtrl.isHeart = false;
               appCtrl.isCart = true;
               appCtrl.isShare = false;
               appCtrl.isSearch = false;
               appCtrl.isNotification = false;
+              Get.until((route) =>
+                  route.settings.name == routeName.dashboard || route.isFirst);
               appCtrl.update();
-              Get.toNamed(routeName.dashboard);
-              await Future.delayed(DurationsClass.s1);
-              appCtrl.isShimmer = false;
               Get.forceAppUpdate();
-
             }).paddingSymmetric(
                 horizontal: AppScreenUtil()
                     .screenWidth(appCtrl.isHeart && appCtrl.isCart ? 0 : 10)),

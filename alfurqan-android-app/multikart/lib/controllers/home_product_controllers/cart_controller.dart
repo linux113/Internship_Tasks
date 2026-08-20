@@ -50,22 +50,39 @@ class CartController extends GetxController {
     isCartLoading = true;
     update();
 
-    final res = await ApiService().request<CartApiModel>(
+    final Map<String, dynamic> itemBody = {
+      "id": 0,
+      "product_id": productId,
+      "variation_id": variationId,
+      "quantity": quantity,
+      "sub_total": subTotal,
+      "wholesale_price": wholesalePrice,
+    };
+
+    // Pehle doc ke mutabik `items` OBJECT bhejo. Backend agar `items` ko
+    // ARRAY maange to validation error (400) deta hai — us case me array
+    // shape ke sath ek baar phir try karo. Dono shapes cover ho gaye.
+    var res = await ApiService().request<CartApiModel>(
       endpoint: ApiEndpoints.addToCart,
       method: ApiMethod.post,
       data: {
         "total": subTotal,
-        "items": {
-          "id": 0,
-          "product_id": productId,
-          "variation_id": variationId,
-          "quantity": quantity,
-          "sub_total": subTotal,
-          "wholesale_price": wholesalePrice,
-        }
+        "items": itemBody,
       },
       fromJson: (json) => CartApiModel.fromJson(json),
     );
+
+    if (!res.isSuccess && res.code == 400) {
+      res = await ApiService().request<CartApiModel>(
+        endpoint: ApiEndpoints.addToCart,
+        method: ApiMethod.post,
+        data: {
+          "total": subTotal,
+          "items": [itemBody],
+        },
+        fromJson: (json) => CartApiModel.fromJson(json),
+      );
+    }
 
     isCartLoading = false;
 

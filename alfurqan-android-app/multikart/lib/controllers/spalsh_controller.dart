@@ -30,15 +30,20 @@ final storage = LocalStorage();
     //#endregion
 
     bool isIntro = storage.read(Session.isIntro) ?? false;
-log(isIntro.toString());
+    log(isIntro.toString());
+    // FIX: pehle Get.toNamed use hota tha — Splash stack ME HI pada rehta
+    // tha, aur login page par back dabane par splash dobara chal kar
+    // checkLogin -> login par wapas phenk deta tha (user ko lagta tha
+    // "app logout ho gayi / back kaam nahi kar raha"). Ab offAll se
+    // navigation stack bilkul clean hota hai.
     if (isIntro.toString() == "false") {
-      Get.toNamed(routeName.onBoarding);
+      Get.offAllNamed(routeName.onBoarding);
     } else {
       if (isLogin == true) {
-        Get.toNamed(routeName.dashboard);
+        Get.offAllNamed(routeName.dashboard);
       } else {
         // Checking if user is already login or not
-        Get.toNamed(routeName.login);
+        Get.offAllNamed(routeName.login);
       }
     }
   }
