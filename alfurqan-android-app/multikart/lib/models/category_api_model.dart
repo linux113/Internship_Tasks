@@ -1,6 +1,7 @@
 import '../env.dart';
 import 'home_banner_model.dart';
 import 'home_category_model.dart';
+import 'json_parse_utils.dart';
 
 /// GetTopCategory (https://alfurqan.ae/app/MobileAppApi/GetTopCategory) ka
 /// actual response confirm ho chuka hai. Ek category object aisa aata hai:
@@ -32,15 +33,18 @@ class CategoryApiModel {
   });
 
   factory CategoryApiModel.fromJson(Map<String, dynamic> json) {
+    // lenient parse — string id bhi safe
     return CategoryApiModel(
-      id: json['id'] as int?,
-      name: (json['name'] ?? json['title'] ?? json['category_name']) as String?,
-      slug: (json['slug'] ?? json['category_slug']) as String?,
-      banner: json['banner'] as String?,
-      image: json['image'] as String?,
-      subcategories: json['subcategories'] != null
+      id: jsonToInt(json['id']),
+      name: jsonToString(json['name'] ?? json['title'] ?? json['category_name']),
+      slug: jsonToString(json['slug'] ?? json['category_slug']),
+      banner: jsonToString(json['banner']),
+      image: jsonToString(json['image']),
+      subcategories: json['subcategories'] is List
           ? (json['subcategories'] as List)
-              .map((e) => CategoryApiModel.fromJson(e as Map<String, dynamic>))
+              .where((e) => e is Map)
+              .map((e) => CategoryApiModel.fromJson(
+                  Map<String, dynamic>.from(e as Map)))
               .toList()
           : const [],
     );

@@ -1,3 +1,5 @@
+import 'json_parse_utils.dart';
+
 class LoginResponseModel {
   final int? id;
   final String? email;
@@ -33,11 +35,10 @@ class LoginResponseModel {
         ?.toString();
 
     return LoginResponseModel(
-      id: (json['id'] ?? userNode?['id']) as int?,
-      email: (json['email'] ?? userNode?['email']) as String?,
-      displayName:
-          (json['displayName'] ?? userNode?['displayName']) as String?,
-      name: (json['name'] ?? userNode?['name']) as String?,
+      id: jsonToInt(json['id'] ?? userNode?['id']),
+      email: jsonToString(json['email'] ?? userNode?['email']),
+      displayName: jsonToString(json['displayName'] ?? userNode?['displayName']),
+      name: jsonToString(json['name'] ?? userNode?['name']),
       token: token,
     );
   }

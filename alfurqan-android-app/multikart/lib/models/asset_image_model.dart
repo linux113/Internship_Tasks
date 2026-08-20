@@ -1,6 +1,7 @@
 /// Server har jagah image isi shape me deta hai:
 /// { "id":.., "name":.., "asset_url": "https://...jpg", "original_url": "media/..." }
 import '../env.dart';
+import 'json_parse_utils.dart';
 
 class AssetImageModel {
   final int? id;
@@ -11,11 +12,12 @@ class AssetImageModel {
   AssetImageModel({this.id, this.name, this.assetUrl, this.originalUrl});
 
   factory AssetImageModel.fromJson(Map<String, dynamic> json) {
+    // lenient parse — string id bhi safe
     return AssetImageModel(
-      id: json['id'] as int?,
-      name: json['name'] as String?,
-      assetUrl: json['asset_url'] as String?,
-      originalUrl: json['original_url'] as String?,
+      id: jsonToInt(json['id']),
+      name: jsonToString(json['name']),
+      assetUrl: jsonToString(json['asset_url']),
+      originalUrl: jsonToString(json['original_url']),
     );
   }
 

@@ -5,10 +5,13 @@ class LogoImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // FIX: pehle sirf width di gayi thi — logo image tall hone ki wajah se
+    // app bar me bahut BADA dikhta tha. Ab height fix (app bar ke hisaab se
+    // chhota size) hai aur width apne aap sahi proportion me aa jayegi.
     return Image.asset(
       imageAssets.logo,
       fit: BoxFit.contain,
-      width: AppScreenUtil().screenWidth(110),
+      height: AppScreenUtil().screenHeight(38),
     );
   }
 }

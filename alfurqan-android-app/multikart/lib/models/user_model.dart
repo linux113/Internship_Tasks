@@ -1,3 +1,5 @@
+import 'json_parse_utils.dart';
+
 class RoleModel {
   final int? id;
   final String? name;
@@ -7,9 +9,9 @@ class RoleModel {
 
   factory RoleModel.fromJson(Map<String, dynamic> json) {
     return RoleModel(
-      id: json['id'] as int?,
-      name: json['name'] as String?,
-      guardName: json['guard_name'] as String?,
+      id: jsonToInt(json['id']),
+      name: jsonToString(json['name']),
+      guardName: jsonToString(json['guard_name']),
     );
   }
 }
@@ -43,16 +45,18 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as int?,
-      name: json['name'] as String?,
-      email: json['email'] as String?,
-      roleName: json['role_name'] as String?,
-      role: json['role'] != null ? RoleModel.fromJson(json['role']) : null,
-      phone: json['phone'] as String?,
-      countryCode: json['country_code'] as String?,
-      roleId: json['role_id'] as int?,
-      status: json['status'] as bool?,
-      createdAt: json['created_at'] as String?,
+      id: jsonToInt(json['id']),
+      name: jsonToString(json['name']),
+      email: jsonToString(json['email']),
+      roleName: jsonToString(json['role_name']),
+      role: json['role'] is Map
+          ? RoleModel.fromJson(Map<String, dynamic>.from(json['role'] as Map))
+          : null,
+      phone: jsonToString(json['phone']),
+      countryCode: jsonToString(json['country_code']),
+      roleId: jsonToInt(json['role_id']),
+      status: jsonToBool(json['status']),
+      createdAt: jsonToString(json['created_at']),
     );
   }
 

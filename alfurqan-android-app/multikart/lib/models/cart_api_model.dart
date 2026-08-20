@@ -1,3 +1,4 @@
+import 'json_parse_utils.dart';
 import 'product_api_model.dart';
 
 /// Ek cart item (AddToCart body me jo "items" object bheja jata hai,
@@ -25,15 +26,17 @@ class CartItemModel {
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    // lenient parse — string numbers bhi safe
     return CartItemModel(
-      id: json['id'] as int?,
-      productId: json['product_id'] as int?,
-      variationId: json['variation_id'] as int?,
-      quantity: json['quantity'] as int?,
-      subTotal: (json['sub_total'] as num?)?.toDouble(),
-      wholesalePrice: (json['wholesale_price'] as num?)?.toDouble(),
-      product: json['product'] != null
-          ? ProductApiModel.fromJson(json['product'] as Map<String, dynamic>)
+      id: jsonToInt(json['id']),
+      productId: jsonToInt(json['product_id']),
+      variationId: jsonToInt(json['variation_id']),
+      quantity: jsonToInt(json['quantity']),
+      subTotal: jsonToDouble(json['sub_total']),
+      wholesalePrice: jsonToDouble(json['wholesale_price']),
+      product: json['product'] is Map
+          ? ProductApiModel.fromJson(
+              Map<String, dynamic>.from(json['product'] as Map))
           : null,
     );
   }
@@ -60,14 +63,20 @@ class CartApiModel {
     List<CartItemModel> parsedItems = [];
 
     if (rawItems is List) {
-      parsedItems = rawItems.map((e) => CartItemModel.fromJson(e as Map<String, dynamic>)).toList();
-    } else if (rawItems is Map<String, dynamic>) {
+      parsedItems = rawItems
+          .where((e) => e is Map)
+          .map((e) =>
+              CartItemModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } else if (rawItems is Map) {
       // safety: agar kabhi single object aa jaye (jaisa AddToCart request me jata hai)
-      parsedItems = [CartItemModel.fromJson(rawItems)];
+      parsedItems = [
+        CartItemModel.fromJson(Map<String, dynamic>.from(rawItems))
+      ];
     }
 
     return CartApiModel(
-      total: (json['total'] as num?)?.toDouble(),
+      total: jsonToDouble(json['total']),
       items: parsedItems,
     );
   }

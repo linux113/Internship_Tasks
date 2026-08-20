@@ -22,13 +22,12 @@ snackBar(message, {context, duration}) {
       style: AppCss.h2.copyWith(color: Colors.white),
     ),
     behavior: SnackBarBehavior.floating,
+    // FIX: pehle "ok" action button tha — user ko lagta tha popup tab tak
+    // nahi jata jab tak ok na dabao. Ab koi action nahi — message apne aap
+    // ~2.5 second me gayab ho jata hai.
     duration: Duration(
-      milliseconds: duration == 'short' ? 1000 : (duration == 'long' ? 4000 : 2000),
-    ),
-    action: SnackBarAction(
-      label: "ok",
-      textColor: Colors.white,
-      onPressed: () => messenger.hideCurrentSnackBar(),
+      milliseconds:
+          duration == 'short' ? 1500 : (duration == 'long' ? 4000 : 2500),
     ),
   );
 

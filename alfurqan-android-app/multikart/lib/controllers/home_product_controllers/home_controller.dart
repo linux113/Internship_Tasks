@@ -53,8 +53,14 @@ class HomeController extends GetxController {
     loginWidth = ScreenUtil().screenWidth;
     loginHeight = 500.w;
     update();
-    await fetchTopCategories();
-    await fetchHomeProducts();
+    // try/catch — koi bhi api fail ho jaye to bhi shimmer hamesha band ho
+    // aur baaki sections load ho jaye (ek ki failure dusre ko na roke).
+    try {
+      await fetchTopCategories();
+    } catch (_) {}
+    try {
+      await fetchHomeProducts();
+    } catch (_) {}
 
     // Find-your-style ka initial grid = pehli real category chip
     if (findStyleCategory.isNotEmpty) {
@@ -96,27 +102,41 @@ class HomeController extends GetxController {
   /// Kids Corner) ko real GetAllProductsFront ke newest products se
   /// dynamic banao. Api fail ho jaye to purana demo data hi rahega.
   Future<void> fetchHomeProducts() async {
-    final res = await ApiService().request<ProductListResponseModel>(
-      endpoint: ApiEndpoints.productList,
-      method: ApiMethod.get,
-      queryParams: {
-        "page": 1,
-        "paginate": 10,
-        "status": 1,
-        "field": "created_at",
-        "price": "",
-        "category": "",
-        "tag": "",
-        "sort": "desc",
-        "sortBy": "desc",
-        "rating": "",
-        "attribute": "",
-      },
-      fromJson: (json) => ProductListResponseModel.fromJson(json),
-    );
+    // Mobile network kabhi-kabhi flaky hota hai — fail hone par ek baar
+    // aur koshish karo (isliye 2 attempts ka chhota loop).
+    ApiResponse<ProductListResponseModel>? res;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      res = await ApiService().request<ProductListResponseModel>(
+        endpoint: ApiEndpoints.productList,
+        method: ApiMethod.get,
+        queryParams: {
+          "page": 1,
+          "paginate": 10,
+          "status": 1,
+          "field": "created_at",
+          "price": "",
+          "category": "",
+          "tag": "",
+          "sort": "desc",
+          "sortBy": "desc",
+          "rating": "",
+          "attribute": "",
+        },
+        fromJson: (json) => ProductListResponseModel.fromJson(json),
+      );
+      if (res.isSuccess && res.data != null && res.data!.data.isNotEmpty) {
+        break;
+      }
+      if (attempt == 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+    }
 
-    if (res.isSuccess && res.data != null && res.data!.data.isNotEmpty) {
-      newestApiProducts = res.data!.data;
+    if (res != null &&
+        res!.isSuccess &&
+        res!.data != null &&
+        res!.data!.data.isNotEmpty) {
+      newestApiProducts = res!.data!.data;
 
       // Deals of the Day <- real newest products
       dealOfTheDayList =

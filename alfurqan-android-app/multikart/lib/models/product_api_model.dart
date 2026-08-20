@@ -2,6 +2,7 @@ import '../models/index.dart';
 import 'asset_image_model.dart';
 import 'category_api_model.dart';
 import 'home_find_style_category.dart';
+import 'json_parse_utils.dart';
 
 /// GetAllProductsFront ke ek product object ka model — ye field names
 /// wahi hai jo actual api response me aaye the.
@@ -53,32 +54,40 @@ class ProductApiModel {
   });
 
   factory ProductApiModel.fromJson(Map<String, dynamic> json) {
+    // NOTE: lenient helpers (jsonToInt/jsonToDouble/jsonToBool) use ho rahe
+    // hai — backend kabhi number string me bhejta hai, jisse direct cast
+    // crash ho jata tha aur POORI list fail ho jati thi.
     return ProductApiModel(
-      id: json['id'] as int?,
-      name: json['name'] as String?,
-      shortDescription: json['short_description'] as String?,
-      description: json['description'] as String?,
-      price: (json['price'] as num?)?.toDouble(),
-      salePrice: (json['sale_price'] as num?)?.toDouble(),
-      discount: (json['discount'] as num?)?.toDouble(),
-      quantity: json['quantity'] as int?,
-      stock: json['stock'] as int?,
-      stockStatus: json['stock_status'] as String?,
-      isFeatured: json['is_featured'] as bool?,
-      isSaleEnable: json['is_sale_enable'] as bool?,
-      isTrending: json['is_trending'] as bool?,
-      sku: json['sku'] as String?,
-      slug: json['slug'] as String?,
-      status: json['status'] as bool?,
-      ratingCount: json['rating_count'] as int?,
-      reviewsCount: json['reviews_count'] as int?,
-      isWishlist: json['is_wishlist'] as bool?,
-      thumbnail: json['product_thumbnail'] != null
+      id: jsonToInt(json['id']),
+      name: jsonToString(json['name']),
+      shortDescription: jsonToString(json['short_description']),
+      description: jsonToString(json['description']),
+      price: jsonToDouble(json['price']),
+      salePrice: jsonToDouble(json['sale_price']),
+      discount: jsonToDouble(json['discount']),
+      quantity: jsonToInt(json['quantity']),
+      stock: jsonToInt(json['stock']),
+      stockStatus: jsonToString(json['stock_status']),
+      isFeatured: jsonToBool(json['is_featured']),
+      isSaleEnable: jsonToBool(json['is_sale_enable']),
+      isTrending: jsonToBool(json['is_trending']),
+      sku: jsonToString(json['sku']),
+      slug: jsonToString(json['slug']),
+      status: jsonToBool(json['status']),
+      ratingCount: jsonToInt(json['rating_count']),
+      reviewsCount: jsonToInt(json['reviews_count']),
+      isWishlist: jsonToBool(json['is_wishlist']),
+      thumbnail: json['product_thumbnail'] is Map<String, dynamic>
           ? AssetImageModel.fromJson(json['product_thumbnail'] as Map<String, dynamic>)
-          : null,
-      categories: json['categories'] != null
+          : (json['product_thumbnail'] is Map
+              ? AssetImageModel.fromJson(
+                  Map<String, dynamic>.from(json['product_thumbnail'] as Map))
+              : null),
+      categories: json['categories'] is List
           ? (json['categories'] as List)
-              .map((e) => CategoryApiModel.fromJson(e as Map<String, dynamic>))
+              .where((e) => e is Map)
+              .map((e) => CategoryApiModel.fromJson(
+                  Map<String, dynamic>.from(e as Map)))
               .toList()
           : const [],
     );
@@ -209,15 +218,17 @@ class ProductListResponseModel {
 
   factory ProductListResponseModel.fromJson(Map<String, dynamic> json) {
     return ProductListResponseModel(
-      currentPage: json['current_page'] as int? ?? 1,
-      lastPage: json['last_page'] as int? ?? 1,
-      total: json['total'] as int? ?? 0,
-      perPage: json['per_page'] as int? ?? 0,
-      from: json['from'] as int? ?? 0,
-      to: json['to'] as int? ?? 0,
-      data: json['data'] != null
+      currentPage: jsonToInt(json['current_page']) ?? 1,
+      lastPage: jsonToInt(json['last_page']) ?? 1,
+      total: jsonToInt(json['total']) ?? 0,
+      perPage: jsonToInt(json['per_page']) ?? 0,
+      from: jsonToInt(json['from']) ?? 0,
+      to: jsonToInt(json['to']) ?? 0,
+      data: json['data'] is List
           ? (json['data'] as List)
-              .map((e) => ProductApiModel.fromJson(e as Map<String, dynamic>))
+              .where((e) => e is Map)
+              .map((e) => ProductApiModel.fromJson(
+                  Map<String, dynamic>.from(e as Map)))
               .toList()
           : const [],
     );
