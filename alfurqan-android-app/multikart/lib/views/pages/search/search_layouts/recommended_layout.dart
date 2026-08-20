@@ -19,6 +19,12 @@ class RecommendedLayout extends StatelessWidget {
             onTap: () {
               searchCtrl.selectRecommended = index;
               searchCtrl.update();
+              // Real category chip hai (slug hai) to us category ka shop page
+              // kholo — demo chip ho to kuch mat karo (khaali page na khule).
+              final slug = searchCtrl.recommendedList[index]['slug']
+                      ?.toString() ??
+                  '';
+              if (slug.isNotEmpty) searchCtrl.goToShopPage(slug);
             },
           );
         },

@@ -55,8 +55,9 @@ class AboutUsBody extends StatelessWidget {
               ],
             ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15)),
 
-            //our brand layout
-            const CommonBrandLayout()
+            // FIX: "our brands" grid fashion demo brands (Zara/Nike jaisi
+            // jagah ke names) dikhata tha jo is bookstore ke liye galat tha —
+            // remove kar diya hai.
           ],
         );
       }

@@ -8,9 +8,17 @@ class ProductPrice extends StatelessWidget {
   Widget build(BuildContext context) {
     return  GetBuilder<AppController>(
       builder: (appCtrl) {
+        // FIX: pehle `product!.discountPrice ?? 0 * appCtrl.rateValue` likha
+        // tha — `*` ki precedence `??` se zyada hoti hai, isliye bina discount
+        // wale sab products ka main price "0.00" dikhne lagta tha. Ab:
+        // main price = discountPrice (ho to) warna price, dono par rate lagao.
+        final double mainPrice =
+            ((product!.discountPrice ?? product!.price) ?? 0.0) *
+                appCtrl.rateValue;
+        final double mrpPrice = (product!.price ?? 0.0) * appCtrl.rateValue;
         return product !=null ? PriceLayout(
-            totalPrice: '${appCtrl.priceSymbol} ${(product!.discountPrice ??0 * appCtrl.rateValue).toStringAsFixed(2)}',
-            mrp: '${appCtrl.priceSymbol} ${(product!.price ?? 0 * appCtrl.rateValue)}',
+            totalPrice: '${appCtrl.priceSymbol} ${mainPrice.toStringAsFixed(2)}',
+            mrp: '${appCtrl.priceSymbol} ${mrpPrice.toStringAsFixed(2)}',
             discount: product!.discount,
             fontSize: FontSizes.f16,
             isBold: false,

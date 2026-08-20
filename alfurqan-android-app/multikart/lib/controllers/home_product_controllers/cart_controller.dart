@@ -77,6 +77,17 @@ class CartController extends GetxController {
       update();
       return true;
     } else {
+      // Backend cart ke liye login mangta hai — 401 aaye to sirf toast ke
+      // bajaye seedha login page pe le jao (warna user ko samajh nahi aata
+      // ki Add to Cart kyu nahi ho raha).
+      if (res.code == 401) {
+        socialLoginToast(res.message.isNotEmpty
+            ? res.message
+            : 'Please login to add items to your cart.');
+        update();
+        Get.toNamed(routeName.login);
+        return false;
+      }
       socialLoginToast(res.message);
       update();
       return false;

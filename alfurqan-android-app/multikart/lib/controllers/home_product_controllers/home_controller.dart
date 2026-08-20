@@ -245,6 +245,60 @@ class HomeController extends GetxController {
     return !isLiked;
   }
 
+  /// Card-data se wishlist toggle — ye SOURCE independent hai.
+  /// Pehle `toggleWishlist(id, isLiked, source)` sirf home ki lists me dhundhta
+  /// tha — isliye SHOP / SEARCH page ke product cards ka heart tap karne par
+  /// item kabhi wishlist me save hi nahi hota tha. Ab card ka pura data
+  /// (name/image/price) seedha yaha milta hai, to kisi bhi screen ka
+  /// product wishlist me save hota hai.
+  Future<bool> toggleWishlistData(
+      HomeFindStyleCategoryModel data, bool isLiked) async {
+    final bool newVal = !isLiked;
+    data.isFav = newVal;
+
+    // home/detail ki kisi bhi list me same id dikhe to uska heart bhi sync karo
+    for (var item in findStyleCategoryList) {
+      if (item.id == data.id) item.isFav = newVal;
+    }
+    for (var item in homeKidsCornerList) {
+      if (item.id == data.id) item.isFav = newVal;
+    }
+    for (var item in dealOfTheDayList) {
+      if (item.id == data.id) item.isFav = newVal;
+    }
+    if (Get.isRegistered<ProductDetailController>()) {
+      final productCtrl = Get.find<ProductDetailController>();
+      for (var item in productCtrl.similarList) {
+        if (item.id == data.id) item.isFav = newVal;
+      }
+      productCtrl.update();
+    }
+
+    if (newVal) {
+      await WishlistController.saveWishlistItem(
+        HomeDealOfTheDayModel(
+          id: data.id,
+          name: data.name,
+          image: data.image,
+          byWhom: 'مكتبة الفرقان',
+          discount: data.discount,
+          isFav: true,
+          mrp: data.totalPrice, // selling price
+          totalPrice: data.mrp, // original (struck) price
+          isTrending: false,
+        ),
+      );
+    } else {
+      await WishlistController.removeWishlistItem(data.id);
+    }
+    if (Get.isRegistered<WishlistController>()) {
+      Get.find<WishlistController>().refreshFromStorage();
+    }
+
+    update();
+    return newVal;
+  }
+
     //sub category list by category id
   subCategoryList(index, categoryId) async {
     loginWidth = 40.0;

@@ -116,21 +116,15 @@ class ProductDetailController extends GetxController {
 
   //on quantity increase
   quantityIncrease() {
-    int val = product.quantity!;
-    val++;
-    product.quantity = val;
+    // FIX: `product.quantity!` agar null hua to app crash ho jati thi.
+    product.quantity = (product.quantity ?? 1) + 1;
     update();
   }
 
   //on quantity decrease
   quantityDecrease() {
-    int val =product.quantity!;
-    val--;
-    if (product.quantity! <= 1) {
-      product.quantity = 1;
-    } else {
-      product.quantity = val;
-    }
+    final int val = product.quantity ?? 1;
+    product.quantity = val <= 1 ? 1 : val - 1;
     update();
   }
 
@@ -163,13 +157,15 @@ class ProductDetailController extends GetxController {
 
     if (!success) return; // error ka toast addToCart khud dikha chuka hai
 
-    // cart (bag) tab khol do — dashboard ka index 2 cart hota hai
-    appCtrl.isShimmer = true;
+    // Cart (bag) tab khol do — dashboard ka index 2 cart hota hai.
+    // FIX: pehle purane dashboard ke UPAR ek naya dashboard push ho jata tha
+    // (back button dabane par dashboard ke andar dashboard dikhta tha).
+    // Ab stack ko wapas dashboard tak pop karte hai aur cart tab select karte hai.
+    Get.until((route) =>
+        route.settings.name == routeName.dashboard || route.isFirst);
     appCtrl.selectedIndex = 2;
     appCtrl.goToHome();
-    Get.toNamed(routeName.dashboard);
-    await Future.delayed(DurationsClass.s1);
-    appCtrl.isShimmer = false;
+    appCtrl.update();
     Get.forceAppUpdate();
   }
 }

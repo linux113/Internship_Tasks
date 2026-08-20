@@ -5,6 +5,7 @@ import 'package:multikart/views/bottom_navigate_page/profile/profile.dart';
 import 'package:multikart/views/bottom_navigate_page/wishlist/wishlist.dart';
 
 import '../../config.dart';
+import '../../utilities/currency_store.dart';
 import '../pages_controller/product_detail_controller.dart';
 
 class AppController extends GetxController {
@@ -25,8 +26,9 @@ class AppController extends GetxController {
   double rightValue = 15;
   final storage = LocalStorage();
   AppTheme get appTheme => _appTheme;
-  double rateValue = 0.0;
-  String priceSymbol = "₹";
+  // alfurqan.ae ki saari prices AED me aati hai — default currency AED (rate 1.0)
+  double rateValue = 1.0;
+  String priceSymbol = "AED";
 
 //list of bottommost page
   List<Widget> widgetOptions = <Widget>[
@@ -40,8 +42,17 @@ class AppController extends GetxController {
   @override
   void onReady() async {
     bottomList = AppArray().bottomSheet;
-    rateValue = double.parse(AppArray().currencyList[0]['INR'].toString());
-  getData();
+    // User ne pehle koi currency select ki thi to app restart par bhi wahi
+    // chalni chahiye (pehle har restart par ₹ par reset ho jati thi).
+    final stored = CurrencyStore.read();
+    if (stored != null) {
+      priceSymbol = stored.symbol;
+      rateValue = stored.rate;
+    } else {
+      priceSymbol = 'AED';
+      rateValue = 1.0;
+    }
+    getData();
     super.onReady();
   }
 

@@ -975,12 +975,31 @@ class AppArray {
     }
   ];
 
+  // NOTE: app ki saari prices alfurqan.ae se AED (UAE dirham) me aati hai —
+  // isliye AED ko base currency banaya hai (list me SABSE PEHLE, rate 1.0).
+  // Har entry ka `rateFromBase` = "1 AED is currency me kitna" (approx rate —
+  // sirf display ke liye; checkout/payment hamesha server ke AED amount se hota hai).
   var currencyList = [
+    {
+      'icon': svgAssets.usd,
+      'title': 'UAE Dirham'.tr,
+      'code': 'AED',
+      'symbol': 'AED',
+      'rateFromBase': 1.0,
+      'AED': 1,
+      'KPW': 244.8,
+      'USD': 0.27,
+      'AUD': 0.41,
+      'EUR': 0.25,
+      'INR': 22.7
+    },
     {
       'icon': svgAssets.inr,
       'title': 'Indian rupee'.tr,
       'code': 'INR',
       'symbol': '₹',
+      'rateFromBase': 22.7,
+      'AED': 0.044,
       'KPW': 16.50,
       'USD': 0.013,
       'AUD': 0.018,
@@ -992,6 +1011,8 @@ class AppArray {
       'title': 'United States dollar'.tr,
       'code': 'USD',
       'symbol': '\$',
+      'rateFromBase': 0.27,
+      'AED': 3.67,
       'KPW': 1311.35,
       'USD': 1,
       'AUD': 1.44,
@@ -1003,6 +1024,8 @@ class AppArray {
       'title': 'Euro'.tr,
       'code': 'EUR',
       'symbol': '€',
+      'rateFromBase': 0.25,
+      'AED': 4.0,
       'KPW': 1334.87,
       'USD': 1.02,
       'AUD': 1.47,
@@ -1014,6 +1037,8 @@ class AppArray {
       'title': 'Australian dollar'.tr,
       'code': 'AUD',
       'symbol': 'A\$',
+      'rateFromBase': 0.41,
+      'AED': 2.44,
       'KPW': 909.45,
       'USD': 0.69,
       'AUD': 1,
@@ -1025,6 +1050,8 @@ class AppArray {
       'title': 'South Korean won'.tr,
       'code': 'KPW',
       'symbol': '₩',
+      'rateFromBase': 244.8,
+      'AED': 0.0041,
       'KPW': 1,
       'USD': 0.00076,
       'AUD': 0.0011,

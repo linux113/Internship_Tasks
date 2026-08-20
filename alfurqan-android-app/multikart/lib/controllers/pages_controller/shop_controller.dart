@@ -1,6 +1,7 @@
 import 'package:multikart/models/product_api_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
+import 'package:multikart/services/category_cache.dart';
 
 import '../../config.dart';
 import '../../views/pages/filter/filter.dart';
@@ -60,8 +61,17 @@ class ShopController extends GetxController {
     }
     update();
 
-    // "All" select hai to category filter empty bhejo, warna slug bhejo.
-    final String categoryFilter = (name == "All".tr) ? "" : name;
+    // "All" select hai to category filter empty bhejo, warna SLUG bhejo.
+    // FIX: kabhi-kabhi yaha slug ki jagah category ka NAAM (ya purani demo
+    // tiles ke fashion titles) aa jata tha — backend naam nahi pehchanta
+    // aur shop page khaali dikhne lagta tha. Ab cached categories se
+    // naam -> slug convert kar lete hai.
+    String categoryFilter = (name == "All".tr) ? "" : name;
+    if (categoryFilter.isNotEmpty) {
+      await CategoryCache.ensureLoaded();
+      final match = CategoryCache.resolve(categoryFilter);
+      if (match != null) categoryFilter = match.slug ?? categoryFilter;
+    }
 
     final res = await ApiService().request<ProductListResponseModel>(
       endpoint: ApiEndpoints.productList,

@@ -87,6 +87,32 @@ class ProductApiModel {
   /// Final displayed price (sale_price agar 0 se zyada ho to wahi, warna price)
   double get finalPrice => (salePrice != null && salePrice! > 0) ? salePrice! : (price ?? 0);
 
+  /// Wishlist jaisi jagah par sirf HomeDealOfTheDayModel (id/name/image/price)
+  /// save hota hai — waha se product detail page kholne ke liye ek minimal
+  /// ProductApiModel wapas bana lo, taaki detail page REAL product samajh kar
+  /// khule (price + AddToCart dono sahi kaam kare).
+  ///
+  /// Mapping: deal.mrp = selling price, deal.totalPrice = original (struck) price.
+  factory ProductApiModel.fromDealModel(HomeDealOfTheDayModel m) {
+    final double selling =
+        (m.mrp ?? 0.0) > 0.0 ? m.mrp! : (m.totalPrice ?? 0.0);
+    final double original =
+        (m.totalPrice ?? 0.0) >= selling ? (m.totalPrice ?? selling) : selling;
+    final img = m.image ?? '';
+    return ProductApiModel(
+      id: m.id,
+      name: m.name,
+      price: original,
+      salePrice: selling < original ? selling : null,
+      thumbnail: img.isEmpty
+          ? null
+          : (img.startsWith('http')
+              ? AssetImageModel(assetUrl: img)
+              : AssetImageModel(originalUrl: img)),
+      isWishlist: m.isFav,
+    );
+  }
+
   /// App ke existing UI (FindStyleListCard etc) `HomeFindStyleCategoryModel`
   /// use karte hai, isliye seedha usi shape me convert kar rahe hai — taki
   /// shop/category grid me widget change kiye bina real product dikha sake.

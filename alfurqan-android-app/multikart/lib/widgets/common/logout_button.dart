@@ -1,4 +1,5 @@
 import '../../config.dart';
+import '../../controllers/home_product_controllers/wishlist_controller.dart';
 
 class LogoutButton extends StatelessWidget {
   const LogoutButton({Key? key}) : super(key: key);
@@ -9,15 +10,25 @@ class LogoutButton extends StatelessWidget {
       return InkWell(
           onTap: () {
             showLogoutDialog(
-              () {
+              () async {
                 appCtrl.selectedIndex = 0;
-                appCtrl.storage.erase();
+                // FIX: erase() await nahi ho raha tha — usse pehle hi login
+                // page khul jata tha aur token kabhi-kabhi bacha rehta tha.
+                await appCtrl.storage.erase();
+                // Pichhle user ka cart/wishlist memory me pada rehta tha —
+                // naye user ke login par purana data dikh sakta tha.
+                if (Get.isRegistered<CartController>()) {
+                  Get.delete<CartController>(force: true);
+                }
+                if (Get.isRegistered<WishlistController>()) {
+                  Get.delete<WishlistController>(force: true);
+                }
                 Get.forceAppUpdate();
                 Get.offAllNamed(routeName.login);
               },
             );
           },
-    
+
           child: Container(
               alignment: Alignment.center,
               padding: EdgeInsets.symmetric(

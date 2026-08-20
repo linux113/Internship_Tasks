@@ -73,13 +73,11 @@ class Search extends StatelessWidget {
                 const RecommendedLayout(),
                     const Space(0,30),
                 SearchWidget().commonText(SearchFont().trendingCategory),
-                //trending category layout
+                //trending category layout (ab real alfurqan.ae categories)
                 const CommonTrendingCategory(),
                     const Space(0,20),
-                SearchWidget().commonText(SearchFont().topBrandForMultikart),
-
-                //brand list layout
-                const CommonBrandLayout()
+                // FIX: "Top Brands on Multikart" section fashion demo brands
+                // dikhata tha — bookstore app se hata diya gaya hai.
               ]
             ]),
           ),

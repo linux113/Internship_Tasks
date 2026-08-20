@@ -1,4 +1,5 @@
 import '../../../../../config.dart';
+import '../../../../../controllers/home_product_controllers/wishlist_controller.dart';
 
 class FindStyleListCard extends StatelessWidget {
   final HomeFindStyleCategoryModel? data;
@@ -22,7 +23,14 @@ class FindStyleListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final homeCtrl = Get.find<HomeController>();
+    // FIX: pehle `Get.find<HomeController>()` bina check ke tha — shop/search
+    // jaise pages jinpe HomeController (abhi tak) registered nahi hota waha
+    // ye card CRASH kar deta tha. Ab registered ho to toggleWishlistData (jo
+    // har screen ke cards ko wishlist me save karti hai), warna heart tap
+    // seedha local wishlist storage me save karo.
+    final HomeController? homeCtrl = Get.isRegistered<HomeController>()
+        ? Get.find<HomeController>()
+        : null;
     return GetBuilder<AppController>(builder: (appCtrl) {
       return InkWell(
         onTap: onTap ?? () => appCtrl.goToProductDetail(),
@@ -35,13 +43,33 @@ class FindStyleListCard extends StatelessWidget {
               ProductImage(image: data!.image.toString(), isFit: isFit),
               LinkHeartIcon(
                 isLiked: data!.isFav,
-              
+
                 onTap: (isLiked) {
-                  return homeCtrl.toggleWishlist(
-                    data!.id,
-                    isLiked,
-                      source??''
-                  );
+                  final bool newVal = !isLiked;
+                  if (homeCtrl != null) {
+                    return homeCtrl.toggleWishlistData(data!, isLiked);
+                  }
+                  // HomeController available nahi — phir bhi wishlist save karo
+                  data!.isFav = newVal;
+                  if (newVal) {
+                    WishlistController.saveWishlistItem(HomeDealOfTheDayModel(
+                      id: data!.id,
+                      name: data!.name,
+                      image: data!.image,
+                      byWhom: 'مكتبة الفرقان',
+                      discount: data!.discount,
+                      isFav: true,
+                      mrp: data!.totalPrice,
+                      totalPrice: data!.mrp,
+                      isTrending: false,
+                    ));
+                  } else {
+                    WishlistController.removeWishlistItem(data!.id);
+                  }
+                  if (Get.isRegistered<WishlistController>()) {
+                    Get.find<WishlistController>().refreshFromStorage();
+                  }
+                  return Future.value(newVal);
                 },
 
               ).paddingOnly(

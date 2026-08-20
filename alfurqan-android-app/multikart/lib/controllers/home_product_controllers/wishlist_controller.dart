@@ -66,6 +66,12 @@ class WishlistController extends GetxController {
     update();
   }
 
+  /// Wishlist screen ke "Remove" button se — storage se hata kar UI refresh.
+  Future<void> removeItem(int id) async {
+    await removeWishlistItem(id);
+    refreshFromStorage();
+  }
+
   //common bottom sheet
   bottomSheetLayout(text) {
     Get.bottomSheet(

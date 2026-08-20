@@ -26,16 +26,13 @@ class InnerCategoryBody extends StatelessWidget {
                   Get.forceAppUpdate();
                 },
               ),
-            //inner category layout expandable
-            const InnerCategoryLayout(),
-            const Space(0, 10),
+            // FIX: purana "expandable subcategory" aur "brands" section dono
+            // fashion demo data dikhate the aur unke tap par khaali demo pages
+            // khulte the — bookshop app me se hata diye gaye hai.
 
-            //trending category layout
+            //trending category layout (ab real alfurqan.ae categories)
             const CommonTrendingCategory(),
             const Space(0, 10),
-
-            //brands layout
-            const InnerCategoryBrands()
           ]),
         );
       }

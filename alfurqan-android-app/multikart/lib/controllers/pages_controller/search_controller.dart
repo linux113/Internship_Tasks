@@ -2,6 +2,7 @@ import '../../config.dart';
 import '../../models/product_api_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/category_cache.dart';
 
 class SearchScreenController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -24,14 +25,32 @@ class SearchScreenController extends GetxController {
 
   @override
   void onReady() {
-    // TODO: implement onReady
     recentSearchList = AppArray().recentSearchList;
     recommendedList = AppArray().recommendedList;
     innerCategoryProduct = AppArray().innerCategoryProduct;
     // har keystroke pe filter — widget me koi change nahi karna pada
     controller.addListener(() => onSearchChanged(controller.text));
     update();
+    // "Recommended for you" chips fashion naam (Denim/Skirts) dikhati thin —
+    // ab real alfurqan.ae categories se bharo.
+    _loadRecommended();
     super.onReady();
+  }
+
+  /// Recommended chips <- real top categories (tap = us category ka shop page).
+  Future<void> _loadRecommended() async {
+    await CategoryCache.ensureLoaded();
+    if (CategoryCache.items.isNotEmpty) {
+      recommendedList = CategoryCache.items
+          .take(6)
+          .map((c) => {
+                'title': c.name ?? '',
+                'slug': c.slug ?? '',
+                'isSelected': false,
+              })
+          .toList();
+      update();
+    }
   }
 
   /// Saare products ek baar fetch karke cache karo (paginate=50 pages loop).

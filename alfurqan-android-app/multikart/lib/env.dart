@@ -11,11 +11,11 @@ Map<String, dynamic> environment = {
   "advanceConfig": {
     "defaultLanguage": "en",
     "defaultCurrency": {
-      "symbol": "₹",
-      "decimalDigits": 0,
+      "symbol": "AED",
+      "decimalDigits": 2,
       "symbolBeforeTheNumber": true,
-      "currency": "INR",
-      "currencyCode": "INR",
+      "currency": "AED",
+      "currencyCode": "AED",
     },
     "isMultiLanguages": false,
   },

@@ -5,6 +5,7 @@ class WishListCard extends StatelessWidget {
   final int? index, lastIndex;
   final GestureTapCallback? firstActionTap;
   final GestureTapCallback? secondActionTap;
+  final GestureTapCallback? onTap;
 
   const WishListCard(
       {Key? key,
@@ -12,7 +13,8 @@ class WishListCard extends StatelessWidget {
       this.lastIndex,
       this.index,
       this.firstActionTap,
-      this.secondActionTap})
+      this.secondActionTap,
+      this.onTap})
       : super(key: key);
 
   @override
@@ -20,7 +22,9 @@ class WishListCard extends StatelessWidget {
     return GetBuilder<AppController>(
       builder: (appCtrl) {
         return InkWell(
-          onTap: ()=> appCtrl.goToProductDetail(),
+          // FIX: pehle tap karne par hamesha DEMO product khulta tha —
+          // ab jo onTap diya gaya hai (real product detail) wo chalega.
+          onTap: onTap ?? () => appCtrl.goToProductDetail(),
           splashColor: Colors.transparent,
           hoverColor: Colors.transparent,
           highlightColor: Colors.transparent,
