@@ -1,4 +1,6 @@
 import '../../../../config.dart';
+import '../../../../controllers/pages_controller/product_detail_controller.dart';
+import '../../../../models/product_api_model.dart';
 
 class SimilarProductLayout extends StatelessWidget {
   final List<HomeFindStyleCategoryModel>? data;
@@ -17,7 +19,17 @@ class SimilarProductLayout extends StatelessWidget {
             isFit: true,
             isDiscountShow: false,
             index: e.key,
-
+            // similar card tap -> usi real product ka detail khule
+            onTap: () {
+              ProductApiModel? api;
+              if (Get.isRegistered<ProductDetailController>()) {
+                final pc = Get.find<ProductDetailController>();
+                if (e.key < pc.similarApiProducts.length) {
+                  api = pc.similarApiProducts[e.key];
+                }
+              }
+              Get.find<AppController>().goToProductDetail(arguments: api);
+            },
           ).paddingOnly(right: AppScreenUtil().screenWidth(10));
         }).toList(),
       ),

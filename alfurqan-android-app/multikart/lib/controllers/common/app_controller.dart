@@ -5,6 +5,7 @@ import 'package:multikart/views/bottom_navigate_page/profile/profile.dart';
 import 'package:multikart/views/bottom_navigate_page/wishlist/wishlist.dart';
 
 import '../../config.dart';
+import '../pages_controller/product_detail_controller.dart';
 
 class AppController extends GetxController {
   AppTheme _appTheme = AppTheme.fromType(ThemeType.light);
@@ -52,6 +53,12 @@ class AppController extends GetxController {
     isShare = true;
     isHeart = true;
     update();
+    // GetX detail controller ko REUSE karta hai (onReady sirf pehli baar
+    // chalta hai), isliye agar pehle se registered hai to naye product pe
+    // update kar do — warna purana/demo product atka rehta tha.
+    if (Get.isRegistered<ProductDetailController>()) {
+      Get.find<ProductDetailController>().loadProduct(arguments);
+    }
     Get.toNamed(routeName.productDetail, arguments: arguments);
   }
 

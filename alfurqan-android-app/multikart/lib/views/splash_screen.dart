@@ -20,11 +20,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           body: Center(
             child:Center(
               child: AnimatedContainer(
-                height: splashCtrl.isTapped ? AppScreenUtil().screenHeight(220.0) : AppScreenUtil().screenHeight(100.0),
-                width: splashCtrl.isTapped ? AppScreenUtil().screenHeight(220.0) : AppScreenUtil().screenHeight(100.0),
+                height: splashCtrl.isTapped ? AppScreenUtil().screenHeight(190.0) : AppScreenUtil().screenHeight(90.0),
+                width: splashCtrl.isTapped ? AppScreenUtil().screenHeight(190.0) : AppScreenUtil().screenHeight(90.0),
                 duration: const Duration(seconds: 2),
                 curve: Curves.fastOutSlowIn,
-                child: Hero(tag: 'cat',child: Image.asset(imageAssets.logo)),
+                // BoxFit.contain = logo pura dikhe, kabhi cut na ho
+                child: Hero(tag: 'cat',child: Image.asset(imageAssets.logo, fit: BoxFit.contain)),
               ),
             ),
           ),

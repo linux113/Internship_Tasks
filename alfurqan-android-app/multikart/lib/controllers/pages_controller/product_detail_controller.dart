@@ -25,34 +25,15 @@ class ProductDetailController extends GetxController {
   bool isCartPage = false;
   final CarouselController sliderController = CarouselController();
   List<HomeFindStyleCategoryModel> similarList = [];
+
+  /// similar products ke asli api objects (similar card tap -> real detail ke liye)
+  List<ProductApiModel> similarApiProducts = [];
   int colorSelected = 1;
 
   @override
   void onReady() {
-    // Get.arguments me agar real product (ProductApiModel) aaya ho — jaise
-    // ab shop grid me image/card tap karne par aata hai — to wahi dikhao,
-    // warna purana static demo product fallback ke roop me chalega.
-    final args = Get.arguments;
-    if (args is ProductApiModel) {
-      apiProduct = args;
-      product = args.toProduct();
-    } else {
-      apiProduct = null;
-      product = productList;
-    }
+    loadProduct(Get.arguments);
     similarList = AppArray().similarProductList;
-
-    imagesList = [];
-    final List<Images> allImages = product.images ?? [];
-    for (var i = 0; i < allImages.length; i++) {
-      // real api products me colorId hota hi nahi (koi color-variant nahi),
-      // isliye aisi images ko bhi dikhao — pehle sirf exact colorId match
-      // wali images add hoti thi, jisse real product ki image kabhi
-      // dikhti hi nahi thi.
-      if (allImages[i].colorId == null || colorSelected == allImages[i].colorId) {
-        imagesList.add(allImages[i]);
-      }
-    }
     update();
     super.onReady();
 
@@ -60,6 +41,32 @@ class ProductDetailController extends GetxController {
     if (apiProduct != null) {
       fetchSimilarProducts();
     }
+  }
+
+  /// Product load karo. GetX SAME controller ko reuse karta hai jab detail
+  /// page dubara khulta hai (onReady sirf pehli baar chalta hai) — isliye
+  /// ye method alag rakha hai aur appCtrl.goToProductDetail har naye
+  /// product pe isko call karta hai. Iske bina purana/"demo" product hi
+  /// atka rehta tha aur AddToCart "demo product" wali error dikhata tha.
+  void loadProduct(dynamic args) {
+    if (args is ProductApiModel) {
+      apiProduct = args;
+      product = args.toProduct();
+    } else {
+      apiProduct = null;
+      product = productList; // purana static demo product fallback
+    }
+
+    imagesList = [];
+    final List<Images> allImages = product.images ?? [];
+    for (var i = 0; i < allImages.length; i++) {
+      // real api products me colorId hota hi nahi — aisi images ko bhi dikhao
+      if (allImages[i].colorId == null ||
+          colorSelected == allImages[i].colorId) {
+        imagesList.add(allImages[i]);
+      }
+    }
+    update();
   }
 
   /// "You may also like" section — isi product ki category ke real products
@@ -100,6 +107,7 @@ class ProductDetailController extends GetxController {
       final others =
           res.data!.data.where((p) => p.id != api.id).take(6).toList();
       if (others.isNotEmpty) {
+        similarApiProducts = others;
         similarList = others.map((e) => e.toFindStyleModel()).toList();
         update();
       }
