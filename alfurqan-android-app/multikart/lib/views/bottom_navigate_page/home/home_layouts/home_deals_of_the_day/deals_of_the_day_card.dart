@@ -4,8 +4,9 @@ class DealsOfTheDayCard extends StatelessWidget {
   final int? index;
   final HomeDealOfTheDayModel? data;
   final bool? dealsOfTheDay;
+  final VoidCallback? onTap;
 
-  const DealsOfTheDayCard({Key? key, this.index, this.data, this.dealsOfTheDay}) : super(key: key);
+  const DealsOfTheDayCard({Key? key, this.index, this.data, this.dealsOfTheDay, this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +44,7 @@ class DealsOfTheDayCard extends StatelessWidget {
               ],
             ),
           )
-          .gestures(onTap: () => homeCtrl.appCtrl.goToProductDetail());
+          .gestures(onTap: onTap ?? () => homeCtrl.appCtrl.goToProductDetail());
     });
   }
 }

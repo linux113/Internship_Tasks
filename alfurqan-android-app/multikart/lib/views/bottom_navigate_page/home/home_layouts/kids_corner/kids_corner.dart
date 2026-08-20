@@ -41,6 +41,9 @@ class KidsCorner extends StatelessWidget {
                         isFit: true,
                         isDiscountShow: false,
                             source: "kids",
+                        // real product detail page khule (demo nahi)
+                        onTap: () => homeCtrl.openProductById(
+                            homeCtrl.homeKidsCornerList[index].id),
 
                       ).paddingOnly(
                         right: AppScreenUtil().screenWidth(10),

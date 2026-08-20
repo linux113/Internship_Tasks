@@ -25,6 +25,8 @@ class HomeDealsOfTheDayLayout extends StatelessWidget {
                       index: e.key,
                       data: e.value,
                       dealsOfTheDay: true,
+                      // real product detail page khule (demo nahi)
+                      onTap: () => homeCtrl.openProductById(e.value.id),
                     )),
             const Space(0, 10),
           ],

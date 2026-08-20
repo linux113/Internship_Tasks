@@ -12,10 +12,13 @@ class FindStyleSubCategory extends StatelessWidget {
         shrinkWrap: true,
         itemCount: homeCtrl.findStyleCategoryCategoryWiseList.length,
         itemBuilder: (context, index) {
+          final item = homeCtrl.findStyleCategoryCategoryWiseList[index];
           return FindStyleListCard(
-            data: homeCtrl.findStyleCategoryCategoryWiseList[index],
+            data: item,
             index: index,
             source: "findStyle",
+            // real product detail page khule (demo nahi)
+            onTap: () => homeCtrl.openProductById(item.id),
           );
         },
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

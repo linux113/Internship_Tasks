@@ -98,16 +98,45 @@ class ProductApiModel {
       final percent = (((mrpVal - saleVal) / mrpVal) * 100).round();
       discountLabel = '$percent%';
     }
+    // Find-your-style chips filter ke liye category id (slug wali category priority)
+    final withSlug = categories.where((c) => (c.slug ?? '').isNotEmpty);
+    final catId = (withSlug.isNotEmpty
+            ? withSlug.first.id
+            : (categories.isNotEmpty ? categories.first.id : null))
+        ?.toString();
     return HomeFindStyleCategoryModel(
       id: id ?? 0,
       name: name ?? '',
       image: thumbnail?.url ?? '',
+      categoryId: catId,
       totalPrice: saleVal,
       mrp: mrpVal,
       discount: discountLabel,
       isFav: isWishlist ?? false,
       rating: (ratingCount ?? 0).toDouble(),
       isNew: false,
+    );
+  }
+
+  /// Home page ke "Deals of the Day" section ke liye — real product se
+  /// HomeDealOfTheDayModel banao (cart page wale mapping jaisa hi pattern).
+  HomeDealOfTheDayModel toDealOfTheDayModel() {
+    final double mrpVal = price ?? 0;
+    final double saleVal = finalPrice;
+    String discountLabel = '';
+    if (mrpVal > 0 && saleVal > 0 && saleVal < mrpVal) {
+      discountLabel = '${(((mrpVal - saleVal) / mrpVal) * 100).round()}%';
+    }
+    return HomeDealOfTheDayModel(
+      id: id ?? 0,
+      name: name ?? '',
+      image: thumbnail?.url ?? '',
+      byWhom: 'مكتبة الفرقان',
+      discount: discountLabel,
+      isFav: isWishlist ?? false,
+      mrp: saleVal, // main selling price
+      totalPrice: mrpVal, // struck-through original price
+      isTrending: isTrending ?? false,
     );
   }
 

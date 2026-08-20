@@ -1,5 +1,7 @@
 import '../../config.dart';
 import '../../models/product_api_model.dart';
+import '../../services/api_endpoints.dart';
+import '../../services/api_service.dart';
 import '../home_product_controllers/cart_controller.dart';
 
 class ProductDetailController extends GetxController {
@@ -53,6 +55,55 @@ class ProductDetailController extends GetxController {
     }
     update();
     super.onReady();
+
+    // similar products bhi real api se lao (same category), demo list overwrite karo
+    if (apiProduct != null) {
+      fetchSimilarProducts();
+    }
+  }
+
+  /// "You may also like" section — isi product ki category ke real products
+  /// (GetAllProductsFront?category=<slug>) se bharo, current product hata kar.
+  Future<void> fetchSimilarProducts() async {
+    final api = apiProduct;
+    if (api == null) return;
+
+    String slug = '';
+    for (final c in api.categories) {
+      if ((c.slug ?? '').isNotEmpty) {
+        slug = c.slug!;
+        break;
+      }
+    }
+    if (slug.isEmpty) return; // slug na mile to demo list hi chalne do
+
+    final res = await ApiService().request<ProductListResponseModel>(
+      endpoint: ApiEndpoints.productList,
+      method: ApiMethod.get,
+      queryParams: {
+        "page": 1,
+        "paginate": 8,
+        "status": 1,
+        "field": "created_at",
+        "category": slug,
+        "price": "",
+        "tag": "",
+        "sort": "desc",
+        "sortBy": "desc",
+        "rating": "",
+        "attribute": "",
+      },
+      fromJson: (json) => ProductListResponseModel.fromJson(json),
+    );
+
+    if (res.isSuccess && res.data != null) {
+      final others =
+          res.data!.data.where((p) => p.id != api.id).take(6).toList();
+      if (others.isNotEmpty) {
+        similarList = others.map((e) => e.toFindStyleModel()).toList();
+        update();
+      }
+    }
   }
 
   //on quantity increase
