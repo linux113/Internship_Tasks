@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "67192858656",
+    "project_id": "furqanbook-af827",
+    "storage_bucket": "furqanbook-af827.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:67192858656:android:096d5d43d16ee6fafcf445",
+        "android_client_info": {
+          "package_name": "ecom.furqanbook.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAw2iWOnpGnxIm17wT3E9WnEhefySwF09Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
