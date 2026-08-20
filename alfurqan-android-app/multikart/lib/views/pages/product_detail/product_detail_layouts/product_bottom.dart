@@ -53,15 +53,9 @@ class ProductBottom extends StatelessWidget {
                 ),
                 VerticalDivider(color: appCtrl.appTheme.greyLight25 ,),
                 InkWell(
-                  onTap: ()async{
-                    appCtrl.isShimmer = true;
-                    appCtrl.selectedIndex = 2;
-                    appCtrl.goToHome();
-                    Get.toNamed(routeName.dashboard);
-                    await Future.delayed(DurationsClass.s1);
-                    appCtrl.isShimmer = false;
-                    Get.forceAppUpdate();
-                  },
+                  // Real Cart/AddToCart api call -> success par cart tab open.
+                  onTap: () =>
+                      Get.find<ProductDetailController>().onAddToCartTap(),
                   child: Row(
                     children: [
                       BuyIcon(

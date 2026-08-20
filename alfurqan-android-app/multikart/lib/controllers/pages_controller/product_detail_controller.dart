@@ -1,5 +1,6 @@
 import '../../config.dart';
 import '../../models/product_api_model.dart';
+import '../home_product_controllers/cart_controller.dart';
 
 class ProductDetailController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -8,6 +9,10 @@ class ProductDetailController extends GetxController {
 
   TextEditingController controller = TextEditingController();
   Product product = Product();
+
+  /// Shop grid se aaya asli api product (AddToCart ke liye id/price yahi se milta hai).
+  /// Static demo product khula ho to null rahega.
+  ProductApiModel? apiProduct;
   List<Images> imagesList = [];
   int current = 0;
   List reviewList = [];
@@ -27,8 +32,10 @@ class ProductDetailController extends GetxController {
     // warna purana static demo product fallback ke roop me chalega.
     final args = Get.arguments;
     if (args is ProductApiModel) {
+      apiProduct = args;
       product = args.toProduct();
     } else {
+      apiProduct = null;
       product = productList;
     }
     similarList = AppArray().similarProductList;
@@ -66,5 +73,44 @@ class ProductDetailController extends GetxController {
       product.quantity = val;
     }
     update();
+  }
+
+  /// "Add to Cart/Bag" button tap — real api (Cart/AddToCart) call karti hai.
+  /// Success hone par cart tab (dashboard) khol deti hai, jaise pehle UI karta tha.
+  Future<void> onAddToCartTap() async {
+    final api = apiProduct;
+
+    if (api == null || api.id == null) {
+      // static/demo product — real cart api uske liye nahi hai
+      snackBar('This is a demo product, it cannot be added to the cart.',
+          context: Get.context);
+      return;
+    }
+
+    final cartCtrl = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController());
+
+    final int qty = (product.quantity ?? 1) <= 0 ? 1 : (product.quantity ?? 1);
+    final double unitPrice = api.finalPrice;
+
+    final bool success = await cartCtrl.addToCart(
+      productId: api.id!,
+      variationId: null,
+      quantity: qty,
+      subTotal: unitPrice * qty,
+      wholesalePrice: unitPrice,
+    );
+
+    if (!success) return; // error ka toast addToCart khud dikha chuka hai
+
+    // cart (bag) tab khol do — dashboard ka index 2 cart hota hai
+    appCtrl.isShimmer = true;
+    appCtrl.selectedIndex = 2;
+    appCtrl.goToHome();
+    Get.toNamed(routeName.dashboard);
+    await Future.delayed(DurationsClass.s1);
+    appCtrl.isShimmer = false;
+    Get.forceAppUpdate();
   }
 }
