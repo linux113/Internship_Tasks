@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("CONTENT_MANAGER")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String        @default("")
+  shortDesc     String        @default("")
+  image         String        @default("")
+  sortOrder     Int           @default(0)
+  published     Boolean       @default(true)
+  seoTitle      String        @default("")
+  seoDesc       String        @default("")
+  seoKeywords   String        @default("")
+  subcategories Subcategory[]
+  products      Product[]
+}
+
+model Subcategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String
+  description String    @default("")
+  image       String    @default("")
+  sortOrder   Int       @default(0)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products    Product[]
+
+  @@unique([categoryId, slug])
+}
+
+model Product {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  sku           String            @unique
+  shortDesc     String            @default("")
+  description   String            @default("")
+  categoryId    String
+  category      Category          @relation(fields: [categoryId], references: [id])
+  subcategoryId String?
+  subcategory   Subcategory?      @relation(fields: [subcategoryId], references: [id])
+  material      String            @default("")
+  grade         String            @default("")
+  size          String            @default("")
+  diameter      String            @default("")
+  length        String            @default("")
+  standard      String            @default("")
+  finish        String            @default("")
+  threadType    String            @default("")
+  headType      String            @default("")
+  application   String            @default("")
+  availability  String            @default("In Stock")
+  features      String            @default("")
+  featured      Boolean           @default(false)
+  published     Boolean           @default(true)
+  seoTitle      String            @default("")
+  seoDesc       String            @default("")
+  seoKeywords   String            @default("")
+  canonicalUrl  String            @default("")
+  views         Int               @default(0)
+  images        ProductImage[]
+  documents     ProductDocument[]
+  specifications ProductSpecification[]
+  enquiries     Enquiry[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([categoryId])
+  @@index([featured, published])
+  @@index([sku])
+  @@index([material])
+  @@index([grade])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String  @default("")
+  sortOrder Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductDocument {
+  id        String  @id @default(cuid())
+  name      String
+  url       String
+  type      String  @default("datasheet")
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductSpecification {
+  id        String  @id @default(cuid())
+  label     String
+  value     String
+  sortOrder Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model Enquiry {
+  id          String   @id @default(cuid())
+  type        String   @default("product")
+  name        String
+  company     String   @default("")
+  email       String
+  phone       String   @default("")
+  country     String   @default("")
+  subject     String   @default("")
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  productName String   @default("")
+  quantity    String   @default("")
+  spec        String   @default("")
+  message     String   @default("")
+  fileUrl     String   @default("")
+  status      String   @default("New")
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Vendor {
+  id              String   @id @default(cuid())
+  companyName     String
+  contactPerson   String
+  email           String
+  phone           String   @default("")
+  country         String   @default("")
+  website         String   @default("")
+  categories      String   @default("")
+  capability      String   @default("")
+  certifications  String   @default("")
+  capacity        String   @default("")
+  message         String   @default("")
+  profileUrl      String   @default("")
+  status          String   @default("New")
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model BlogCategory {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+  posts Blog[]
+}
+
+model BlogAuthor {
+  id    String @id @default(cuid())
+  name  String
+  title String @default("")
+  bio   String @default("")
+  image String @default("")
+  posts Blog[]
+}
+
+model Blog {
+  id            String       @id @default(cuid())
+  title         String
+  slug          String       @unique
+  excerpt       String       @default("")
+  content       String       @default("")
+  image         String       @default("")
+  categoryId    String
+  category      BlogCategory @relation(fields: [categoryId], references: [id])
+  authorId      String
+  author        BlogAuthor   @relation(fields: [authorId], references: [id])
+  featured      Boolean      @default(false)
+  published     Boolean      @default(true)
+  publishedAt   DateTime     @default(now())
+  seoTitle      String       @default("")
+  seoDesc       String       @default("")
+  seoKeywords   String       @default("")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+model Customer {
+  id          String  @id @default(cuid())
+  name        String
+  logo        String  @default("")
+  website     String  @default("")
+  testimonial String  @default("")
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+}
+
+model Testimonial {
+  id          String  @id @default(cuid())
+  quote       String
+  name        String
+  company     String  @default("")
+  designation String  @default("")
+  photo       String  @default("")
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+}
+
+model Certification {
+  id                String    @id @default(cuid())
+  name              String
+  issuer            String    @default("")
+  certificateNumber String    @default("")
+  issueDate         DateTime?
+  expiryDate        DateTime?
+  description       String    @default("")
+  image             String    @default("")
+  fileUrl           String    @default("")
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+}
+
+model Industry {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String  @default("")
+  applications String @default("")
+  image       String  @default("")
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+  seoTitle    String  @default("")
+  seoDesc     String  @default("")
+}
+
+model Country {
+  id          String  @id @default(cuid())
+  name        String
+  region      String  @default("")
+  flag        String  @default("")
+  description String  @default("")
+  lat       Float   @default(0)
+  lng       Float   @default(0)
+  published Boolean @default(true)
+  sortOrder Int     @default(0)
+}
+
+model WhyChoose {
+  id          String  @id @default(cuid())
+  title       String
+  description String
+  icon        String  @default("shield")
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+}
+
+model InfrastructureImage {
+  id          String  @id @default(cuid())
+  title       String
+  category    String  @default("Facility")
+  caption     String  @default("")
+  image       String
+  sortOrder   Int     @default(0)
+  published   Boolean @default(true)
+}
+
+model Homepage {
+  id                 String @id @default("homepage")
+  heroTitle          String @default("")
+  heroSubtitle       String @default("")
+  heroBg             String @default("")
+  heroFg             String @default("")
+  heroCtaText        String @default("Get a Quote")
+  heroCtaUrl         String @default("/quote")
+  heroSecondaryText  String @default("Send Enquiry")
+  heroSecondaryUrl   String @default("/contact")
+  aboutTitle         String @default("")
+  aboutBody          String @default("")
+  aboutImage         String @default("")
+  aboutCta           String @default("Know More About Us")
+  aboutCtaUrl        String @default("/about")
+  ctaTitle           String @default("")
+  ctaBody            String @default("")
+  ctaButton          String @default("Get a Quote")
+  ctaUrl             String @default("/quote")
+  importBody         String @default("")
+  exportBody         String @default("")
+}
+
+model PageContent {
+  slug        String @id
+  title       String
+  subtitle    String @default("")
+  body        String @default("")
+  image       String @default("")
+  seoTitle    String @default("")
+  seoDesc     String @default("")
+  seoKeywords String @default("")
+}
+
+model Setting {
+  key   String @id
+  value String @default("")
+}
+
+model MediaAsset {
+  id         String   @id @default(cuid())
+  filename   String
+  storageKey String   @default("")
+  url        String
+  mime      String   @default("")
+  size      Int      @default(0)
+  alt       String   @default("")
+  kind      String   @default("image")
+  createdAt DateTime @default(now())
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+}
+
+
+model WebsiteContent {
+  id        String   @id @default(cuid())
+  section   String
+  key       String
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@unique([section, key])
+  @@index([section])
+}
+
+model SocialLink {
+  id        String  @id @default(cuid())
+  platform  String  @unique
+  url       String
+  published Boolean @default(true)
+  sortOrder Int     @default(0)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  company   String   @default("")
+  email     String
+  phone     String   @default("")
+  country   String   @default("")
+  subject   String   @default("")
+  message   String
+  status    String   @default("NEW")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
