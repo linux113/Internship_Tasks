@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -44,9 +46,9 @@ export default async function LoginPage({
         <p className="mt-8 text-xs text-mist">
           Default: nina.v@example.com / HelvixAdmin2026!
         </p>
-        <a href="/" className="mt-6 inline-block text-xs tracking-[0.16em] uppercase text-brass">
+        <Link href="/" className="mt-6 inline-block text-xs tracking-[0.16em] uppercase text-brass">
           ← Back to website
-        </a>
+        </Link>
       </form>
     </div>
   );

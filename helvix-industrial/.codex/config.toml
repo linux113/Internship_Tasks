@@ -1,0 +1,18 @@
+# Project-local MCP integrations. Tokens are read from the environment and must
+# never be committed. The servers are started lazily by compatible Codex hosts.
+
+[mcp_servers.ruflo]
+command = "npx"
+args = ["--yes", "ruflo@latest", "mcp", "start"]
+enabled = true
+tool_timeout_sec = 120
+
+[mcp_servers.21st]
+url = "https://21st.dev/api/mcp"
+bearer_token_env_var = "API_KEY_21ST"
+enabled = true
+
+[mcp_servers.originkit]
+url = "https://mcp.originkit.dev/mcp"
+bearer_token_env_var = "ORIGINKIT_API_KEY"
+enabled = true

@@ -8,7 +8,13 @@
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "tsx prisma/seed.ts"
+    "db:reset": "tsx prisma/seed.ts",
+    "ui:search": "21st search",
+    "ui:review": "21st review src --strict",
+    "ui:design-context": "21st init --design-context",
+    "ui:add-origin": "originkit add",
+    "agent:ruflo": "npx --yes ruflo@latest",
+    "security:audit": "npm audit"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -28,6 +34,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@21st-dev/cli": "^1.16.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
@@ -35,6 +42,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "originkit": "^0.2.23",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"
