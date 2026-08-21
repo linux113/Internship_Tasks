@@ -1,6 +1,20 @@
 # Internship_Tasks
 
-This repository now includes a production-style B2B industrial website:
+## Sriyaan Metals (new project)
+
+A new premium Next.js website and custom CMS baseline for Sriyaan Metals lives in `sriyaan-metals/`.
+
+```bash
+cd sriyaan-metals
+npm install
+npm run dev
+```
+
+See `sriyaan-metals/docs/PRD.md` for the product plan and production rollout.
+
+---
+
+This repository also includes an earlier B2B industrial website:
 
 ## Helvix Industrial
 
