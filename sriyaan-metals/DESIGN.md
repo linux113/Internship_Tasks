@@ -40,11 +40,13 @@
 ## Signature interactions
 
 1. Staged hero typography and image clip reveal.
-2. Fine-pointer image parallax with no functional dependency.
-3. Slow optical scan beam over the product image.
-4. Fixed 2px reading-progress line.
-5. GSAP chapter reveals and restrained image movement.
-6. Glass specification cards with strong contrast.
+2. Original WebGL light-bloom shader inspired by Originkit's Light Bloom concept.
+3. Motion-powered 3D scroll showcase inspired by 21st.dev's hero-scroll pattern.
+4. Fine-pointer image parallax with no functional dependency.
+5. Slow optical scan beam over the product image.
+6. Fixed 2px reading-progress line.
+7. GSAP chapter reveals and restrained image movement.
+8. Glass specification cards with strong contrast.
 
 ## Motion contract
 

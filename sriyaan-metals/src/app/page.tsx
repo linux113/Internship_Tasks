@@ -4,15 +4,19 @@ import { ArrowRight, CheckCircle2, ClipboardCheck, Globe2, PackageCheck, ShieldC
 import { Reveal } from "@/components/Reveal";
 import { categories, industries, products } from "@/lib/site-data";
 import { HeroScene } from "@/components/HeroScene";
+import { ScrollShowcase } from "@/components/ScrollShowcase";
 
 export default function Home() {
   return <>
     <HeroScene />
+    <div className="overflow-hidden border-y border-white/10 bg-carbon py-4" aria-label="Sriyaan Metals capabilities"><div className="marquee flex w-max items-center whitespace-nowrap">{[0,1].map(group=><div key={group} className="flex items-center" aria-hidden={group === 1}>{["Precision supply","Material traceability","Global standards","Special fasteners","Export support"].map(item=><span key={`${group}-${item}`} className="flex items-center font-display text-sm font-bold uppercase tracking-[.18em] text-fog/65"><span className="mx-7 h-1.5 w-1.5 rotate-45 bg-orange"/>{item}</span>)}</div>)}</div></div>
 
     <section id="catalogue" className="bg-paper py-24 text-ink">
       <div className="container-site"><Reveal><p className="eyebrow !text-teal-dark">Product catalogue</p><div className="mt-5 flex flex-col justify-between gap-5 md:flex-row md:items-end"><h2 className="display max-w-3xl text-5xl uppercase md:text-7xl">Fasteners for every critical connection</h2><Link href="/products" className="text-xs font-bold uppercase tracking-[.16em] text-teal-dark">View complete range →</Link></div></Reveal>
       <div className="mt-14 grid gap-px bg-ink/10 sm:grid-cols-2 lg:grid-cols-4">{categories.map((c,i)=><Reveal key={c.slug} delay={i*.04} className="bg-paper"><Link href={`/products?category=${c.slug}`} className="premium-card group block min-h-64 p-7 transition-colors hover:bg-white"><span className="font-display text-sm font-bold text-teal-dark">{c.code}</span><h3 className="mt-12 font-display text-2xl font-bold uppercase tracking-tight">{c.name}</h3><p className="mt-3 text-sm leading-6 text-slate-600">{c.description}</p><ArrowRight className="mt-6 text-orange transition-transform group-hover:translate-x-2" size={18}/></Link></Reveal>)}</div></div>
     </section>
+
+    <ScrollShowcase />
 
     <section className="relative overflow-hidden bg-carbon py-24"><div className="container-site grid gap-12 lg:grid-cols-[.95fr_1.05fr] lg:items-center"><Reveal><p className="eyebrow">Why Sriyaan</p><h2 className="display mt-5 text-5xl uppercase md:text-7xl">Supply engineered around your specification</h2><p className="mt-7 max-w-xl leading-8 text-fog/75">We connect product knowledge, disciplined sourcing, inspection support and responsive communication so procurement teams can move with confidence.</p><Link href="/about" className="btn btn-secondary mt-9">About Sriyaan Metals</Link></Reveal><div className="grid gap-3 sm:grid-cols-2">{[[ShieldCheck,"Specification first","Standards, material, grade, dimensions and finish reviewed before supply."],[ClipboardCheck,"Quality support","Inspection and documentation aligned with order requirements."],[PackageCheck,"Catalogue + specials","Standard products and drawing-based requirements through one desk."],[Truck,"Export coordination","Commercial documents, packing and shipment planning support."]].map(([Icon,t,d],i)=>{const C=Icon as typeof ShieldCheck;return <Reveal key={String(t)} delay={i*.06}><article className="card-line min-h-56 p-7"><C className="text-teal" strokeWidth={1.4}/><h3 className="mt-8 font-display text-xl font-bold uppercase">{String(t)}</h3><p className="mt-3 text-sm leading-6 text-muted">{String(d)}</p></article></Reveal>})}</div></div></section>
 

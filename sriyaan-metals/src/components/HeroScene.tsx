@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { ArrowDown, ArrowUpRight, CircleCheck, Gauge, ScanLine } from "lucide-react";
 import gsap from "gsap";
 import { company } from "@/lib/site-data";
+import { LightBloom } from "./LightBloom";
 
 export function HeroScene() {
   const root = useRef<HTMLElement>(null);
@@ -32,6 +33,7 @@ export function HeroScene() {
   }, []);
 
   return <section ref={root} className="hero-shell technical-grid relative min-h-[100svh] overflow-hidden bg-ink">
+    <LightBloom />
     <div className="hero-aurora absolute inset-0" aria-hidden />
     <div className="absolute inset-x-0 top-0 z-10 h-40 bg-gradient-to-b from-ink to-transparent" />
     <div className="container-wide relative z-10 grid min-h-[100svh] items-end gap-10 pb-10 pt-32 lg:grid-cols-[1.06fr_.94fr] lg:items-center lg:pb-12">
