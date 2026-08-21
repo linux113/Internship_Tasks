@@ -9,6 +9,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["*.e2b.app"],
   poweredByHeader: false,
   images: { formats: ["image/avif", "image/webp"] },
   async headers() { return [{ source: "/(.*)", headers: securityHeaders }]; },

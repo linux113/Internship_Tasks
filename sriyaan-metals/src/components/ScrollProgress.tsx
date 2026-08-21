@@ -1,0 +1,3 @@
+"use client";
+import { useEffect, useRef } from "react";
+export function ScrollProgress(){const bar=useRef<HTMLDivElement>(null);useEffect(()=>{let frame=0;const update=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const max=document.documentElement.scrollHeight-innerHeight;const value=max>0?scrollY/max:0;if(bar.current)bar.current.style.transform=`scaleX(${value})`;});};update();addEventListener("scroll",update,{passive:true});addEventListener("resize",update);return()=>{cancelAnimationFrame(frame);removeEventListener("scroll",update);removeEventListener("resize",update);};},[]);return <div className="fixed inset-x-0 top-0 z-[70] h-[2px] origin-left bg-teal" ref={bar} style={{transform:"scaleX(0)"}} aria-hidden/>}

@@ -15,7 +15,7 @@ export function Header() {
   }, []);
   useEffect(() => { document.body.style.overflow = open ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [open]);
 
-  return <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${solid || open ? "border-b border-white/10 bg-ink/92 backdrop-blur-xl" : "bg-gradient-to-b from-ink/80 to-transparent"}`}>
+  return <header className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-300 ${solid || open ? "border-b border-white/10 bg-ink/92 backdrop-blur-xl" : "bg-gradient-to-b from-ink/80 to-transparent"}`}>
     <div className="container-wide flex h-[76px] items-center justify-between gap-4">
       <Link href="/" className="flex items-center gap-3" aria-label="Sriyaan Metals home">
         <span className="grid h-11 w-11 place-items-center border border-teal/70 bg-teal/10 text-teal"><Nut size={25} strokeWidth={1.4} /></span>
