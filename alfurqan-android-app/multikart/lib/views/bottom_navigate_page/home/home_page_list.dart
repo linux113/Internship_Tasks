@@ -15,7 +15,6 @@ export 'package:multikart/views/bottom_navigate_page/home/home_layouts/home_deal
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/find_style_list_card.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/find_your_style_category.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/find_your_style.dart';
-export 'package:multikart/views/bottom_navigate_page/home/home_layouts/offer_time/time_layout.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/kids_corner/kids_corner.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/offer_corner/offer_corner.dart';
 export 'package:multikart/models/home_find_style_category.dart';
@@ -26,7 +25,6 @@ export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/product_image.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/find_style_sub_category.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/offer_corner/offer_corner_layout.dart';
-export 'package:multikart/views/bottom_navigate_page/home/home_layouts/offer_time/offer_time_data.dart';
 export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your_style/new_layout.dart';
 
 //home model

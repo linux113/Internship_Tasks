@@ -23,40 +23,50 @@ class ProfileUser extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   LatoFontStyle(
-                      text: profileCtrl.userName.isNotEmpty
-                          ? profileCtrl.userName
-                          : CommonTextFont().profileName,
+                      // guest mode me fake name nahi — "Guest" dikhega
+                      text: profileCtrl.isLoggedIn
+                          ? (profileCtrl.userName.isNotEmpty
+                              ? profileCtrl.userName
+                              : CommonTextFont().guest)
+                          : CommonTextFont().guest,
                       fontSize: FontSizes.f16,
                       fontWeight: FontWeight.w700,
                       color: profileCtrl.appCtrl.appTheme.blackColor),
-                  LatoFontStyle(
-                      text: profileCtrl.userEmail.isNotEmpty
-                          ? profileCtrl.userEmail
-                          : CommonTextFont().email,
-                      fontSize: FontSizes.f12,
-                      fontWeight: FontWeight.normal,
-                      color: profileCtrl.appCtrl.appTheme.contentColor),
+                  // email sirf logged-in user ka dikhe (fake demo email nahi)
+                  if (profileCtrl.isLoggedIn &&
+                      profileCtrl.userEmail.isNotEmpty)
+                    LatoFontStyle(
+                        text: profileCtrl.userEmail,
+                        fontSize: FontSizes.f12,
+                        fontWeight: FontWeight.normal,
+                        color: profileCtrl.appCtrl.appTheme.contentColor),
                   const Space(0, 10),
-                /*  CustomButton(
-                      title: CommonTextFont().edit,
-                      width: AppScreenUtil().screenWidth(100),
-                      fontWeight: FontWeight.w600,
-                      fontSize: FontSizes.f14,
-                      height: AppScreenUtil().screenHeight(25),
-                      margin: 0)*/
-                  Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppScreenUtil().screenWidth(5),
-                          vertical: AppScreenUtil().screenHeight(2)),
-                      decoration: BoxDecoration(
-                          color: profileCtrl.appCtrl.appTheme.primary,
-                          borderRadius: BorderRadius.circular(
-                              AppScreenUtil().borderRadius(2))),
-                      child: LatoFontStyle(
-                          text: CommonTextFont().edit,
-                          fontSize: FontSizes.f10,
-                          fontWeight: FontWeight.w600,
-                          color: profileCtrl.appCtrl.appTheme.white))
+                  // guest ko SIGN IN chip dikhe (tap -> login page),
+                  // logged-in user ko Edit chip.
+                  InkWell(
+                    onTap: () {
+                      if (!profileCtrl.isLoggedIn) {
+                        Get.toNamed(routeName.login);
+                      }
+                    },
+                    child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: AppScreenUtil().screenWidth(
+                                profileCtrl.isLoggedIn ? 5 : 12),
+                            vertical: AppScreenUtil().screenHeight(
+                                profileCtrl.isLoggedIn ? 2 : 5)),
+                        decoration: BoxDecoration(
+                            color: profileCtrl.appCtrl.appTheme.primary,
+                            borderRadius: BorderRadius.circular(
+                                AppScreenUtil().borderRadius(2))),
+                        child: LatoFontStyle(
+                            text: profileCtrl.isLoggedIn
+                                ? CommonTextFont().edit
+                                : CommonTextFont().signIn,
+                            fontSize: FontSizes.f10,
+                            fontWeight: FontWeight.w600,
+                            color: profileCtrl.appCtrl.appTheme.white)),
+                  )
                 ]),
           ]));
     });

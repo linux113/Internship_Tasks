@@ -98,3 +98,23 @@
 - **API:** `https://alfurqan.ae/api/Cart/GetCart`
 - **Type:** `GET`
 - **Note:** Returns all cart data with products and everything.
+
+## 2026-08-24 (v1.0.2+3) UI cleanup + guest mode
+
+- Home categories ab ICON form me (circular image + name), API Top_Category se.
+- Section titles/descriptions ab API se: Deals_Of_The_Day.Title/Description,
+  Tranding_Products.Title/Description. Find_Your_Match ka section-level Title
+  API abhi nahi bhejta (sirf tab titles aate hai) — isliye app text
+  "Find Your Match" use hota hai; backend Title/Description add kare to
+  app khud usko pick kar legi (matchSectionTitle/Description ready hai).
+- Demo sections HATA diye: "Denim Wear Sales Starts In" timer, fake brand
+  logos (NORTH2.0/treva/velocity9), fake "upto 50% off" Offer Corner tiles.
+  Ab Offer_Banner.Banner_1 = bada offer banner, Banner_2/3 = Offer Corner grid,
+  Brand.Status=true ho tabhi brands dikhte hai (abhi backend me false hai).
+- Price fix: "AED 30.0 AED 30.00 ( off)" — ab selling price hamesha
+  2 decimals, struck original sirf tab jab discount ho, "( off)" kabhi khaali nahi.
+- Category tab: image rounded corners (pehle sharp the), demo sales icon hata diya.
+- GUEST MODE: app kholte hi login NAHI maangta — seedha home/dashboard khulta
+  hai. Login sirf Add-to-Cart jaise protected action par ya Profile > SIGN IN se.
+  Ek baar login karne ke baad app band karke kholne par bhi session bana rehta hai.
+  Profile tab guest ko "Guest" + SIGN IN chip dikhata hai.

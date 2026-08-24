@@ -1,11 +1,17 @@
 import 'package:multikart/config.dart';
 
+/// Offer Corner — API ke baaki offer banners (Banner_2/Banner_3).
+/// FIX: pehle yaha DEMO "Flat 50% OFF" tiles dikhti thi. Ab koi asli offer
+/// banner nahi to poora section hide rehta hai.
 class OfferCorner extends StatelessWidget {
   const OfferCorner({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(builder: (homeCtrl) {
+      if (homeCtrl.offerCornerBanners.isEmpty) {
+        return const SizedBox.shrink();
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

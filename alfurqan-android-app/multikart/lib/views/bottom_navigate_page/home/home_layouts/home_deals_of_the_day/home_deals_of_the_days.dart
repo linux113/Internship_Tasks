@@ -12,11 +12,24 @@ class HomeDealsOfTheDayLayout extends StatelessWidget {
         child: Column(
           children: [
             RowTextLayout(
-              text1: HomeFont().dealsOfTheDay,
+              // Title API (Deals_Of_The_Day.Title) se — "Deals of the Day"
+              text1: homeCtrl.dealsTitle.isNotEmpty
+                  ? homeCtrl.dealsTitle
+                  : HomeFont().dealsOfTheDay,
               text2: HomeFont().seeAll,
               fontWeight1: FontWeight.w700,
               fontWeight2: FontWeight.normal,
             ),
+            if (homeCtrl.dealsDescription.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: LatoFontStyle(
+                  text: homeCtrl.dealsDescription,
+                  fontSize: FontSizes.f12,
+                  fontWeight: FontWeight.w400,
+                  color: homeCtrl.appCtrl.appTheme.contentColor,
+                ),
+              ),
             const Space(0, 10),
             ...homeCtrl.dealOfTheDayList
                 .asMap()

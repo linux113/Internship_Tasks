@@ -144,8 +144,9 @@ class ProductApiModel {
       name: name ?? '',
       image: thumbnail?.url ?? '',
       categoryId: catId,
-      totalPrice: saleVal,
-      mrp: mrpVal,
+      // UI (PriceLayout) me mrp = BOLD selling price, totalPrice = STRUCK original.
+      totalPrice: mrpVal, // original (struck) — sirf tab dikhta hai jab selling se bada ho
+      mrp: saleVal, // selling (bold)
       discount: discountLabel,
       isFav: isWishlist ?? false,
       rating: (ratingCount ?? 0).toDouble(),

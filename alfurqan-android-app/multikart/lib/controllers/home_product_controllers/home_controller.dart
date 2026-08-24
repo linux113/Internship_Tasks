@@ -42,6 +42,24 @@ class HomeController extends GetxController {
   /// Home ke SAARE sections ke api products (id -> detail lookup ke liye).
   List<ProductApiModel> homeApiProductsAll = [];
 
+  /// --- API se aaye section titles/descriptions (hardcoded ki jagah) ---
+  String dealsTitle = '';
+  String dealsDescription = '';
+  String trendingTitle = '';
+  String trendingDescription = '';
+  String matchSectionTitle = ''; // Find_Your_Match title (future; abhi API nahi bhejta)
+  String matchSectionDescription = '';
+
+  /// Offer_Banner.Banner_1 — pehla non-empty-image offer banner (bada banner,
+  /// purane demo "Denim Wear Sales Starts In" timer ki jagah).
+  HomePageBanner? mainOfferBanner;
+
+  /// Baaki offer banners (Banner_2/3) — Offer Corner grid ke liye.
+  List<HomePageBanner> offerCornerBanners = [];
+
+  /// Real brands (sirf tab jab backend Brand.Status=true kare).
+  List<HomePageBrand> brandList = [];
+
   static void _addUnique(List<ProductApiModel> list, ProductApiModel p) {
     if (p.id == null) return;
     if (!list.any((e) => e.id == p.id)) list.add(p);
@@ -155,6 +173,28 @@ class HomeController extends GetxController {
         }
       }
     }
+
+    // --- Section titles/descriptions (api se; khaali ho to view apni
+    // translated fallback text dikhayega) ---
+    dealsTitle = d.dealsTitle;
+    dealsDescription = d.dealsDescription;
+    trendingTitle = d.trendingTitle;
+    trendingDescription = d.trendingDescription;
+    matchSectionTitle = d.matchTitle;
+    matchSectionDescription = d.matchDescription;
+
+    // --- Offer banners: pehla non-empty = bada banner, baaki = offer-corner grid ---
+    final usableOffers =
+        d.offerBanners.where((b) => b.image.isNotEmpty).toList();
+    if (usableOffers.isNotEmpty) {
+      mainOfferBanner = usableOffers.first;
+      offerCornerBanners = usableOffers.length > 1
+          ? usableOffers.sublist(1)
+          : <HomePageBanner>[];
+    }
+
+    // --- Brands (sirf jab backend Status=true kare; abhi false hai to khaali) ---
+    brandList = d.brandStatus ? d.brands : <HomePageBrand>[];
 
     // --- Kids corner / New Arrivals <- Tranding_Products ---
     if (d.trending.isNotEmpty) {
@@ -283,6 +323,31 @@ class HomeController extends GetxController {
     appCtrl.goToProductDetail(arguments: found);
   }
 
+  /// Offer banner tap — Redirect_Link ke hisaab se route karo:
+  /// product -> usi product ka detail, collection -> us category ka shop page,
+  /// external_url -> kuch mat kholo (app ke bahar ka link).
+  openOfferBanner(HomePageBanner? banner) {
+    if (banner == null) return;
+    if (banner.linkType == 'product' && banner.productId != null) {
+      openProductById(banner.productId!);
+      return;
+    }
+    if (banner.linkType == 'external_url') return;
+    if (banner.categorySlug != null && banner.categorySlug!.isNotEmpty) {
+      goToCategoryProducts(banner.categorySlug);
+      return;
+    }
+    goToShopAll();
+  }
+
+  /// Saare products wala shop page kholo.
+  goToShopAll() {
+    appCtrl.isSearch = false;
+    appCtrl.selectedIndex = 1;
+    appCtrl.update();
+    Get.toNamed(routeName.shopPage, arguments: "All");
+  }
+
   /// Home category chip / banner tap karne par shop page open karo,
   /// asli category ka slug bhej ke (jaise CategoryController me hota hai).
   goToCategoryProducts(String? slug) {
@@ -347,6 +412,7 @@ class HomeController extends GetxController {
       final src = source == "kids" ? homeKidsCornerList : findStyleCategoryList;
       for (var item in src) {
         if (item.id == productId) {
+          // mrp = selling price (bold), totalPrice = original (struck)
           entry = HomeDealOfTheDayModel(
             id: item.id,
             name: item.name,
@@ -354,8 +420,8 @@ class HomeController extends GetxController {
             byWhom: 'مكتبة الفرقان',
             discount: item.discount,
             isFav: newVal,
-            mrp: item.totalPrice,
-            totalPrice: item.mrp,
+            mrp: item.mrp,
+            totalPrice: item.totalPrice,
             isTrending: false,
           );
         }
@@ -413,8 +479,8 @@ class HomeController extends GetxController {
           byWhom: 'مكتبة الفرقان',
           discount: data.discount,
           isFav: true,
-          mrp: data.totalPrice, // selling price
-          totalPrice: data.mrp, // original (struck) price
+          mrp: data.mrp, // selling (bold)
+          totalPrice: data.totalPrice, // original (struck)
           isTrending: false,
         ),
       );

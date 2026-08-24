@@ -34,24 +34,30 @@ class DealsOfTheDayContent extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // FIX: selling price hamesha 2 decimals ("AED 30.00", "30.0" nahi)
               LatoFontStyle(
-                  text: '${appCtrl.priceSymbol} ${(data!.mrp! * appCtrl.rateValue)}',
+                  text: '${appCtrl.priceSymbol} ${(data!.mrp! * appCtrl.rateValue).toStringAsFixed(2)}',
                   fontWeight: FontWeight.w400,
                   color: appCtrl.appTheme.blackColor,
                   fontSize: FontSizes.f13),
-              const Space(8, 0),
-              LatoFontStyle(
-                  text:'${appCtrl.priceSymbol} ${(data!.totalPrice! * appCtrl.rateValue).toStringAsFixed(2)}',
-                  fontWeight: FontWeight.w400,
-                  color: appCtrl.appTheme.contentColor,
-                  fontSize: FontSizes.f13,
-                  textDecoration: TextDecoration.lineThrough),
-              const Space(8, 0),
-              LatoFontStyle(
-                  text: data!.discount,
-                  fontWeight: FontWeight.w400,
-                  color: appCtrl.appTheme.primary,
-                  fontSize: FontSizes.f13)
+              // struck original SIRF jab selling se bada ho (same price do baar nahi)
+              if ((data!.totalPrice ?? 0) > (data!.mrp ?? 0)) ...[
+                const Space(8, 0),
+                LatoFontStyle(
+                    text:'${appCtrl.priceSymbol} ${(data!.totalPrice! * appCtrl.rateValue).toStringAsFixed(2)}',
+                    fontWeight: FontWeight.w400,
+                    color: appCtrl.appTheme.contentColor,
+                    fontSize: FontSizes.f13,
+                    textDecoration: TextDecoration.lineThrough),
+              ],
+              if ((data!.discount ?? '').trim().isNotEmpty) ...[
+                const Space(8, 0),
+                LatoFontStyle(
+                    text: data!.discount,
+                    fontWeight: FontWeight.w400,
+                    color: appCtrl.appTheme.primary,
+                    fontSize: FontSizes.f13),
+              ],
             ],
           ),
           const Space(0, 10),

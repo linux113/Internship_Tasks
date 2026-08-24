@@ -1,5 +1,9 @@
 import '../../../config.dart';
 
+/// CATEGORY tab ka ek card — colored rounded text box + uske upar corner
+/// image. DONO cheezein API se aati hai (category ka Name + ImageUrl);
+/// sirf card ke background colors local palette se aate hai (backend colors
+/// nahi bhejta).
 class CategoryCardLayout extends StatelessWidget {
   final CategoryApiModel? categoryModel;
   final int? index;
@@ -27,13 +31,21 @@ class CategoryCardLayout extends StatelessWidget {
               categoryModel: categoryModel,
             ),
             Positioned(
-              top: MediaQuery.of(context).size.width < 370 ? 17 :MediaQuery.of(context).size.width < 385 ? 12 :MediaQuery.of(context).size.width >400 ?13 : -3,
+              top: AppScreenUtil().screenHeight(12),
               child: Hero(
                 tag: index.toString(),
-                child: imageNetwork(
-                    url: categoryModel?.displayImageUrl ?? '',
-                    fit: BoxFit.fill,
-                    height: AppScreenUtil().screenHeight(105)),
+                // FIX: image ke edges SHARP the (bina clip ke) jabki text box
+                // rounded tha — ab image bhi utne hi rounded corners me
+                // clip hoti hai, fixed width ke sath (BoxFit.cover, stretch nahi).
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                      AppScreenUtil().borderRadius(8)),
+                  child: imageNetwork(
+                      url: categoryModel?.displayImageUrl ?? '',
+                      fit: BoxFit.cover,
+                      width: AppScreenUtil().screenWidth(105),
+                      height: AppScreenUtil().screenHeight(105)),
+                ),
               ),
             )
           ],

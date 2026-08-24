@@ -59,8 +59,8 @@ class FindStyleListCard extends StatelessWidget {
                       byWhom: 'مكتبة الفرقان',
                       discount: data!.discount,
                       isFav: true,
-                      mrp: data!.totalPrice,
-                      totalPrice: data!.mrp,
+                      mrp: data!.mrp, // selling (bold)
+                      totalPrice: data!.totalPrice, // original (struck)
                       isTrending: false,
                     ));
                   } else {
@@ -93,7 +93,8 @@ class FindStyleListCard extends StatelessWidget {
           PriceLayout(
               totalPrice:
               '${appCtrl.priceSymbol} ${(data!.totalPrice! * appCtrl.rateValue).toStringAsFixed(2)}',
-              mrp: '${appCtrl.priceSymbol} ${(data!.mrp! * appCtrl.rateValue)}',
+              mrp:
+              '${appCtrl.priceSymbol} ${(data!.mrp! * appCtrl.rateValue).toStringAsFixed(2)}',
               discount: data!.discount,
               fontSize: isDiscountShow
                   ? MediaQuery.of(context).size.width > 400

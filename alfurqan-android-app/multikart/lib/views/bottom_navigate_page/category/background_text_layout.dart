@@ -39,16 +39,22 @@ class BackgroundTextLayout extends StatelessWidget {
             isEven! ? CrossAxisAlignment.start : CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              index == 0
-                  ? Image.asset(
-                imageAssets.sales,
-                height: AppScreenUtil().screenHeight(50),
-              )
-                  : LatoFontStyle(
-                text: (categoryModel?.name ?? '').toUpperCase(),
-                fontSize: FontSizes.f16,
-                color: appCtrl.isTheme ?  appCtrl.appTheme.whiteColor: appCtrl.appTheme.blackColor,
-                fontWeight: FontWeight.w700,
+              // FIX: pehle pehle card par DEMO "sales" asset image dikhti thi —
+              // ab har card par asli category ka name dikhta hai.
+              Padding(
+                padding: EdgeInsets.only(
+                  // text image ke neeche na dabey — image jis side hai usi
+                  // side se padding chhodo.
+                  right: isEven! ? AppScreenUtil().screenWidth(100) : 0,
+                  left: isEven! ? 0 : AppScreenUtil().screenWidth(100),
+                ),
+                child: LatoFontStyle(
+                  text: (categoryModel?.name ?? '').toUpperCase(),
+                  fontSize: FontSizes.f16,
+                  color: appCtrl.isTheme ?  appCtrl.appTheme.whiteColor: appCtrl.appTheme.blackColor,
+                  fontWeight: FontWeight.w700,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

@@ -1,5 +1,7 @@
 import '../../../../../config.dart';
 
+/// Home top category row — ICON form: gol (circular) image-icon + niche naam.
+/// Image API (Top_Category.TopCategories[].ImageUrl) se aati hai.
 class HomeCategoryData extends StatelessWidget {
   final HomeCategoryModel? data;
   final int? index;
@@ -31,41 +33,43 @@ class HomeCategoryData extends StatelessWidget {
         },
         child: Padding(
           padding: EdgeInsets.only(
-              right: AppScreenUtil().screenWidth(12),
-              left: AppScreenUtil().screenWidth(index == 0 ? 10 : 0)),
+              right: AppScreenUtil().screenWidth(14),
+              left: AppScreenUtil().screenWidth(index == 0 ? 15 : 0)),
           child: Column(
             children: [
-              SizedBox(
-                height: AppScreenUtil().screenHeight(70),
-                child: Stack(
-                  alignment: Alignment.topCenter,
-                  children: [
-                    Container(
-                      width: AppScreenUtil().screenWidth(55),
-                      decoration: BoxDecoration(
-                        color: homeCtrl.appCtrl.appTheme.homeCategoryColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    Positioned(
-                      top: MediaQuery.of(context).size.width > 400
-                          ? MediaQuery.of(context).size.height / 100
-                          : MediaQuery.of(context).size.width < 380
-                              ? 5
-                              : 0,
-                      child: FadeInImageLayout(
-                          image: data!.image.toString(),
-                          height: AppScreenUtil().screenHeight(60),
-                          width: AppScreenUtil().screenWidth(60),
-                          fit: BoxFit.fill),
-                    ),
-                  ],
+              // gol icon — soft brand-green background circle ke andar
+              // rounded category image
+              Container(
+                width: AppScreenUtil().size(62),
+                height: AppScreenUtil().size(62),
+                padding: EdgeInsets.all(AppScreenUtil().size(3)),
+                decoration: BoxDecoration(
+                  color: homeCtrl.appCtrl.appTheme.primaryLight,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: homeCtrl.appCtrl.appTheme.primary.withOpacity(0.25),
+                    width: 1,
+                  ),
+                ),
+                child: ClipOval(
+                  child: FadeInImageLayout(
+                    image: data!.image.toString(),
+                    height: AppScreenUtil().size(56),
+                    width: AppScreenUtil().size(56),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-              LatoFontStyle(
-                text: data!.title,
-                fontWeight: FontWeight.w600,
-                fontSize: FontSizes.f12,
+              const Space(0, 6),
+              SizedBox(
+                width: AppScreenUtil().size(74),
+                child: LatoFontStyle(
+                  text: data!.title,
+                  fontWeight: FontWeight.w600,
+                  fontSize: FontSizes.f12,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
               )
             ],
           ),

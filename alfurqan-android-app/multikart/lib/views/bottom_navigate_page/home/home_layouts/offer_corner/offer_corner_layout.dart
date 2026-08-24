@@ -1,5 +1,7 @@
 import '../../../../../config.dart';
 
+/// Offer Corner grid — real offer banner images (tap se unke redirect
+/// links ke hisaab se product/category page khulta hai).
 class OfferCornerLayout extends StatelessWidget {
   const OfferCornerLayout({Key? key}) : super(key: key);
 
@@ -7,40 +9,23 @@ class OfferCornerLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(
       builder: (homeCtrl) {
+        final banners = homeCtrl.offerCornerBanners;
+        if (banners.isEmpty) return const SizedBox.shrink();
         return GridView.builder(
           padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: AppArray().offerCornerList.length,
+          itemCount: banners.length,
           itemBuilder: (context, index) {
+            final banner = banners[index];
             return InkWell(
-              onTap: () {
-                homeCtrl.appCtrl.isSearch = false;
-                homeCtrl.appCtrl.selectedIndex = 1;
-                homeCtrl.appCtrl.update();
-                Get.toNamed(routeName.shopPage, arguments: "All");
-              },
-              child: Container(
-                alignment: Alignment.center,
-
-                decoration: BoxDecoration(
-                  borderRadius:
-                  BorderRadius.circular(AppScreenUtil().borderRadius(3)),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    homeCtrl.appCtrl.isTheme
-                        ? Image.asset(imageAssets.offerCornerBG,
-                        color: homeCtrl.appCtrl.appTheme.whiteColor)
-                        : Image.asset(imageAssets.offerCornerBG),
-                    LatoFontStyle(
-                      text: AppArray().offerCornerList[index]['title'].toString().tr,
-                      color: homeCtrl.appCtrl.appTheme.blackColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ],
+              onTap: () => homeCtrl.openOfferBanner(banner),
+              child: ClipRRect(
+                borderRadius:
+                    BorderRadius.circular(AppScreenUtil().borderRadius(10)),
+                child: FadeInImageLayout(
+                  image: banner.image,
+                  fit: BoxFit.cover,
                 ),
               ),
             );
@@ -48,9 +33,9 @@ class OfferCornerLayout extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 10,
-            mainAxisSpacing: 0,
+            mainAxisSpacing: 10,
             childAspectRatio: MediaQuery.of(context).size.width /
-                (MediaQuery.of(context).size.height / (6)),
+                (MediaQuery.of(context).size.height / (4.5)),
           ),
         );
       }

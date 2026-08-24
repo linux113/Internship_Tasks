@@ -58,6 +58,12 @@ class LoginController extends GetxController {
       txtPassword.text = "";
       update();
 
+      // Profile tab pehle se khuli ho to usme turant naya naam/email + logout
+      // button dikhe (guest -> logged-in UI turant refresh ho jaye).
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadUserData();
+      }
+
       socialLoginCtrl.showToast(res.message.isNotEmpty ? res.message : 'Login successful');
       // FIX: Get.toNamed se login page stack me pada rehta tha — back dabane
       // par user phir se login page par aa jata tha ("logout jaisa" feel).

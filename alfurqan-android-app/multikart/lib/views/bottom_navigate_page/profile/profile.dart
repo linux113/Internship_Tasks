@@ -33,8 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     lastIndex: profileCtrl.drawerList.length - 1,
                     onTap: () => profileCtrl.goToPage(e.key));
               }).toList(),
-            if (profileCtrl.drawerList.isNotEmpty)
-              //logout button layout
+            // logout sirf logged-in user ko dikhe (guest mode me SIGN IN
+            // chip profile header me hi hai)
+            if (profileCtrl.drawerList.isNotEmpty && profileCtrl.isLoggedIn)
               const LogoutButton()
           ])),
         ),

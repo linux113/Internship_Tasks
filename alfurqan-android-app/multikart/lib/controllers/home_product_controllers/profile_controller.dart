@@ -15,6 +15,10 @@ class ProfileController extends GetxController {
   String userName = "";
   String userEmail = "";
 
+  /// User abhi logged-in hai ya guest mode me hai (splash ab bina-login bhi
+  /// dashboard kholta hai — login sirf zaroorat par).
+  bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
+
   var gender = ["Male", "Female", "Other"];
 
   TextEditingController txtFirstName = TextEditingController();

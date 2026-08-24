@@ -24,6 +24,7 @@ class CommonTextFont{
   String addToCart = "addToCart".tr;
   String email = "paigeturner@gmail.com".tr;
   String profileName = "profileName".tr;
+  String guest = "guest".tr;
   String edit = "edit".tr;
   String logOut = "logOut".tr;
   String wallets = "wallets".tr;

@@ -16,14 +16,21 @@ class FindYourStyle extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title/description API (Find_Your_Match) se — backend abhi
+                // section-level Title nahi bhejta, to translated
+                // "Find Your Match" fallback use hota hai.
                 LatoFontStyle(
-                  text: HomeFont().findYourStyle,
+                  text: homeCtrl.matchSectionTitle.isNotEmpty
+                      ? homeCtrl.matchSectionTitle
+                      : HomeFont().findYourStyle,
                   fontSize: FontSizes.f14,
                   fontWeight: FontWeight.w700,
                   color: homeCtrl.appCtrl.appTheme.blackColor,
                 ),
                 LatoFontStyle(
-                  text: HomeFont().superSummerSale,
+                  text: homeCtrl.matchSectionDescription.isNotEmpty
+                      ? homeCtrl.matchSectionDescription
+                      : HomeFont().superSummerSale,
                   fontSize: FontSizes.f14,
                   fontWeight: FontWeight.w400,
                   color: homeCtrl.appCtrl.appTheme.contentColor,

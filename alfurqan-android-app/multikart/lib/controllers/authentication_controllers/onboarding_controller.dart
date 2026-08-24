@@ -29,7 +29,9 @@ class OnBoardingController extends GetxController {
   readIntroPage()async{
     await storage.write(Session.isIntro, true);
     update();
-    Get.toNamed(routeName.login);
+    // FIX: onboarding ke baad login force nahi hota — guest mode me seedha
+    // dashboard khulta hai (login tabhi poocha jayega jab zaroorat ho).
+    Get.offAllNamed(routeName.dashboard);
   }
 
   @override

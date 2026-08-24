@@ -96,14 +96,16 @@ class HomePageProduct {
   }
 
   /// Find-your-style / kids-corner grid card ke liye.
+  /// NOTE: PriceLayout pehle `mrp` ko BOLD (selling) aur `totalPrice` ko
+  /// STRUCK (original) dikhata hai — isliye mrp=finalPrice, totalPrice=price.
   HomeFindStyleCategoryModel toFindStyleModel() {
     return HomeFindStyleCategoryModel(
       id: id ?? 0,
       name: name ?? '',
       image: image,
       categoryId: null,
-      totalPrice: finalPrice, // selling
-      mrp: price, // original
+      totalPrice: price, // original (struck) — sirf tab dikhta hai jab selling se bada ho
+      mrp: finalPrice, // selling (bold)
       discount: discountLabel,
       isFav: false,
       rating: rating,
@@ -216,6 +218,27 @@ class FindYourMatchTab {
   }
 }
 
+/// Ek brand — {Id, Name, Slug, ImageUrl} (Brand section).
+/// Backend jab Brand.Status=true karega tab hi home par dikhengi.
+class HomePageBrand {
+  final int? id;
+  final String? name;
+  final String? slug;
+  final String image; // full url
+
+  HomePageBrand({this.id, this.name, this.slug, this.image = ''});
+
+  factory HomePageBrand.fromJson(Map<String, dynamic> json) {
+    return HomePageBrand(
+      id: jsonToInt(json['Id'] ?? json['id']),
+      name: jsonToString(json['Name'] ?? json['name']),
+      slug: jsonToString(json['Slug'] ?? json['slug']),
+      image:
+          buildMediaUrl(jsonToString(json['ImageUrl'] ?? json['image'])),
+    );
+  }
+}
+
 List<HomePageProduct> _parseProductList(dynamic raw) {
   if (raw is List) {
     return raw
@@ -245,6 +268,20 @@ class HomePageDataModel {
   final List<HomePageProduct> trending;
   final List<FindYourMatchTab> matchTabs;
   final List<HomePageCategory> topCategories;
+  final List<HomePageBrand> brands;
+
+  /// Brand section ka Status flag — backend jab taak false rakhe, home par
+  /// brands section bilkul nahi dikhega (demo brands kabhi nahi).
+  final bool brandStatus;
+
+  /// Sections ke API titles/descriptions (hardcoded text ki jagah).
+  final String dealsTitle;
+  final String dealsDescription;
+  final String trendingTitle;
+  final String trendingDescription;
+  final String topCategoryTitle;
+  final String matchTitle; // Find_Your_Match section title (abhi API nahi bhejta — '' rahega)
+  final String matchDescription;
 
   HomePageDataModel({
     this.banners = const [],
@@ -253,6 +290,15 @@ class HomePageDataModel {
     this.trending = const [],
     this.matchTabs = const [],
     this.topCategories = const [],
+    this.brands = const [],
+    this.brandStatus = false,
+    this.dealsTitle = '',
+    this.dealsDescription = '',
+    this.trendingTitle = '',
+    this.trendingDescription = '',
+    this.topCategoryTitle = '',
+    this.matchTitle = '',
+    this.matchDescription = '',
   });
 
   factory HomePageDataModel.fromJson(Map<String, dynamic> json) {
@@ -269,8 +315,24 @@ class HomePageDataModel {
     final matchSec = section(content, 'Find_Your_Match');
     final offerSec = section(content, 'Offer_Banner');
     final catSec = section(content, 'Top_Category');
+    final brandSec = section(content, 'Brand');
 
     return HomePageDataModel(
+      brandStatus: jsonToBool(brandSec['Status']) ?? false,
+      brands: brandSec['Brands'] is List
+          ? (brandSec['Brands'] as List)
+              .where((e) => e is Map)
+              .map((e) =>
+                  HomePageBrand.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList()
+          : const [],
+      dealsTitle: jsonToString(dealsSec['Title']) ?? '',
+      dealsDescription: jsonToString(dealsSec['Description']) ?? '',
+      trendingTitle: jsonToString(trendingSec['Title']) ?? '',
+      trendingDescription: jsonToString(trendingSec['Description']) ?? '',
+      topCategoryTitle: jsonToString(catSec['Title']) ?? '',
+      matchTitle: jsonToString(matchSec['Title']) ?? '',
+      matchDescription: jsonToString(matchSec['Description']) ?? '',
       banners: _parseBannerList(bannerSec['Banners']),
       offerBanners: [
         if (offerSec['Banner_1'] is Map)

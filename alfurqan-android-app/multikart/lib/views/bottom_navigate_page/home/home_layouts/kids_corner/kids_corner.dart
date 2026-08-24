@@ -16,14 +16,20 @@ class KidsCorner extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title/description API (Tranding_Products) se —
+                // "Trending Products" / "Deals on trending product"
                 LatoFontStyle(
-                  text: HomeFont().theKidsCorner,
+                  text: homeCtrl.trendingTitle.isNotEmpty
+                      ? homeCtrl.trendingTitle
+                      : HomeFont().theKidsCorner,
                   fontSize: FontSizes.f14,
                   fontWeight: FontWeight.w700,
                   color: homeCtrl.appCtrl.appTheme.blackColor,
                 ),
                 LatoFontStyle(
-                  text: HomeFont().clothingForYourLilOne,
+                  text: homeCtrl.trendingDescription.isNotEmpty
+                      ? homeCtrl.trendingDescription
+                      : HomeFont().clothingForYourLilOne,
                   fontSize: FontSizes.f14,
                   fontWeight: FontWeight.w400,
                   color: homeCtrl.appCtrl.appTheme.contentColor,

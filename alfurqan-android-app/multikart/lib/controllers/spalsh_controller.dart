@@ -39,12 +39,13 @@ final storage = LocalStorage();
     if (isIntro.toString() == "false") {
       Get.offAllNamed(routeName.onBoarding);
     } else {
-      if (isLogin == true) {
-        Get.offAllNamed(routeName.dashboard);
-      } else {
-        // Checking if user is already login or not
-        Get.offAllNamed(routeName.login);
-      }
+      // FIX: pehle bina-login user ko hamesha LOGIN screen par fenk diya
+      // jata tha — isliye app kholte hi / back dabate hi baar-baar login
+      // milta tha. Ab GUEST MODE: bina login bhi seedha dashboard (home)
+      // khulega. Login sirf tab maanga jayega jab koi protected kaam ho
+      // (Add to Cart / Checkout / Profile) — ek baar login karne ke baad
+      // app band karke kholo tab bhi session yaad rehta hai.
+      Get.offAllNamed(routeName.dashboard);
     }
   }
 }
