@@ -1,8 +1,10 @@
 import '../../config.dart';
 import '../../models/category_api_model.dart';
+import '../../models/home_page_api_model.dart';
 import '../../models/product_api_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/category_cache.dart';
 import 'wishlist_controller.dart';
 
 class HomeController extends GetxController {
@@ -31,6 +33,20 @@ class HomeController extends GetxController {
   /// GetAllProductsFront se aaye real newest products (home sections ke liye)
   List<ProductApiModel> newestApiProducts = [];
 
+  /// NAYE home api (GetHomePageDataApp) ne real data diya ya nahi.
+  bool homeApiLoaded = false;
+
+  /// Find Your Style ke chips yahi tabs hote hai (Trending/Top Picks/Featured...)
+  List<FindYourMatchTab> matchTabs = [];
+
+  /// Home ke SAARE sections ke api products (id -> detail lookup ke liye).
+  List<ProductApiModel> homeApiProductsAll = [];
+
+  static void _addUnique(List<ProductApiModel> list, ProductApiModel p) {
+    if (p.id == null) return;
+    if (!list.any((e) => e.id == p.id)) list.add(p);
+  }
+
   int current = 0;
   int selectedStyleCategory = 0;
   final CarouselController controller = CarouselController();
@@ -55,12 +71,25 @@ class HomeController extends GetxController {
     update();
     // try/catch — koi bhi api fail ho jaye to bhi shimmer hamesha band ho
     // aur baaki sections load ho jaye (ek ki failure dusre ko na roke).
+    //
+    // STEP 1: NAYA home api (GetHomePageDataApp) — banners + categories +
+    // deals + find-your-match tabs + trending sab isi ek call me aata hai.
     try {
-      await fetchTopCategories();
+      await fetchHomePageData();
     } catch (_) {}
-    try {
-      await fetchHomeProducts();
-    } catch (_) {}
+
+    // STEP 2 (fallback): naya home api fail ho jaye to purane tareeke se
+    // categories/products lao.
+    if (apiCategoryList.isEmpty) {
+      try {
+        await fetchTopCategories();
+      } catch (_) {}
+    }
+    if (!homeApiLoaded) {
+      try {
+        await fetchHomeProducts();
+      } catch (_) {}
+    }
 
     // Find-your-style ka initial grid = pehli real category chip
     if (findStyleCategory.isNotEmpty) {
@@ -73,6 +102,77 @@ class HomeController extends GetxController {
     appCtrl.isShimmer = false;
     appCtrl.update();
     Get.forceAppUpdate();
+  }
+
+  /// NAYA home api (GetHomePageDataApp) — purana GetTopCategory backend ne
+  /// band kar diya hai (404), ab home page ka SAARA data isi ek call se aata
+  /// hai: banners (redirect links ke sath) + top categories + deals +
+  /// trending + find-your-match tabs.
+  Future<void> fetchHomePageData() async {
+    final res = await ApiService().request<HomePageDataModel>(
+      endpoint: ApiEndpoints.homePageData,
+      method: ApiMethod.get,
+      fromJson: (json) => HomePageDataModel.fromJson(
+          json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json as Map)),
+    );
+
+    if (!res.isSuccess || res.data == null) return;
+    final d = res.data!;
+
+    // --- categories row (+ CategoryCache, taaki shop/search/category tab bhi chale) ---
+    if (d.topCategories.isNotEmpty) {
+      apiCategoryList =
+          d.topCategories.map((e) => e.toCategoryApiModel()).toList();
+      CategoryCache.items = List.of(apiCategoryList);
+      homeCategoryList =
+          apiCategoryList.map((e) => e.toHomeCategoryModel()).toList();
+    }
+
+    // --- banner carousel (redirect links ke sath: product/category/external) ---
+    if (d.banners.isNotEmpty) {
+      bannerList = d.banners.map((e) => e.toHomeBannerModel()).toList();
+    }
+
+    // --- Deals of the Day (real api section) ---
+    if (d.deals.isNotEmpty) {
+      dealOfTheDayList = d.deals.map((e) => e.toDealModel()).toList();
+      for (final p in d.deals) {
+        _addUnique(homeApiProductsAll, p.toApiModel());
+      }
+    }
+
+    // --- Find your Style chips <- Find_Your_Match tabs ---
+    if (d.matchTabs.isNotEmpty) {
+      matchTabs = d.matchTabs;
+      findStyleCategory = d.matchTabs
+          .asMap()
+          .entries
+          .map((e) => {'id': e.key, 'title': e.value.title})
+          .toList();
+      for (final tab in d.matchTabs) {
+        for (final p in tab.products) {
+          _addUnique(homeApiProductsAll, p.toApiModel());
+        }
+      }
+    }
+
+    // --- Kids corner / New Arrivals <- Tranding_Products ---
+    if (d.trending.isNotEmpty) {
+      homeKidsCornerList =
+          d.trending.map((e) => e.toFindStyleModel()).toList();
+      for (final p in d.trending) {
+        _addUnique(homeApiProductsAll, p.toApiModel());
+      }
+    }
+
+    // home api se products/categories mile to "loaded" maano (fallback skip hoga)
+    if (d.deals.isNotEmpty ||
+        d.trending.isNotEmpty ||
+        d.matchTabs.isNotEmpty ||
+        d.topCategories.isNotEmpty) {
+      homeApiLoaded = true;
+    }
+    update();
   }
 
   /// GetTopCategory api call — home page ki category-row aur
@@ -164,10 +264,20 @@ class HomeController extends GetxController {
   /// (na mile to purana demo detail fallback khulega).
   openProductById(int id) {
     ProductApiModel? found;
-    for (final p in newestApiProducts) {
+    // pehle naye home api ke products me dhoondo (deals/tabs/trending),
+    // phir newest list me — dono cover ho jaye.
+    for (final p in homeApiProductsAll) {
       if (p.id == id) {
         found = p;
         break;
+      }
+    }
+    if (found == null) {
+      for (final p in newestApiProducts) {
+        if (p.id == id) {
+          found = p;
+          break;
+        }
       }
     }
     appCtrl.goToProductDetail(arguments: found);
@@ -331,10 +441,19 @@ class HomeController extends GetxController {
     selectedStyleCategory = index;
 
     update();
-    for (var i = 0; i < findStyleCategoryList.length; i++) {
-      if (categoryId.toString() ==
-          findStyleCategoryList[i].categoryId.toString()) {
-        findStyleCategoryCategoryWiseList.add(findStyleCategoryList[i]);
+    // NAYA home api: chips = Find_Your_Match tabs — tap par usi tab ke
+    // products dikhao (chip ka 'id' = tab index).
+    if (matchTabs.isNotEmpty && index is int && index < matchTabs.length) {
+      findStyleCategoryCategoryWiseList =
+          matchTabs[index].products.map((e) => e.toFindStyleModel()).toList();
+    }
+    // fallback: purane tareeke se categoryId se filter (jab home api na ho)
+    if (findStyleCategoryCategoryWiseList.isEmpty) {
+      for (var i = 0; i < findStyleCategoryList.length; i++) {
+        if (categoryId.toString() ==
+            findStyleCategoryList[i].categoryId.toString()) {
+          findStyleCategoryCategoryWiseList.add(findStyleCategoryList[i]);
+        }
       }
     }
     // agar is category me koi item na mile (kam products me possible),

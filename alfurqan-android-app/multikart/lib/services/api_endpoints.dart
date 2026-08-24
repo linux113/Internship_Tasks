@@ -8,6 +8,10 @@ class ApiEndpoints {
   static const String topCategory = 'https://alfurqan.ae/app/MobileAppApi/GetTopCategory';
   static const String productList = 'https://alfurqan.ae/web/Products/GetAllProductsFront';
 
+  // ---------------- NAYA home api (purana GetTopCategory band ho gaya hai) ----------------
+  // Full url: https://alfurqan.ae/api/MobileAppApi/GetHomePageDataApp
+  static const String homePageData = 'MobileAppApi/GetHomePageDataApp';
+
   // ---------------- Cart ----------------
   static const String addToCart = 'Cart/AddToCart';
   static const String getCart = 'Cart/GetCart';

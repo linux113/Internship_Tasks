@@ -1,11 +1,15 @@
 import '../models/category_api_model.dart';
+import '../models/home_page_api_model.dart';
 import 'api_endpoints.dart';
 import 'api_service.dart';
 
 /// App me kai jagah (shop page filter, trending categories, search ke
 /// recommended chips) top categories chahiye hoti hai. Har jagah alag se
-/// api call na karni pade, isliye ek chhota sa in-memory cache rakha hai —
-/// GetTopCategory ek baar call hoga aur result yaha rahega.
+/// api call na karni pade, isliye ek chhota sa in-memory cache rakha hai.
+///
+/// NOTE: purana GetTopCategory api backend ne BAND kar diya hai (404) —
+/// ab categories NAYE home api (GetHomePageDataApp) ke Top_Category section
+/// se aati hai.
 class CategoryCache {
   CategoryCache._();
 
@@ -22,13 +26,20 @@ class CategoryCache {
     _loading = true;
     _attempts++;
     try {
-      final res = await ApiService().request<List<CategoryApiModel>>(
-        endpoint: ApiEndpoints.topCategory,
+      final res = await ApiService().request<HomePageDataModel>(
+        endpoint: ApiEndpoints.homePageData,
         method: ApiMethod.get,
-        fromJson: (json) => CategoryApiModel.listFromJson(json),
+        fromJson: (json) => HomePageDataModel.fromJson(
+            json is Map<String, dynamic>
+                ? json
+                : Map<String, dynamic>.from(json as Map)),
       );
-      if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
-        items = res.data!;
+      if (res.isSuccess &&
+          res.data != null &&
+          res.data!.topCategories.isNotEmpty) {
+        items = res.data!.topCategories
+            .map((e) => e.toCategoryApiModel())
+            .toList();
       }
     } catch (_) {
       // ignore — cache khaali hi rahega, agli baar phir try hoga

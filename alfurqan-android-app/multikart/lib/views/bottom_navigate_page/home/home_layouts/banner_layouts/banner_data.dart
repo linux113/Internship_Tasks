@@ -10,6 +10,21 @@ class HomeBannerData extends StatelessWidget {
     return GetBuilder<AppController>(builder: (appCtrl) {
       return InkWell(
         onTap: (){
+          // NAYA home api: banner "product" type ka ho to seedha us product ka
+          // detail page kholo (external_url banners par kuch mat karo).
+          if (data?.linkType == 'product' && data?.productId != null) {
+            final homeCtrl = Get.isRegistered<HomeController>()
+                ? Get.find<HomeController>()
+                : null;
+            if (homeCtrl != null) {
+              homeCtrl.openProductById(data!.productId!);
+              return;
+            }
+          }
+          // "external_url" banners (youtube etc.) — app ke andar kuch na kholo
+          if (data?.linkType == 'external_url') {
+            return;
+          }
           if (data?.slug != null && data!.slug!.isNotEmpty) {
             appCtrl.isSearch = false;
             appCtrl.isNotification = true;

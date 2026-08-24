@@ -1,6 +1,5 @@
 import 'package:multikart/models/category_api_model.dart';
-import 'package:multikart/services/api_endpoints.dart';
-import 'package:multikart/services/api_service.dart';
+import 'package:multikart/services/category_cache.dart';
 
 import '../../config.dart';
 
@@ -18,19 +17,15 @@ class CategoryController extends GetxController {
     super.onReady();
   }
 
-  //get data list (GetTopCategory api)
+  //get data list (NAYA home api ke Top_Category section se — purana
+  // GetTopCategory api backend ne band kar diya hai)
   getData() async {
     appCtrl.isShimmer = true;
     appCtrl.update();
 
-    final res = await ApiService().request<List<CategoryApiModel>>(
-      endpoint: ApiEndpoints.topCategory,
-      method: ApiMethod.get,
-      fromJson: (json) => CategoryApiModel.listFromJson(json),
-    );
-
-    if (res.isSuccess && res.data != null) {
-      categoryList = res.data!;
+    await CategoryCache.ensureLoaded();
+    if (CategoryCache.items.isNotEmpty) {
+      categoryList = CategoryCache.items;
     }
 
     update();

@@ -6,6 +6,27 @@
 
 ---
 
+## ⚡ NEW — Home Page API (added 2026-08-24, replaces stopped GetTopCategory)
+
+- **API:** `https://alfurqan.ae/api/MobileAppApi/GetHomePageDataApp`
+- **Type:** `GET`
+- **Used in app for:** home banners (with product/category/external redirect links),
+  top categories row, Deals of the Day, Find Your Style tabs (Trending/Top Picks/
+  Featured/Top Rated/Ready to Ship), Trending products, offer banners.
+- **Response shape:** `{ code, message, isSuccess, data: { slug, contentApp: {...} } }`
+- **contentApp sections:**
+  - `Home_Banner.Banners[]` → `{ Image_Url, Status, Redirect_Link: { Link, Link_Type: "product"|"collection"|"external_url", Product_Ids: [264] } }`
+  - `Find_Your_Match.Tab_One..Tab_Five` → `{ Title, MatchTabProducts: [{ Id, Name, Slug, ImageUrl, Price, Discount, DiscountPrice, Rating }] }`
+  - `Deals_Of_The_Day.Products[]` → same product shape
+  - `Tranding_Products.Products[]` → same product shape
+  - `Offer_Banner.Banner_1..3` → same banner shape
+  - `Top_Category.TopCategories[]` → `{ Id, Name, Slug, ImageUrl }`
+  - `Brand.Brands[]` → `{ Id, Name, Slug, ImageUrl }` (Status=false right now)
+- **NOTE:** Keys are CAPITALIZED in this API (unlike the older lowercase snake_case APIs).
+- **NOTE (2026-08-24):** Old `https://alfurqan.ae/app/MobileAppApi/GetTopCategory` now returns **404 (stopped by backend)**. `GetAllProductsFront` (products catalog) is still alive and used for shop/search/category-product pages.
+
+---
+
 ## 1. Login
 
 - **API:** `https://alfurqan.ae/api/Core/LogInWeb`
