@@ -82,8 +82,9 @@ class ProductDetailController extends GetxController {
         break;
       }
     }
-    if (slug.isEmpty) return; // slug na mile to demo list hi chalne do
-
+    // FIX: naye home api ke compact products me category info nahi hoti —
+    // slug na mile to demo fashion list mat dikhao; uski jagah newest
+    // products ko hi "similar" bana do (kam se kam BOOKS hi dikhenge).
     final res = await ApiService().request<ProductListResponseModel>(
       endpoint: ApiEndpoints.productList,
       method: ApiMethod.get,
@@ -92,6 +93,7 @@ class ProductDetailController extends GetxController {
         "paginate": 8,
         "status": 1,
         "field": "created_at",
+        // slug mila to same-category, nahi to saare newest
         "category": slug,
         "price": "",
         "tag": "",

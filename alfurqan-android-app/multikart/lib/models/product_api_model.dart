@@ -182,7 +182,8 @@ class ProductApiModel {
     return Product(
       name: name,
       title: name,
-      description: description,
+      // "null" string UI me na dikhe (home api products me description nahi hota)
+      description: description ?? shortDescription ?? '',
       price: price,
       discountPrice: (salePrice != null && salePrice! < (price ?? 0)) ? salePrice : null,
       // NOTE: api ka `quantity` field stock/available count hai, cart quantity
