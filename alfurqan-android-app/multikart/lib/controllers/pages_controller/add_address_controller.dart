@@ -245,7 +245,19 @@ class AddAddressController extends GetxController {
     if (!savedOnServer) {
       isSaving = false;
       update();
-      socialLoginToast(message.isNotEmpty ? message : 'Could not save address. Please try again.');
+      // backend ke raw DB/.NET errors (FOREIGN KEY / type map) user ko mat
+      // dikhao — friendly message do.
+      String friendly = message;
+      if (message.contains('FOREIGN KEY') || message.contains('INSERT statement')) {
+        friendly =
+            'Address could not be saved (server country data issue). Please try again or pick United Arab Emirates.';
+      } else if (message.contains('type map') || message.contains('Mapping types')) {
+        friendly =
+            'Address could not be saved (server mapping issue). Please try again.';
+      } else if (message.isEmpty) {
+        friendly = 'Could not save address. Please try again.';
+      }
+      socialLoginToast(friendly);
       return;
     }
 

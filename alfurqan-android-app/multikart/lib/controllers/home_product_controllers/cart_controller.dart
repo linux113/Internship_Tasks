@@ -197,6 +197,19 @@ class CartController extends GetxController {
     update();
   }
 
+  /// App me pehle se loaded product pools (home api products + newest) me
+  /// id se product dhundo — GetCart ke items me detail na ho to isi se
+  /// naam/image/price bharte hai.
+  ProductApiModel? _lookupKnownProduct(int productId) {
+    if (Get.isRegistered<HomeController>()) {
+      final home = Get.find<HomeController>();
+      for (final p in [...home.homeApiProductsAll, ...home.newestApiProducts]) {
+        if (p.id == productId) return p;
+      }
+    }
+    return null;
+  }
+
   /// Real api cart (CartApiModel) ko app ke existing cart UI ke model
   /// (CartModel) me convert karna — isse cart screen ka koi bhi widget
   /// change kiye bina real api ka data dikhne lagta hai.
@@ -209,7 +222,16 @@ class CartController extends GetxController {
     double bagTotalFinal = 0; // selling prices ka sum
 
     for (final item in apiCart.items) {
-      final product = item.product;
+      // GetCart kabhi-kabhi product detail (name/image/price) NAHI bhejta.
+      // Us case me app ke paas pehle se loaded product pools (home api +
+      // newest) se id match karke detail bharo — warna "Product #264" jaisa
+      // naam aur khali image dikhti thi.
+      ProductApiModel? product = item.product;
+      if ((product == null || (product.name ?? '').isEmpty) &&
+          item.productId != null) {
+        final found = _lookupKnownProduct(item.productId!);
+        if (found != null) product = found;
+      }
       final int qty = (item.quantity ?? 1) <= 0 ? 1 : (item.quantity ?? 1);
 
       // per-unit price: pehle product detail se, warna line subTotal se nikaalo
@@ -231,8 +253,10 @@ class CartController extends GetxController {
 
       viewItems.add(
         HomeDealOfTheDayModel(
-          id: item.id ?? item.productId ?? 0,
-          name: product?.name ?? 'Product #${item.productId ?? ''}',
+          id: item.productId ?? item.id ?? 0,
+          name: (product?.name ?? '').isNotEmpty
+              ? product!.name!
+              : 'Product #${item.productId ?? ''}',
           image: product?.thumbnail?.url ?? '',
           byWhom: 'Qty: $qty',
           discount: discountLabel,

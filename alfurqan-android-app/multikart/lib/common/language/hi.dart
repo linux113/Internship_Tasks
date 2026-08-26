@@ -109,7 +109,7 @@ final dynamic hi = {
   'upto 50% off': "50% तक की छूट",
   "categories": "श्रेणियाँ",
   "myCart": "शॉपिंग कार्ट",
-  "shoppingCart": "आपकी इच्छा सूची (3)",
+  "shoppingCart": "आपकी इच्छा सूची",
   "steps": "कदम 1 का 3",
 
   //drawer font

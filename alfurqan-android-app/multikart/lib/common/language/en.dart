@@ -108,7 +108,7 @@ final dynamic en = {
   'upto 50% off': "upto 50% off",
   "categories": "Categories",
   "myCart": "Shopping Cart",
-  "shoppingCart": "Your Wishlist (3)",
+  "shoppingCart": "Your Wishlist",
   "steps": "step 1 of 3",
 
   //drawer font

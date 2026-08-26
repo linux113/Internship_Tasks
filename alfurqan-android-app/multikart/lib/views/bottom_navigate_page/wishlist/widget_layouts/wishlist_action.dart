@@ -20,7 +20,11 @@ class WishListAction extends StatelessWidget {
             ),
             const Space(0, 10),
             ActionLayout(firstActionIcon:  BuyIcon(color: appCtrl.appTheme.blackColor)
-                .height(AppScreenUtil().screenHeight(14)),firstActionName: CommonTextFont().addToCart,secondAction: CommonTextFont().remove,firstActionTap: firstActionTap,secondActionTap: firstActionTap,)
+                .height(AppScreenUtil().screenHeight(14)),firstActionName: CommonTextFont().addToCart,secondAction: CommonTextFont().remove,firstActionTap: firstActionTap,
+              // FIX: pehle yaha copy-paste bug tha — Remove button bhi
+              // firstActionTap (Add to Cart) chala raha tha, isliye wishlist
+              // se Remove kaam hi nahi karta tha.
+              secondActionTap: secondActionTap,)
           ],
         );
       }

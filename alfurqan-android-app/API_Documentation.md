@@ -166,3 +166,18 @@
 - Cart: fake "Qty 1 / Size S" dropdowns hide (books ke liye meaningless),
   "Move to wishlist" ab real save karta hai, "You May also Like" ab demo
   fashion ki jagah REAL books dikhata hai (tap se real detail khulta hai).
+
+## 2026-08-26 (v1.0.5+6) FK fix + wishlist remove + cart enrichment
+
+- AddAddress country source BADLI: ab `api/Core/GetAllCountry` (api namespace,
+  wahi Core_Countries DB table) se aati hai. Pehle `web/CoreFront/GetAllCountryFront`
+  ke ids DB table se match nahi karte the — isliye INSERT par
+  "FK_Addresses_Core_Countries_CountryId" error aati thi. States bhi
+  `api/Core/GetStates` (dono live verify kiye).
+- Wishlist Remove button ka copy-paste bug fix (Remove ab bhi Add-to-Cart
+  trigger karta tha). Title ka count dynamic "Your Wishlist (N)".
+- Cart items jinme GetCart product detail nahi bhejta ("Product #264" + khali
+  image) — ab app ke loaded product pools se naam/image/price bharte hai.
+- Cart item ka id ab PRODUCT id hai (pehle cart-row id thi — Move-to-wishlist
+  galat id save karta tha).
+- DB/.NET raw errors user ko nahi dikhte — friendly toast.

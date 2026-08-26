@@ -107,7 +107,7 @@ final dynamic kr = {
   'upto 50% off': "최대 50% 할인",
   "categories": "카테고리",
   "myCart": "쇼핑 카트",
-  "shoppingCart": "위시리스트 (3)",
+  "shoppingCart": "위시리스트",
   "steps": "3단계 중 1단계",
 
   //drawer font

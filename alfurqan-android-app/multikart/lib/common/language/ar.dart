@@ -108,7 +108,7 @@ final dynamic ar = {
   'upto 50% off': "خصم بنسبة تصل إلى 50",
   "categories": "فئات",
   "myCart": "عربة التسوق",
-  "shoppingCart": "قائمة الرغبات الخاصة بك (3)",
+  "shoppingCart": "قائمة الرغبات الخاصة بك",
   "steps": "الخطوة 1 من 3",
 
   //drawer font
