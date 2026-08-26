@@ -8,7 +8,11 @@ class DealsOfTheDayContent extends StatelessWidget {
   final bool isActionShow;
   final GestureTapCallback? firstActionTap;
   final GestureTapCallback? secondActionTap;
-  const DealsOfTheDayContent({Key? key, this.data, this.isVariantsShow = false,this.isActionShow = false,this.firstActionTap,this.secondActionTap})
+
+  /// false karne par fake "Qty 1 / Size S" dropdowns hide (books store).
+  final bool showVariantOptions;
+
+  const DealsOfTheDayContent({Key? key, this.data, this.isVariantsShow = false,this.isActionShow = false,this.firstActionTap,this.secondActionTap,this.showVariantOptions = true})
       : super(key: key);
 
   @override
@@ -61,7 +65,7 @@ class DealsOfTheDayContent extends StatelessWidget {
             ],
           ),
           const Space(0, 10),
-          if (isVariantsShow)  Variants(firstActionTap: firstActionTap,secondActionTap: secondActionTap,),
+          if (isVariantsShow)  Variants(firstActionTap: firstActionTap,secondActionTap: secondActionTap,showVariantOptions: showVariantOptions,),
           if (isActionShow)
              WishListAction(firstActionTap: firstActionTap,secondActionTap: secondActionTap,)
         ],

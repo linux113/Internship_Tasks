@@ -210,29 +210,37 @@ class AddAddressController extends GetxController {
 
     bool savedOnServer = false;
     String message = 'Address added successfully';
-    try {
-      final res = await ApiService().request(
-        endpoint: ApiEndpoints.addAddress,
-        method: ApiMethod.post,
-        data: address.toPostJson(),
-        fromJson: (json) => json,
-      );
-      savedOnServer = res.isSuccess;
-      if (res.message.isNotEmpty) message = res.message;
-      if (!savedOnServer && res.code == 401) {
-        isSaving = false;
-        update();
-        socialLoginToast('Please login to add address');
-        Get.toNamed(routeName.login);
-        return;
-      }
-      // response se naya address id mil jaye to use karo
-      if (res.data is Map) {
-        final map = Map<String, dynamic>.from(res.data as Map);
-        final newId = map['id'];
-        if (newId is num) address.id = newId.toInt();
-      }
-    } catch (_) {}
+    // Backend ka AutoMapper kabhi-kabhi nested `state` object ko map nahi
+    // kar pata ("Missing type map configuration... Destination Member: State"
+    // wali error). Isliye 3 payload variants try karte hai:
+    //  1) curl-exact (state+country objects)
+    //  2) state object null (scalar stateName/state_id + country object)
+    //  3) state aur country dono null
+    for (var variant = 1; variant <= 3 && !savedOnServer; variant++) {
+      try {
+        final res = await ApiService().request(
+          endpoint: ApiEndpoints.addAddress,
+          method: ApiMethod.post,
+          data: address.toPostJson(variant: variant),
+          fromJson: (json) => json,
+        );
+        savedOnServer = res.isSuccess;
+        if (res.message.isNotEmpty) message = res.message;
+        if (!savedOnServer && res.code == 401) {
+          isSaving = false;
+          update();
+          socialLoginToast('Please login to add address');
+          Get.toNamed(routeName.login);
+          return;
+        }
+        if (savedOnServer && res.data is Map) {
+          final map = Map<String, dynamic>.from(res.data as Map);
+          final newId = map['id'];
+          if (newId is num) address.id = newId.toInt();
+        }
+        // AutoMapper wali error aayi to agla variant try karo (loop chalta rahega)
+      } catch (_) {}
+    }
 
     if (!savedOnServer) {
       isSaving = false;

@@ -151,3 +151,18 @@
   HIDE kar deta hai. Backend me sahi rate (GBP ~0.20, EUR ~0.23) daalne par wo
   khud show ho jayenge.
 - "EUR " code me trailing space hai — app trim karta hai.
+
+## 2026-08-26 (v1.0.4+5) Address AutoMapper fix + detail wishlist + cart cleanup
+
+- AddAddress POST: backend (.NET AutoMapper) nested `state` object ko map nahi
+  kar pa raha tha — error "Missing type map configuration... StateDto -> State,
+  Destination Member: State". Ab app 3 payload variants try karti hai:
+  (1) curl-exact, (2) state:null (scalar stateName/state_id + country object),
+  (3) state+country dono null. Jo pehle success ho wahi use hota hai.
+  (Backend me StateDto->State ka CreateMap add kar doge to variant 1 hi chalega.)
+- Product DETAIL page ka WISHLIST button pehle sirf wishlist tab kholta tha,
+  product SAVE nahi karta tha — ab pehle save hota hai (local+server) phir
+  wishlist tab khulti hai.
+- Cart: fake "Qty 1 / Size S" dropdowns hide (books ke liye meaningless),
+  "Move to wishlist" ab real save karta hai, "You May also Like" ab demo
+  fashion ki jagah REAL books dikhata hai (tap se real detail khulta hai).

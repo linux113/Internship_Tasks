@@ -19,16 +19,40 @@ class SimilarProductLayout extends StatelessWidget {
             isFit: true,
             isDiscountShow: false,
             index: e.key,
-            // similar card tap -> usi real product ka detail khule
+            // similar card tap -> usi real product ka detail khule.
+            // FIX: pehle sirf detail-page ki similarApiProducts list dekhta
+            // tha — cart page par ye list alag hoti hai isliye galat/demo
+            // detail khulta tha. Ab pehle ID se match dhundhte hai, na mile
+            // to home controller ke api products me id se kholte hai.
             onTap: () {
+              final int cardId = data![e.key].id;
               ProductApiModel? api;
               if (Get.isRegistered<ProductDetailController>()) {
                 final pc = Get.find<ProductDetailController>();
-                if (e.key < pc.similarApiProducts.length) {
-                  api = pc.similarApiProducts[e.key];
+                for (final p in pc.similarApiProducts) {
+                  if (p.id == cardId) {
+                    api = p;
+                    break;
+                  }
                 }
               }
-              Get.find<AppController>().goToProductDetail(arguments: api);
+              if (api == null && Get.isRegistered<HomeController>()) {
+                final home = Get.find<HomeController>();
+                for (final p in [
+                  ...home.homeApiProductsAll,
+                  ...home.newestApiProducts
+                ]) {
+                  if (p.id == cardId) {
+                    api = p;
+                    break;
+                  }
+                }
+              }
+              if (api != null) {
+                Get.find<AppController>().goToProductDetail(arguments: api);
+              } else if (Get.isRegistered<HomeController>()) {
+                Get.find<HomeController>().openProductById(cardId);
+              }
             },
           ).paddingOnly(right: AppScreenUtil().screenWidth(10));
         }).toList(),

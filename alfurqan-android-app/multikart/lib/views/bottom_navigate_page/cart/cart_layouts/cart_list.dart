@@ -45,10 +45,11 @@ class CartList extends StatelessWidget {
                                         data: e.value,
                                         isVariantsShow: true,
                                         isActionShow: false,
-                                        firstActionTap: () {
-                                          cartCtrl.bottomSheetLayout(
-                                              CommonTextFont().moveToWishList);
-                                        },
+                                        // books me Size/Qty dropdown fake lagta tha — hide kar diya
+                                        showVariantOptions: false,
+                                        // "Move to wishlist" AB REAL save hota hai
+                                        firstActionTap: () =>
+                                            cartCtrl.moveToWishlist(e.value),
                                         secondActionTap: () =>
                                             cartCtrl.bottomSheetLayout(
                                                 CommonTextFont().remove))

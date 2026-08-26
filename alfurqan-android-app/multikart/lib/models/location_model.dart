@@ -192,21 +192,41 @@ class AddressModel {
       };
 
   /// Location/AddAddress POST body (user ke curl ke mutabik).
-  Map<String, dynamic> toPostJson() => {
-        'id': 0,
-        'city': city ?? '',
-        'stateName': stateName ?? state?.name ?? '',
-        'phone': int.tryParse((phone ?? '').replaceAll(RegExp('[^0-9]'), '')) ?? 0,
-        'state': state?.toPostJson(
-                countryId: country?.id, countryName: country?.name) ??
-            {'id': 0, 'name': stateName ?? '', 'countryId': country?.id ?? 0, 'country': country?.name ?? ''},
-        'title': title ?? 'Home',
-        'street': street ?? '',
-        'country': country?.toPostJson() ?? {},
-        'pincode': pincode ?? '',
-        'user_id': userId ?? 0,
-        'state_id': state?.id ?? 0,
-      };
+  ///
+  /// [variant]:
+  ///  1 = FULL (curl-exact: state object + country object)
+  ///  2 = state object ko `null` bhejo — backend (ASP.NET) ka AutoMapper
+  ///      "StateDto -> State" nested-object mapping nahi kar pa raha tha
+  ///      aur error deta tha: "Missing type map configuration...
+  ///      Destination Member: State". state_name + state_id scalar fields
+  ///      me hi poori info jaati hai, country object bhi pass karte hai.
+  ///  3 = state aur country DONO null (sabse safe; sirf scalar fields).
+  Map<String, dynamic> toPostJson({int variant = 1}) {
+    final body = <String, dynamic>{
+      'id': 0,
+      'city': city ?? '',
+      'stateName': stateName ?? state?.name ?? '',
+      'phone': int.tryParse((phone ?? '').replaceAll(RegExp('[^0-9]'), '')) ?? 0,
+      'title': title ?? 'Home',
+      'street': street ?? '',
+      'pincode': pincode ?? '',
+      'user_id': userId ?? 0,
+      'state_id': state?.id ?? 0,
+    };
+    if (variant >= 3) {
+      body['state'] = null;
+      body['country'] = null;
+    } else if (variant == 2) {
+      body['state'] = null;
+      body['country'] = country?.toPostJson() ?? {};
+    } else {
+      body['state'] = state?.toPostJson(
+              countryId: country?.id, countryName: country?.name) ??
+          {'id': 0, 'name': stateName ?? '', 'countryId': country?.id ?? 0, 'country': country?.name ?? ''};
+      body['country'] = country?.toPostJson() ?? {};
+    }
+    return body;
+  }
 
   /// Saved-address list (SaveAddress page ke AddressList display model) ke liye.
   AddressList toAddressListDisplay() {

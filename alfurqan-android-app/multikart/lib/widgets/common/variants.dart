@@ -6,13 +6,18 @@ class Variants extends StatelessWidget {
   final GestureTapCallback? firstActionTap;
   final GestureTapCallback? secondActionTap;
 
+  /// Books store me Size/Qty ka matlab nahi — fake "Qty 1 / Size S"
+  /// dropdowns hide karne ke liye false karo (actions row bhi rehti hai).
+  final bool showVariantOptions;
+
   const Variants(
       {Key? key,
       this.sizeTap,
       this.qtyTap,
       this.isActionShow = false,
       this.firstActionTap,
-      this.secondActionTap})
+      this.secondActionTap,
+      this.showVariantOptions = true})
       : super(key: key);
 
   @override
@@ -21,20 +26,22 @@ class Variants extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              VariantOptions(
-                text: "${CommonTextFont().qty} 1",
-                onTap: qtyTap,
-              ),
-              const Space(15, 0),
-              VariantOptions(
-                text: "${CommonTextFont().size} S",
-                onTap: sizeTap,
-              ),
-            ],
-          ),
-          const Space(0, 15),
+          if (showVariantOptions) ...[
+            Row(
+              children: [
+                VariantOptions(
+                  text: "${CommonTextFont().qty} 1",
+                  onTap: qtyTap,
+                ),
+                const Space(15, 0),
+                VariantOptions(
+                  text: "${CommonTextFont().size} S",
+                  onTap: sizeTap,
+                ),
+              ],
+            ),
+            const Space(0, 15),
+          ],
           Container(
             height: AppScreenUtil().screenHeight(0.5),
             color: appCtrl.appTheme.lightGray,

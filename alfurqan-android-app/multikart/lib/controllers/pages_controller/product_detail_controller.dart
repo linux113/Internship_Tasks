@@ -3,6 +3,7 @@ import '../../models/product_api_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../home_product_controllers/cart_controller.dart';
+import '../home_product_controllers/wishlist_controller.dart';
 
 class ProductDetailController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -114,6 +115,48 @@ class ProductDetailController extends GetxController {
         update();
       }
     }
+  }
+
+  /// Detail page ka WISHLIST button — pehle SIRF wishlist tab par le jata
+  /// tha, product save hi nahi hota tha (isliye wishlist page khaali dikhti
+  /// thi). Ab product pehle wishlist me SAVE hota hai (local + logged-in ho
+  /// to server par bhi), phir wishlist tab khulti hai — waha item dikhega.
+  Future<void> addToWishlistAndOpen() async {
+    final api = apiProduct;
+    if (api != null && api.id != null) {
+      String discountLabel = '';
+      final double price = api.price ?? 0;
+      final double selling = api.finalPrice;
+      if (price > 0 && selling > 0 && selling < price) {
+        discountLabel =
+            '${(((price - selling) / price) * 100).round()}%';
+      }
+      await WishlistController.saveWishlistItem(
+        HomeDealOfTheDayModel(
+          id: api.id!,
+          name: api.name ?? '',
+          image: api.thumbnail?.url ?? '',
+          byWhom: 'مكتبة الفرقان',
+          discount: discountLabel,
+          isFav: true,
+          mrp: selling, // selling (bold)
+          totalPrice: price, // original (struck)
+          isTrending: false,
+        ),
+      );
+      if (Get.isRegistered<WishlistController>()) {
+        Get.find<WishlistController>().refreshFromStorage();
+      }
+      snackBar('Added to wishlist');
+    }
+    // wishlist tab khol do (purana behavior) — ab waha item bhi milega
+    appCtrl.isShimmer = true;
+    appCtrl.selectedIndex = 3;
+    appCtrl.goToHome();
+    Get.toNamed(routeName.dashboard);
+    await Future.delayed(DurationsClass.s1);
+    appCtrl.isShimmer = false;
+    Get.forceAppUpdate();
   }
 
   //on quantity increase

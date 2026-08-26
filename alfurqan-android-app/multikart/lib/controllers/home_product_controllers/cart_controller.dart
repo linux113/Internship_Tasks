@@ -1,8 +1,11 @@
 import 'package:multikart/models/cart_api_model.dart';
+import 'package:multikart/models/product_api_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
 
 import '../../config.dart';
+import 'home_controller.dart';
+import 'wishlist_controller.dart';
 
 class CartController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -22,12 +25,72 @@ class CartController extends GetxController {
     // Pehle yaha static demo cartList dikhti thi — ab seedha real
     // api (Cart/GetCart) ka data dikhayenge. Jab tak response nahi
     // aata, shimmer dikhate hai.
-    similarList = AppArray().similarProductList;
     appCtrl.isShimmer = true;
     appCtrl.update();
     update();
     getCart();
+    loadSimilarProducts();
     super.onReady();
+  }
+
+  /// "You May also Like" — pehle DEMO fashion products (Blue Denim Jacket /
+  /// Party Wear Jumpshuit) dikhte the. Ab REAL products: pehle home ke loaded
+  /// api products se, warna newest products api se.
+  Future<void> loadSimilarProducts() async {
+    List<ProductApiModel> pool = [];
+    if (Get.isRegistered<HomeController>()) {
+      final home = Get.find<HomeController>();
+      pool = [...home.homeApiProductsAll, ...home.newestApiProducts];
+    }
+    if (pool.isEmpty) {
+      try {
+        final res = await ApiService().request<ProductListResponseModel>(
+          endpoint: ApiEndpoints.productList,
+          method: ApiMethod.get,
+          queryParams: {
+            "page": 1,
+            "paginate": 8,
+            "status": 1,
+            "field": "created_at",
+            "price": "",
+            "category": "",
+            "tag": "",
+            "sort": "desc",
+            "sortBy": "desc",
+            "rating": "",
+            "attribute": "",
+          },
+          fromJson: (json) => ProductListResponseModel.fromJson(json),
+        );
+        if (res.isSuccess && res.data != null) pool = res.data!.data;
+      } catch (_) {}
+    }
+    // cart me jo already items hai unhe suggestions se hata do
+    final cartIds = (cartModelList?.cartList ?? [])
+        .map((e) => e.id)
+        .toSet();
+    final seen = <int>{};
+    final suggestions = <ProductApiModel>[];
+    for (final p in pool) {
+      if (p.id == null || cartIds.contains(p.id) || !seen.add(p.id!)) continue;
+      suggestions.add(p);
+      if (suggestions.length >= 8) break;
+    }
+    if (suggestions.isNotEmpty) {
+      similarList = suggestions.map((e) => e.toFindStyleModel()).toList();
+      update();
+    }
+  }
+
+  /// Cart item ka "Move to wishlist" — ab asli wishlist me save hota hai
+  /// (local + logged-in ho to server par bhi), sirf bottomsheet text nahi.
+  Future<void> moveToWishlist(HomeDealOfTheDayModel? item) async {
+    if (item == null || item.id == 0) return;
+    await WishlistController.saveWishlistItem(item);
+    if (Get.isRegistered<WishlistController>()) {
+      Get.find<WishlistController>().refreshFromStorage();
+    }
+    snackBar(CommonTextFont().moveToWishList);
   }
 
   /// Static demo cart (`cartList` from cart_array) ke instruction

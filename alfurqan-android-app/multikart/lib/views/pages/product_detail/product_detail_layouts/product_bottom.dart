@@ -28,15 +28,10 @@ class ProductBottom extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 InkWell(
-                  onTap: ()async{
-                    appCtrl.isShimmer = true;
-                    appCtrl.selectedIndex = 3;
-                    appCtrl.goToHome();
-                    Get.toNamed(routeName.dashboard);
-                    await Future.delayed(DurationsClass.s1);
-                    appCtrl.isShimmer = false;
-                    Get.forceAppUpdate();
-                  },
+                  // FIX: pehle sirf wishlist tab khulti thi, product SAVE nahi
+                  // hota tha — ab pehle save hota hai phir wishlist khulti hai.
+                  onTap: () => Get.find<ProductDetailController>()
+                      .addToWishlistAndOpen(),
                   child: Row(
                     children: [
                       HeartIcon(

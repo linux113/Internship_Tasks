@@ -13,15 +13,18 @@ class CartBody extends StatelessWidget {
               //cart list layout
               if (cartCtrl.cartModelList != null) const CartList(),
 
-              //you may also like layout
-              ProductDetailWidget().commonText(
-                  text: CartFont().youMayAlsoLike,
-                  fontSize: FontSizes.f14),
+              //you may also like layout — REAL products (demo fashion nahi);
+              //koi real suggestion na ho to section hi hide
+              if (cartCtrl.similarList.isNotEmpty) ...[
+                ProductDetailWidget().commonText(
+                    text: CartFont().youMayAlsoLike,
+                    fontSize: FontSizes.f14),
 
-              //similar product layout
-              SimilarProductLayout(
-                  data: cartCtrl.similarList, bottom: 30),
-              const BorderLineLayout(),
+                //similar product layout
+                SimilarProductLayout(
+                    data: cartCtrl.similarList, bottom: 30),
+                const BorderLineLayout(),
+              ],
 
               //coupon text layout
               ProductDetailWidget().commonText(
