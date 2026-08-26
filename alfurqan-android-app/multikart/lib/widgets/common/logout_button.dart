@@ -20,6 +20,8 @@ class LogoutButton extends StatelessWidget {
                 if (Get.isRegistered<CartController>()) {
                   Get.delete<CartController>(force: true);
                 }
+                // server wishlist ki static cache (entry-id map) bhi saaf karo
+                WishlistController.clearServerCache();
                 if (Get.isRegistered<WishlistController>()) {
                   Get.delete<WishlistController>(force: true);
                 }

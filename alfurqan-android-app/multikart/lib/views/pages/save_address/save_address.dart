@@ -31,6 +31,19 @@ class SaveAddress extends StatelessWidget {
 
                       if (saveAddressCtrl.deliveryDetail != null)
                         const SaveAddressList(),
+                      // koi address save nahi hai to saaf message demo data ki jagah
+                      if (saveAddressCtrl.deliveryDetail == null)
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: AppScreenUtil().screenWidth(15),
+                              vertical: AppScreenUtil().screenHeight(25)),
+                          child: LatoFontStyle(
+                            text: "No saved addresses yet. Add your delivery address here.",
+                            fontSize: FontSizes.f14,
+                            color: saveAddressCtrl.appCtrl.appTheme.contentColor,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       //add new address button layout
                       const AddAddressButton(),
                     ],

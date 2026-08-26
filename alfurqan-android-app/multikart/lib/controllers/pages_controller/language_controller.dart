@@ -73,7 +73,9 @@ class LanguageController extends GetxController {
     homeController.getData();
     homeController.offerCornerList = AppArray().offerCornerList;
     categoryCtrl.getData();
-    saveAddressCtrl.deliveryDetail = deliveryDetailArray;
+    // addresses language change par dobara demo se NAHI bharte — real
+    // saved addresses local store se hi dobara load karo.
+    saveAddressCtrl.refreshList();
     homeController.update();
     Get.forceAppUpdate();
     pageCtrl.update();

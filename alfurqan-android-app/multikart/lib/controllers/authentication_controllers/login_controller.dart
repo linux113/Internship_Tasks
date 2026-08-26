@@ -2,6 +2,7 @@ import 'package:multikart/config.dart';
 import 'package:multikart/models/login_response_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
+import 'package:multikart/controllers/home_product_controllers/wishlist_controller.dart';
 
 class LoginController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -63,6 +64,11 @@ class LoginController extends GetxController {
       if (Get.isRegistered<ProfileController>()) {
         Get.find<ProfileController>().loadUserData();
       }
+
+      // login ke baad SERVER wishlist sync ho jaye (background) — is user ki
+      // wishlist server se aake local me mil jayegi.
+      // ignore: unawaited_futures
+      WishlistController.ensureServerSync();
 
       socialLoginCtrl.showToast(res.message.isNotEmpty ? res.message : 'Login successful');
       // FIX: Get.toNamed se login page stack me pada rehta tha — back dabane

@@ -118,3 +118,36 @@
   hai. Login sirf Add-to-Cart jaise protected action par ya Profile > SIGN IN se.
   Ek baar login karne ke baad app band karke kholne par bhi session bana rehta hai.
   Profile tab guest ko "Guest" + SIGN IN chip dikhata hai.
+
+## 2026-08-26 (v1.0.3+4) Wishlist + Address + Currency REAL APIs
+
+### Ab live wired APIs
+| Kaam | API | Note |
+|---|---|---|
+| Countries (+ states inside) | GET web/CoreFront/GetAllCountryFront | country object ke andar hi `state[]` aata hai — country select karte hi states mil jate hai |
+| States (saare) | GET web/CoreFront/GetStatesFront | fallback/complete list (client-side country_id se filter hota) |
+| Currencies | GET web/CoreFront/GetAllCurrenciesFront | data.data list; code/symbol/exchange_rate |
+| Address save | POST api/Location/AddAddress | LOGIN zaroori; body me poora country object + state object + user_id; CITY = TEXT input (web jaisa hi) |
+| Wishlist add | POST api/Wishlist/AddToWishlist | body {id:0, consumer_id, product_id} |
+| Wishlist get | GET api/Wishlist/GetWishlist | login ke baad sync — server list source-of-truth |
+| Wishlist delete | DELETE api/Wishlist/DeleteWishlist?id=ENTRY_ID | NOTE: `id` = wishlist ENTRY id (product id nahi) |
+
+### Behavior
+- Guest: wishlist local device me save hoti hai (jaisa pehle). Login karte hi
+  guest-local items pehle server par PUSH hote hai, phir server list se merge.
+- Heart tap: local turant (UI fast) + background me server add/delete sync.
+- Address form: Country dropdown (default UAE) -> State dropdown (us country ki
+  states) -> City TEXT field. Save = POST + local copy (Saved Address page aur
+  Checkout address step dono me dikhta hai). Guest save dabata hai to pehle
+  login page khulta hai.
+- Currency selector ab API se: AED (base, rate 1), INR (~27), USD.
+
+### Backend data issues (inhe backend me theek karna hoga)
+- USD ka exchange_rate 3.65 hai (= 1 USD kitne AED, UAE peg) — INVERTED stored
+  hai. App isko auto-correct (1/3.65) karke dikhata hai, par behtar hai backend
+  me USD rate 0.27 kar do.
+- GBP aur EUR ka exchange_rate 0.01 hai — placeholder/galat. Itne chhote rate
+  par price galat (65 AED -> £0.65) dikhti, isliye app abhi GBP/EUR ko list se
+  HIDE kar deta hai. Backend me sahi rate (GBP ~0.20, EUR ~0.23) daalne par wo
+  khud show ho jayenge.
+- "EUR " code me trailing space hai — app trim karta hai.

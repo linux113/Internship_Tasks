@@ -39,12 +39,13 @@ class AddAddress extends StatelessWidget {
                   ],
                 ).marginOnly(bottom: AppScreenUtil().screenHeight(100)),
               ),
-              //reset and add address layout
+              //reset and add address layout — SAVE ab real POST
+              // (Location/AddAddress) karta hai; guest ko pehle login pe le jaayega
               BottomLayout(
                 firstButtonText: DeliveryDetailFont().reset,
                 secondButtonText: DeliveryDetailFont().addAddress,
                 firstTap: ()=>Get.back(),
-                secondTap: ()=>Get.back(),
+                secondTap: ()=>addAddressCtrl.saveAddress(),
               )
             ],
           ),

@@ -27,8 +27,9 @@ class CurrencyBottomSheet extends StatelessWidget {
               ),
               const Space(0, 20),
 
-              //language list
-              ...AppArray().currencyList.map((e) {
+              //currency list — ab API (GetAllCurrenciesFront) se aati real
+              // currencies (USD/INR/AED...), fallback static list
+              ...currencyCtrl.currencyList.map((e) {
                 return Padding(
                   padding: EdgeInsets.symmetric(
                       vertical: AppScreenUtil().screenHeight(10)),

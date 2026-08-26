@@ -44,16 +44,27 @@ class CountryTextBox extends StatelessWidget {
                   )),
               child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                      value: addAddressCtrl.countrySelectedValue,
+                      value: addAddressCtrl.countryNames
+                              .contains(addAddressCtrl.countrySelectedValue)
+                          ? addAddressCtrl.countrySelectedValue
+                          : null,
+                      hint: Text(
+                          addAddressCtrl.isLoading
+                              ? "Loading countries..."
+                              : DeliveryDetailFont().selectCountry,
+                          style: TextStyle(
+                              fontFamily: GoogleFonts.lato().fontFamily)),
                       isDense: true,
                       isExpanded: true,
                       icon: Icon(Icons.keyboard_arrow_down,
                           color: addAddressCtrl.appCtrl.appTheme.borderColor),
                       onChanged: (String? newValue) {
-                        addAddressCtrl.countrySelectedValue = newValue!;
-                        addAddressCtrl.update();
+                        // country select -> uski states apne aap load ho jayengi
+                        if (newValue != null) {
+                          addAddressCtrl.onCountrySelected(newValue);
+                        }
                       },
-                      items: addAddressCtrl.country.map((String value) {
+                      items: addAddressCtrl.countryNames.map((String value) {
                         return DropdownMenuItem<String>(
                             value: value, child: Text(value,style: TextStyle(fontFamily: GoogleFonts.lato().fontFamily),));
                       }).toList())));

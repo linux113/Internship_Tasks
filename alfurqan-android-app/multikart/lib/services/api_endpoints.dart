@@ -16,6 +16,19 @@ class ApiEndpoints {
   static const String addToCart = 'Cart/AddToCart';
   static const String getCart = 'Cart/GetCart';
 
+  // ---------------- Location (countries/states) — full web urls ----------------
+  static const String countries = 'https://alfurqan.ae/web/CoreFront/GetAllCountryFront';
+  static const String states = 'https://alfurqan.ae/web/CoreFront/GetStatesFront';
+  static const String currencies = 'https://alfurqan.ae/web/CoreFront/GetAllCurrenciesFront';
+
+  // ---------------- Address (login ke baad — POST me user_id bhejna zaroori) ----------------
+  static const String addAddress = 'Location/AddAddress';
+
+  // ---------------- Wishlist (login ke baad) ----------------
+  static const String addToWishlist = 'Wishlist/AddToWishlist';
+  static const String getWishlist = 'Wishlist/GetWishlist';
+  static const String deleteWishlist = 'Wishlist/DeleteWishlist';
+
   // Aage jitni bhi api dogi, unhe yaha isi tarah add karte jayenge, e.g:
   // static const String forgotPassword = 'Core/ForgotPassword';
 }

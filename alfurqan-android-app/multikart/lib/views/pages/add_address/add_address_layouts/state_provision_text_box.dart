@@ -45,7 +45,16 @@ class StateProvisionTextBox extends StatelessWidget {
                     )),
                 child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                  value: addAddressCtrl.stateSelectedValue,
+                  value: addAddressCtrl.stateNames
+                          .contains(addAddressCtrl.stateSelectedValue)
+                      ? addAddressCtrl.stateSelectedValue
+                      : null,
+                  hint: Text(
+                      addAddressCtrl.stateNames.isEmpty
+                          ? "Select country first"
+                          : DeliveryDetailFont().selectState,
+                      style:
+                          TextStyle(fontFamily: GoogleFonts.lato().fontFamily)),
                   isDense: true,
                   isExpanded: true,
                   icon: Icon(
@@ -53,10 +62,11 @@ class StateProvisionTextBox extends StatelessWidget {
                     color: addAddressCtrl.appCtrl.appTheme.borderColor,
                   ),
                   onChanged: (String? newValue) {
-                    addAddressCtrl.stateSelectedValue = newValue!;
-                    addAddressCtrl.update();
+                    if (newValue != null) {
+                      addAddressCtrl.onStateSelected(newValue);
+                    }
                   },
-                  items: addAddressCtrl.state.map((String value) {
+                  items: addAddressCtrl.stateNames.map((String value) {
                     return DropdownMenuItem<String>(
                         value: value, child: Text(value,style: TextStyle(fontFamily: GoogleFonts.lato().fontFamily),));
                   }).toList(),
