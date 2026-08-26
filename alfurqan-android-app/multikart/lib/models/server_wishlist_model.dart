@@ -35,13 +35,28 @@ class ServerWishlistItem {
   factory ServerWishlistItem.fromJson(Map<String, dynamic> json) {
     // product nested object dhoondo (alag-alag possible keys)
     Map<String, dynamic>? p;
+    bool hasNestedProduct = false;
     for (final key in const ['products', 'product', 'Product', 'Products']) {
       if (json[key] is Map) {
         p = Map<String, dynamic>.from(json[key] as Map);
+        hasNestedProduct = true;
         break;
       }
     }
     p ??= json; // flat shape ho to item hi product hai
+
+    // PRODUCT ID: hamesha pehle entry-level `product_id` lo. Nested product
+    // object ka `id` SIRF tab lo jab wo sach me alag nested map ho —
+    // warna p=json fallback me WISHLIST ENTRY ki id product id ban jati thi
+    // aur remove karte waqt galat/multiple items hat jaate the.
+    int? productId = jsonToInt(json['product_id'] ??
+        json['productId'] ??
+        json['Product_Id'] ??
+        json['ProductId'] ??
+        json['ProductID']);
+    if (productId == null && hasNestedProduct) {
+      productId = jsonToInt(p['Id'] ?? p['id'] ?? p['product_id'] ?? p['Product_Id']);
+    }
 
     // image: thumbnail/product_thumbnail map ho to uska url nikalo
     String img = '';
@@ -62,13 +77,8 @@ class ServerWishlistItem {
     return ServerWishlistItem(
       wishlistId: jsonToInt(
           json['id'] ?? json['wishlist_id'] ?? json['wishlistId'] ?? json['WishlistId']),
-      productId: jsonToInt(p['Id'] ??
-          p['id'] ??
-          json['product_id'] ??
-          json['productId'] ??
-          json['Product_Id'] ??
-          json['ProductId']),
-      name: jsonToString(p['Name'] ?? p['name'] ?? p['title']),
+      productId: productId,
+      name: jsonToString(p['Name'] ?? p['name'] ?? p['title'] ?? json['name'] ?? json['Name']),
       slug: jsonToString(p['Slug'] ?? p['slug']),
       image: buildMediaUrl(img),
       price: (sale != null && sale > 0 && sale < price) ? sale : price,

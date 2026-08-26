@@ -210,18 +210,19 @@ class AddAddressController extends GetxController {
 
     bool savedOnServer = false;
     String message = 'Address added successfully';
-    // Backend ka AutoMapper kabhi-kabhi nested `state` object ko map nahi
-    // kar pata ("Missing type map configuration... Destination Member: State"
-    // wali error). Isliye 3 payload variants try karte hai:
-    //  1) curl-exact (state+country objects)
-    //  2) state object null (scalar stateName/state_id + country object)
-    //  3) state aur country dono null
+    // Backend ke Addresses table me CountryId/StateId SCALAR foreign keys hai.
+    // Swagger AddressDto aur website ka working curl dono scalar
+    // country_id/state_id bhejte hai — isliye variant 1 = scalar-only
+    // (sabse reliable). AutoMapper nested-object error aaye to 2/3 try hote hai:
+    //  1) state+country objects NULL, sirf scalar ids (FK fix)
+    //  2) scalars + country object (state null — AutoMapper State error se bacho)
+    //  3) scalars + state object + country object (purana curl-exact style)
     for (var variant = 1; variant <= 3 && !savedOnServer; variant++) {
       try {
         final res = await ApiService().request(
           endpoint: ApiEndpoints.addAddress,
           method: ApiMethod.post,
-          data: address.toPostJson(variant: variant),
+          data: address.toPostJson(variant: variant, isDefault: isChecked ? 1 : 0),
           fromJson: (json) => json,
         );
         savedOnServer = res.isSuccess;

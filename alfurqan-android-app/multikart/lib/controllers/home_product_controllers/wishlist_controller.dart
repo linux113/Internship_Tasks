@@ -28,8 +28,10 @@ class WishlistController extends GetxController {
   static const String _prefsKey = 'local_wishlist';
   static final LocalStorage _staticStorage = LocalStorage();
 
-  /// Server-side: productId -> wishlist entry id (delete ke liye).
-  static final Map<int, int> _serverIds = {};
+  /// Server-side: productId -> wishlist entry ids (delete ke liye).
+  /// EK product ke server par DUPLICATE entries ho sakti hai (pehle ke sync
+  /// bug se) — isliye LIST rakhte hai aur remove par SAB delete karte hai.
+  static final Map<int, List<int>> _serverIds = {};
 
   /// Ek baar server se sync ho chuki hai ya nahi.
   static bool _serverSynced = false;
@@ -54,16 +56,24 @@ class WishlistController extends GetxController {
     super.onReady();
   }
 
-  /// Storage se wishlist items lao.
+  /// Storage se wishlist items lao — DUPLICATE id wale items sirf ek baar
+  /// rakho (warna remove ek par saare duplicate saath me hat jaate the).
   static List<HomeDealOfTheDayModel> loadWishlistItems() {
     try {
       final raw = _staticStorage.read(_prefsKey);
       if (raw is String && raw.isNotEmpty) {
         final List list = jsonDecode(raw) as List;
-        return list
-            .map((e) => HomeDealOfTheDayModel.fromJson(
-                Map<String, dynamic>.from(e as Map)))
-            .toList();
+        final seen = <int>{};
+        final items = <HomeDealOfTheDayModel>[];
+        for (final e in list) {
+          if (e is! Map) continue;
+          final item = HomeDealOfTheDayModel.fromJson(
+              Map<String, dynamic>.from(e));
+          if (seen.contains(item.id)) continue; // duplicate skip
+          seen.add(item.id);
+          items.add(item);
+        }
+        return items;
       }
     } catch (_) {}
     return [];
@@ -104,8 +114,21 @@ class WishlistController extends GetxController {
         final localItems = loadWishlistItems();
         final serverProductIds =
             serverItems.map((e) => e.productId).whereType<int>().toSet();
+        // naam bhi match karo (case-insensitive) — purane app version ki
+        // galat-id wali local items dobara server par push na ho.
+        final serverNames = serverItems
+            .map((e) => (e.name ?? '').trim().toLowerCase())
+            .where((e) => e.isNotEmpty)
+            .toSet();
+        // purane version me local item ki id WISHLIST ENTRY id hoti thi —
+        // aise items server par pehle se maujood hai, dobara push mat karo.
+        final serverEntryIds =
+            serverItems.map((e) => e.wishlistId).whereType<int>().toSet();
         final localOnly = localItems
-            .where((e) => !serverProductIds.contains(e.id))
+            .where((e) =>
+                !serverProductIds.contains(e.id) &&
+                !serverEntryIds.contains(e.id) &&
+                !serverNames.contains((e.name ?? '').trim().toLowerCase()))
             .toList();
         if (localOnly.isNotEmpty) {
           for (final item in localOnly) {
@@ -135,14 +158,49 @@ class WishlistController extends GetxController {
           } catch (_) {}
         }
 
-        _serverIds
-          ..clear()
-          ..addEntries(serverItems
-              .where((e) => e.productId != null && e.wishlistId != null)
-              .map((e) => MapEntry(e.productId!, e.wishlistId!)));
+        // productId -> SARI entry ids (duplicates samet) — delete ke kaam aayegi.
+        _serverIds.clear();
+        for (final e in serverItems) {
+          if (e.productId == null || e.wishlistId == null) continue;
+          _serverIds.putIfAbsent(e.productId!, () => []).add(e.wishlistId!);
+        }
+
+        // Display ke liye productId se DEDUPE — server par agar galti se ek
+        // hi product 2-3 baar add ho gaya ho to list me sirf ek baar dikhe.
+        // (Extra duplicate entries server se bhi clean kar dete hai.)
+        final seen = <int>{};
+        final unique = <ServerWishlistItem>[];
+        final duplicateEntryIds = <int>[];
+        for (final e in serverItems) {
+          final pid = e.productId;
+          if (pid != null) {
+            if (seen.contains(pid)) {
+              if (e.wishlistId != null) duplicateEntryIds.add(e.wishlistId!);
+              continue;
+            }
+            seen.add(pid);
+          }
+          unique.add(e);
+        }
+        // background me duplicate server entries delete karo (best effort)
+        for (final entryId in duplicateEntryIds) {
+          try {
+            await ApiService().request(
+              endpoint: ApiEndpoints.deleteWishlist,
+              method: ApiMethod.delete,
+              queryParams: {'id': entryId},
+              fromJson: (json) => json,
+            );
+          } catch (_) {}
+        }
+        // delete hue duplicates ko map se bhi hata do
+        if (duplicateEntryIds.isNotEmpty) {
+          _serverIds.forEach((pid, ids) =>
+              ids.removeWhere((id) => duplicateEntryIds.contains(id)));
+        }
 
         // server ki list ko source-of-truth maano — local me replace kar do.
-        await _saveAll(serverItems.map((e) => e.toDealModel()).toList());
+        await _saveAll(unique.map((e) => e.toDealModel()).toList());
         _serverSynced = true;
 
         if (Get.isRegistered<WishlistController>()) {
@@ -167,6 +225,12 @@ class WishlistController extends GetxController {
     if (!_isLoggedIn) return;
     try {
       await ensureServerSync();
+      // server par pehle se PRESENT ho to dobara add mat karo — warna same
+      // product ki duplicate entries ban jaati hai (fir remove par confusion).
+      if (_serverIds.containsKey(item.id) &&
+          (_serverIds[item.id]?.isNotEmpty ?? false)) {
+        return;
+      }
       final res = await ApiService().request(
         endpoint: ApiEndpoints.addToWishlist,
         method: ApiMethod.post,
@@ -185,7 +249,9 @@ class WishlistController extends GetxController {
     } catch (_) {}
   }
 
-  /// Item remove karo — local turant + logged-in ho to server par bhi.
+  /// Item remove karo — local turant + logged-in ho to server se bhi.
+  /// Server par us product ki SARI entries delete karte hai (duplicates
+  /// samet) — warna sync ke baad wahi item wapas aa jata tha.
   static Future<void> removeWishlistItem(int id) async {
     final items = loadWishlistItems()..removeWhere((e) => e.id == id);
     await _saveAll(items);
@@ -193,16 +259,29 @@ class WishlistController extends GetxController {
     if (!_isLoggedIn) return;
     try {
       await ensureServerSync();
-      final entryId = _serverIds[id];
-      if (entryId == null) return; // server par tha hi nahi
-      final res = await ApiService().request(
-        endpoint: ApiEndpoints.deleteWishlist,
-        method: ApiMethod.delete,
-        queryParams: {'id': entryId},
-        fromJson: (json) => json,
-      );
-      if (res.isSuccess) {
-        _serverIds.remove(id);
+      final entryIds = _serverIds[id];
+      if (entryIds == null || entryIds.isEmpty) return; // server par tha hi nahi
+      bool anyDeleted = false;
+      for (final entryId in List<int>.from(entryIds)) {
+        try {
+          final res = await ApiService().request(
+            endpoint: ApiEndpoints.deleteWishlist,
+            method: ApiMethod.delete,
+            queryParams: {'id': entryId},
+            fromJson: (json) => json,
+          );
+          if (res.isSuccess) {
+            entryIds.remove(entryId);
+            anyDeleted = true;
+          }
+        } catch (_) {}
+      }
+      if (entryIds.isEmpty) _serverIds.remove(id);
+      if (anyDeleted) {
+        // server se fresh list laao taaki UI me koi stale/duplicate item
+        // wapas na dikhe.
+        _serverSynced = false;
+        await ensureServerSync();
       }
     } catch (_) {}
   }

@@ -181,3 +181,37 @@
 - Cart item ka id ab PRODUCT id hai (pehle cart-row id thi — Move-to-wishlist
   galat id save karta tha).
 - DB/.NET raw errors user ko nahi dikhte — friendly toast.
+
+## 2026-08-26 (v1.0.6+7) Address SCALAR country_id fix + wishlist multi-delete fix
+
+### 1) Address save = FOREIGN KEY error — ROOT CAUSE pakda gaya (swagger)
+
+- Live swagger (`https://alfurqan.ae/swagger/v2/swagger.json`) ka **AddressDto**
+  schema dekha: `country_id` aur `state_id` SCALAR fields hai (i32), saath me
+  `is_default` (i32) aur `country_code` (str). Website ka working curl bhi yahi
+  bhejta hai (humara curl doc wahi se truncated tha).
+- Backend ka `Addresses` table FK columns (`CountryId`/`StateId`) INHI scalar
+  fields se bharta hai. Pehle app sirf nested `country`/`state` objects bhejta
+  tha → CountryId=0 insert → DB har baar
+  `FK_Addresses_Core_Countries_CountryId` error deta tha.
+- FIX: har payload variant me scalar `country_id` + `state_id` + `is_default`
+  + `country_code` AB HAMESHA jaata hai; variant 1 = web-exact (objects null,
+  sirf scalars). Purane 2 variants (country object / dono objects) fallback
+  ke roop me bane rahe.
+
+### 2) Wishlist — 1 remove karne par 3 hat jaana — FIX
+
+- Parse bug: `ServerWishlistItem` flat server row me `product_id` ki jagah
+  wishlist ENTRY ka `id` product-id samajh leta tha → list me id collisions /
+  duplicates → `removeWhere(id == ...)` ek saath kai items hata deta tha.
+- FIX: product id ab HAMESHA pehle entry-level `product_id` se aati hai;
+  nested product ka `id` sirf tab jab sach me alag nested object ho.
+- Local list + server list dono productId se DEDUPE hoti hai (ek product ek
+  hi baar dikhega).
+- Server par ek product ki DUPLICATE wishlist entries ho to sync unhe
+  background me clean karti hai; remove par us product ki SARI entries delete
+  hoti hai + fresh server list pull → stale item wapas nahi aata.
+- Save-side guard: jo product server par pehle se wishlisted hai use dobara
+  add nahi karte (duplicates hi nahi bante).
+- Purane version ki galat-id wali local items entryId/naam match karke skip —
+  junk push band.

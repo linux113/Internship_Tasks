@@ -191,17 +191,23 @@ class AddressModel {
         'stateLocal': state?.toLocalJson(),
       };
 
-  /// Location/AddAddress POST body (user ke curl ke mutabik).
+  /// Location/AddAddress POST body (user ke curl + swagger AddressDto ke mutabik).
+  ///
+  /// ROOT-CAUSE FIX (FOREIGN KEY "FK_Addresses_Core_Countries_CountryId"):
+  /// backend ke `Addresses` table me CountryId / StateId SCALAR foreign-key
+  /// columns hote hai. Swagger ka AddressDto bhi scalar `country_id`,
+  /// `state_id`, `is_default`, `country_code` fields maangta hai — aur
+  /// website ka working curl bhi yehi bhejta hai. Pehle hum sirf nested
+  /// objects bhejte the, isliye CountryId=0 insert hota tha aur DB har baar
+  /// FOREIGN KEY error deta tha. Ab scalar ids HAMESHA bhejte hai.
   ///
   /// [variant]:
-  ///  1 = FULL (curl-exact: state object + country object)
-  ///  2 = state object ko `null` bhejo — backend (ASP.NET) ka AutoMapper
-  ///      "StateDto -> State" nested-object mapping nahi kar pa raha tha
-  ///      aur error deta tha: "Missing type map configuration...
-  ///      Destination Member: State". state_name + state_id scalar fields
-  ///      me hi poori info jaati hai, country object bhi pass karte hai.
-  ///  3 = state aur country DONO null (sabse safe; sirf scalar fields).
-  Map<String, dynamic> toPostJson({int variant = 1}) {
+  ///  1 = SCALAR-ONLY (web-exact): state/country objects null, sirf scalar
+  ///      country_id + state_id (FK yahi se banta hai) — sabse reliable.
+  ///  2 = scalars + country object (state null — AutoMapper "StateDto->State"
+  ///      mapping error se bachne ke liye).
+  ///  3 = scalars + state object + country object (purana curl-exact style).
+  Map<String, dynamic> toPostJson({int variant = 1, int isDefault = 0}) {
     final body = <String, dynamic>{
       'id': 0,
       'city': city ?? '',
@@ -211,9 +217,17 @@ class AddressModel {
       'street': street ?? '',
       'pincode': pincode ?? '',
       'user_id': userId ?? 0,
+      // ⭐ scalar FK fields — inke bina INSERT hamesha fail hota tha
       'state_id': state?.id ?? 0,
+      'country_id': country?.id ?? 0,
+      'is_default': isDefault,
+      'country_code': country == null
+          ? ''
+          : ((country!.callingCode ?? '').isNotEmpty
+              ? country!.callingCode!
+              : (country!.iso2 ?? '')),
     };
-    if (variant >= 3) {
+    if (variant == 1) {
       body['state'] = null;
       body['country'] = null;
     } else if (variant == 2) {
