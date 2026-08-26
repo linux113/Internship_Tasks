@@ -126,9 +126,10 @@ class CurrencyController extends GetxController {
 
       currencyList = built;
       // saved currency ab bhi list me hai to usko selected rakho
+      // (CurrencyStore.read() StoredCurrency OBJECT return karta hai, Map nahi)
       final saved = CurrencyStore.read();
       if (saved != null) {
-        final match = built.where((e) => e['code'] == saved['code']);
+        final match = built.where((e) => e['code'] == saved.code);
         currencyVal = match.isNotEmpty ? match.first : built.first;
       }
       update();
