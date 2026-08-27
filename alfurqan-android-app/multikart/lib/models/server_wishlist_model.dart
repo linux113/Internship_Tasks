@@ -8,8 +8,18 @@ import 'json_parse_utils.dart';
 /// Delete ke liye backend ko WISHLIST ENTRY ka `id` chahiye (product_id
 /// nahi) — isliye wishlistId alag se rakhte hai.
 ///
-/// Product ka shape backend ke hisaab se badal sakta hai (lowercase snake_case
-/// ya CAPITALIZED) — sab variants leniently parse kiye gaye hai.
+/// Backend ka row shape pakka nahi hai (snake_case / PascalCase, nested
+/// product object ho ya LIST, ya bilkul na ho) — isliye parser SAB variants
+/// leniently handle karta hai:
+///   - entry id: id / Id / wishlist_id / wishlistId / WishlistId / Wishlist_Id
+///   - product id: PEHLE entry-level product_id variants (ProductId bhi),
+///     phir (agar sach me nested product ho to) nested product ka id.
+///   - nested product: `product`/`products`/`Product`/`Products` — Map ho ya
+///     single-item List, dono chalega.
+///
+/// ⭐ `displayId` (productId ?? wishlistId) HAMESHA unique hota hai taaki
+/// parse miss hone par bhi alag-alag entries kabhi ek id (0) me collapse
+/// na ho jaye (isi wajah se wishlist me sirf EK item dikhta tha).
 /// ---------------------------------------------------------------------------
 class ServerWishlistItem {
   final int? wishlistId;
@@ -32,53 +42,86 @@ class ServerWishlistItem {
     this.rating = 0,
   });
 
+  /// UI/local-store/list me use hone wali UNIQUE id.
+  int get displayId => productId ?? wishlistId ?? 0;
+
   factory ServerWishlistItem.fromJson(Map<String, dynamic> json) {
-    // product nested object dhoondo (alag-alag possible keys)
+    // ---- nested product object dhoondo (Map ya single-item List) ----
     Map<String, dynamic>? p;
     bool hasNestedProduct = false;
     for (final key in const ['products', 'product', 'Product', 'Products']) {
-      if (json[key] is Map) {
-        p = Map<String, dynamic>.from(json[key] as Map);
+      final v = json[key];
+      if (v is Map) {
+        p = Map<String, dynamic>.from(v);
+        hasNestedProduct = true;
+        break;
+      }
+      if (v is List && v.isNotEmpty && v.first is Map) {
+        p = Map<String, dynamic>.from(v.first as Map);
         hasNestedProduct = true;
         break;
       }
     }
-    p ??= json; // flat shape ho to item hi product hai
+    p ??= json; // flat shape ho to row hi product-info ka source hai
 
-    // PRODUCT ID: hamesha pehle entry-level `product_id` lo. Nested product
-    // object ka `id` SIRF tab lo jab wo sach me alag nested map ho —
-    // warna p=json fallback me WISHLIST ENTRY ki id product id ban jati thi
-    // aur remove karte waqt galat/multiple items hat jaate the.
+    // ---- WISHLIST ENTRY id (delete ke liye) ----
+    final wishlistId = jsonToInt(json['id'] ??
+        json['Id'] ??
+        json['ID'] ??
+        json['wishlist_id'] ??
+        json['wishlistId'] ??
+        json['WishlistId'] ??
+        json['Wishlist_Id']);
+
+    // ---- PRODUCT ID: pehle entry-level `product_id` family. Nested product
+    // ka `id` SIRF tab lo jab wo sach me alag nested map ho — warna wishlist
+    // ENTRY ki id product-id ban jati thi aur remove/display sab bigadta tha.
     int? productId = jsonToInt(json['product_id'] ??
         json['productId'] ??
         json['Product_Id'] ??
         json['ProductId'] ??
         json['ProductID']);
     if (productId == null && hasNestedProduct) {
-      productId = jsonToInt(p['Id'] ?? p['id'] ?? p['product_id'] ?? p['Product_Id']);
+      productId = jsonToInt(
+          p['Id'] ?? p['id'] ?? p['product_id'] ?? p['Product_Id'] ?? p['ProductId']);
     }
 
-    // image: thumbnail/product_thumbnail map ho to uska url nikalo
+    // ---- image: nested product me ya row-level, sab keys try karo ----
     String img = '';
-    final thumb = p['thumbnail'] ?? p['product_thumbnail'];
+    final thumb = p['thumbnail'] ?? p['product_thumbnail'] ?? json['thumbnail'];
     if (thumb is Map) {
       img = jsonToString(thumb['asset_url'] ?? thumb['original_url']) ?? '';
     } else {
       img = jsonToString(thumb) ?? '';
     }
     if (img.isEmpty) {
-      img = jsonToString(p['ImageUrl'] ?? p['Image_Url'] ?? p['image']) ?? '';
+      img = jsonToString(p['ImageUrl'] ??
+              p['Image_Url'] ??
+              p['image'] ??
+              p['Image'] ??
+              json['ImageUrl'] ??
+              json['image'] ??
+              json['Image']) ??
+          '';
     }
 
-    final price = jsonToDouble(p['Price'] ?? p['price']) ?? 0;
-    final sale =
-        jsonToDouble(p['DiscountPrice'] ?? p['sale_price'] ?? p['discount_price']);
+    final price =
+        jsonToDouble(p['Price'] ?? p['price'] ?? json['Price'] ?? json['price']) ?? 0;
+    final sale = jsonToDouble(p['DiscountPrice'] ??
+        p['sale_price'] ??
+        p['discount_price'] ??
+        json['DiscountPrice']);
 
     return ServerWishlistItem(
-      wishlistId: jsonToInt(
-          json['id'] ?? json['wishlist_id'] ?? json['wishlistId'] ?? json['WishlistId']),
+      wishlistId: wishlistId,
       productId: productId,
-      name: jsonToString(p['Name'] ?? p['name'] ?? p['title'] ?? json['name'] ?? json['Name']),
+      name: jsonToString(p['Name'] ??
+          p['name'] ??
+          p['title'] ??
+          p['Title'] ??
+          json['name'] ??
+          json['Name'] ??
+          json['title']),
       slug: jsonToString(p['Slug'] ?? p['slug']),
       image: buildMediaUrl(img),
       price: (sale != null && sale > 0 && sale < price) ? sale : price,
@@ -89,8 +132,11 @@ class ServerWishlistItem {
 
   static List<ServerWishlistItem> listFromJson(dynamic json) {
     dynamic raw = json;
-    // kuch responses {data:{data:[...]}} pagination me ho sakte hai
-    if (raw is Map) raw = raw['data'] ?? raw['Data'];
+    // kuch responses {data:{data:[...]}} (ya PascalCase {Data:{...}}) me ho
+    // sakte hai — List milne tak unwrap karo.
+    for (var i = 0; i < 3 && raw is Map; i++) {
+      raw = raw['data'] ?? raw['Data'] ?? raw['items'] ?? raw['Items'];
+    }
     if (raw is List) {
       return raw
           .where((e) => e is Map)
@@ -108,7 +154,7 @@ class ServerWishlistItem {
       discountLabel = '$percent%';
     }
     return HomeDealOfTheDayModel(
-      id: productId ?? 0,
+      id: displayId, // ⭐ unique — dedupe kabhi alag entries ko merge nahi karega
       name: name ?? '',
       image: image,
       byWhom: 'مكتبة الفرقان',

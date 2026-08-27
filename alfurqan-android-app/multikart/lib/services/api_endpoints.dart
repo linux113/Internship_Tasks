@@ -30,6 +30,10 @@ class ApiEndpoints {
 
   // ---------------- Address (login ke baad — POST me user_id bhejna zaroori) ----------------
   static const String addAddress = 'Location/AddAddress';
+  // swagger se (live verify): list/update/delete bhi available hai (token chahiye)
+  static const String getAllAddress = 'Location/GetAllAddress';
+  static const String updateAddress = 'Location/UpdateAddress';
+  static const String deleteAddress = 'Location/DeleteAddress';
 
   // ---------------- Wishlist (login ke baad) ----------------
   static const String addToWishlist = 'Wishlist/AddToWishlist';

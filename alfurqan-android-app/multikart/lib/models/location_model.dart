@@ -140,6 +140,11 @@ class AddressModel {
   CountryModel? country;
   StateModel? state;
 
+  /// true = ye address SERVER par saved hai (Location/AddAddress POST hua ya
+  /// GetAllAddress se aaya). Edit/Delete ke waqt isi se decide hota hai ki
+  /// server par UpdateAddress/DeleteAddress bhejna hai ya nahi.
+  bool fromServer = false;
+
   AddressModel({
     this.id,
     this.title,
@@ -153,6 +158,7 @@ class AddressModel {
     this.userId,
     this.country,
     this.state,
+    this.fromServer = false,
   });
 
   factory AddressModel.fromLocalJson(Map<String, dynamic> json) {
@@ -173,6 +179,36 @@ class AddressModel {
       state: json['stateLocal'] is Map
           ? StateModel.fromJson(Map<String, dynamic>.from(json['stateLocal'] as Map))
           : null,
+      fromServer: json['fromServer'] == true,
+    );
+  }
+
+  /// Location/GetAllAddress ka ek row — snake_case ya PascalCase dono chalega.
+  factory AddressModel.fromServerJson(Map<String, dynamic> json) {
+    CountryModel? country;
+    final c = json['country'] ?? json['Country'];
+    if (c is Map) {
+      country = CountryModel.fromJson(Map<String, dynamic>.from(c));
+    }
+    StateModel? state;
+    final s = json['state'] ?? json['State'];
+    if (s is Map) {
+      state = StateModel.fromJson(Map<String, dynamic>.from(s));
+    }
+    return AddressModel(
+      id: jsonToInt(json['id'] ?? json['Id']),
+      title: jsonToString(json['title'] ?? json['Title']),
+      fullName: jsonToString(json['title'] ?? json['Title']),
+      street: jsonToString(json['street'] ?? json['Street']),
+      landmark: '',
+      city: jsonToString(json['city'] ?? json['City']),
+      stateName: jsonToString(json['stateName'] ?? json['StateName'] ?? state?.name),
+      phone: jsonToString(json['phone'] ?? json['Phone']),
+      pincode: jsonToString(json['pincode'] ?? json['Pincode']),
+      userId: jsonToInt(json['user_id'] ?? json['userId'] ?? json['User_Id'] ?? json['UserId']),
+      country: country,
+      state: state,
+      fromServer: true,
     );
   }
 
@@ -187,6 +223,7 @@ class AddressModel {
         'phone': phone,
         'pincode': pincode,
         'userId': userId,
+        'fromServer': fromServer,
         'country': country?.toLocalJson(),
         'stateLocal': state?.toLocalJson(),
       };
@@ -207,9 +244,12 @@ class AddressModel {
   ///  2 = scalars + country object (state null — AutoMapper "StateDto->State"
   ///      mapping error se bachne ke liye).
   ///  3 = scalars + state object + country object (purana curl-exact style).
-  Map<String, dynamic> toPostJson({int variant = 1, int isDefault = 0}) {
+  ///
+  /// [serverId]: naya address = 0 (default). EDIT (Location/UpdateAddress PUT)
+  /// ke liye existing address ki id pass karo.
+  Map<String, dynamic> toPostJson({int variant = 1, int isDefault = 0, int? serverId}) {
     final body = <String, dynamic>{
-      'id': 0,
+      'id': serverId ?? 0,
       'city': city ?? '',
       'stateName': stateName ?? state?.name ?? '',
       'phone': int.tryParse((phone ?? '').replaceAll(RegExp('[^0-9]'), '')) ?? 0,

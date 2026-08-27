@@ -215,3 +215,31 @@
   add nahi karte (duplicates hi nahi bante).
 - Purane version ki galat-id wali local items entryId/naam match karke skip —
   junk push band.
+
+## 2026-08-27 (v1.0.7+8) Address EDIT/REMOVE working + wishlist "only one item" fix
+
+### 1) Address EDIT button kaam nahi karta tha — FIX
+- Root cause: Saved Address list ke REMOVE/EDIT buttons (ActionButton) me koi
+  tap handler hi nahi tha — sirf demo UI tha.
+- Ab: EDIT → Add Address form existing address se PREFILL hokar khulta hai;
+  SAVE par `PUT api/Location/UpdateAddress` (existing id + scalar
+  country_id/state_id payload) hota hai. Kabhi server par save na hua local
+  address ho to POST AddAddress se upload ho jata hai.
+- REMOVE → local + `DELETE api/Location/DeleteAddress?id=` (server-par-saved
+  ho to). Saved Address page aur checkout Delivery page dono refresh hote hai.
+- Naye endpoints (swagger se, live): `GET api/Location/GetAllAddress` (token
+  se meri list — website par save kiye addresses bhi dikhte hai, install
+  ke baad bhi), `PUT UpdateAddress`, `DELETE DeleteAddress` dono app me wired.
+
+### 2) Wishlist me sirf EK item add hota tha — FIX
+- Root cause: GetWishlist rows ka shape backend ke hisaab se atakta hai
+  (product nested object kabhi LIST hota hai, kabhi product_id row me hi nahi
+  hota). Parse miss par productId null → sab items display-id `0` le lete the
+  → dedupe ne sabko ek samajh kar chipka diya → list me bas 1 item bachta tha.
+- FIX: parser ab entry id (`id`/`Id`/`wishlist_id`...), product id
+  (entry-level `product_id` family pehle), aur nested product (Map HO YA
+  single-item LIST — dono) leniently padhta hai. Display ke liye UNIQUE
+  `displayId = productId ?? wishlistId` use hota hai — parse miss hone par bhi
+  har entry alag id rakhti hai, isliye list kabhi collapse nahi hoti.
+- Add/remove dono isi displayId par chalte hai → remove hamesha sirf wahi ek
+  item hataata hai; add ke baad poori list sahi dikhti hai.

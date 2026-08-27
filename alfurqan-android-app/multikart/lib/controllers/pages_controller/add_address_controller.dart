@@ -3,6 +3,8 @@ import '../../models/location_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../../utilities/address_store.dart';
+import 'delivery_detail_controller.dart';
+import 'save_address_controller.dart';
 
 /// Add Address — REAL backend (api/Location/AddAddress) ke sath.
 ///
@@ -11,6 +13,10 @@ import '../../utilities/address_store.dart';
 /// - City              <- TEXT input (web jaisa hi — user ne confirm kiya)
 /// - Save              <- POST Location/AddAddress (LOGIN zaroori; guest ko
 ///                        pehle login page par bhejte hai) + local copy save.
+/// - EDIT mode         <- Saved Address page ke EDIT button se arguments me
+///                        existing AddressModel aata hai: form prefill hota
+///                        hai aur SAVE ab POST ki jagah Location/UpdateAddress
+///                        (PUT, existing id ke sath) karta hai.
 class AddAddressController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
       ? Get.find<AppController>()
@@ -35,6 +41,9 @@ class AddAddressController extends GetxController {
 
   bool isLoading = false; // countries aa rahi hai
   bool isSaving = false; // save button dab chuka hai
+
+  /// EDIT mode — Saved Address page se aaya existing address (null = naya add)
+  AddressModel? editing;
 
   //select address type (Home/Office/Other) — ye POST ka `title` banega
   selectAddressType(val, index) {
@@ -78,9 +87,58 @@ class AddAddressController extends GetxController {
   @override
   void onReady() {
     addressType = AppArray().addressType;
+    // EDIT mode? Saved Address page ne arguments me existing address diya hai.
+    final args = Get.arguments;
+    if (args is Map && args['edit'] is AddressModel) {
+      editing = args['edit'] as AddressModel;
+      _applyEditPrefillText();
+    }
     update();
     fetchCountries();
     super.onReady();
+  }
+
+  /// EDIT mode me text fields prefill karo (country/state dropdowns countries
+  /// load hone ke baad fetchCountries me set hote hai).
+  void _applyEditPrefillText() {
+    final e = editing!;
+    txtFullName.text = e.fullName ?? '';
+    txtMobileNumber.text = e.phone ?? '';
+    txtPinCode.text = e.pincode ?? '';
+    txtFlatHouseBuilding.text = e.street ?? ''; // combined street wapas ek field me
+    txtAreaColonyStreet.text = '';
+    txtLandmark.text = e.landmark ?? '';
+    txtTownCity.text = e.city ?? '';
+    // title (Home/Office/Other) wapas select karo
+    final t = (e.title ?? 'home').toLowerCase();
+    value = t;
+    final idx = addressType.indexWhere(
+        (x) => (x['title'] ?? '').toString().toLowerCase() == t);
+    if (idx >= 0) selectRadio = idx;
+  }
+
+  /// Countries aa jane ke baad edit-address ka country/state dropdown select.
+  void _applyEditPrefillDropdowns() {
+    final e = editing;
+    if (e == null || countries.isEmpty) return;
+    var idx = countries.indexWhere((c) =>
+        (e.country?.id ?? 0) != 0 && c.id == e.country!.id);
+    if (idx < 0) {
+      idx = countries.indexWhere((c) =>
+          (c.name ?? '').toLowerCase() ==
+          (e.country?.name ?? '').toLowerCase());
+    }
+    if (idx < 0) return;
+    onCountrySelected(countries[idx].name ?? '');
+    // phir state (naam se match — stateName ya state object ka name)
+    final sName =
+        (e.state?.name ?? e.stateName ?? '').trim().toLowerCase();
+    if (sName.isNotEmpty) {
+      final match = stateNames.firstWhere(
+          (s) => s.toLowerCase() == sName,
+          orElse: () => '');
+      if (match.isNotEmpty) onStateSelected(match);
+    }
   }
 
   /// GetAllCountryFront — countries + unki states ek hi call me.
@@ -104,11 +162,17 @@ class AddAddressController extends GetxController {
         countryNames =
             countries.map((e) => e.name ?? '').where((e) => e.isNotEmpty).toList();
 
-        // default: United Arab Emirates (store UAE ka hai) — na mile to pehla
-        final uae = countries.indexWhere((e) =>
-            (e.name ?? '').toLowerCase().contains('united arab emirates') ||
-            (e.iso3 ?? '').toUpperCase() == 'ARE');
-        onCountrySelected(uae >= 0 ? countries[uae].name ?? '' : countryNames.first);
+        if (editing != null) {
+          // EDIT mode: purane address ka country/state select karo
+          _applyEditPrefillDropdowns();
+        } else {
+          // default: United Arab Emirates (store UAE ka hai) — na mile to pehla
+          final uae = countries.indexWhere((e) =>
+              (e.name ?? '').toLowerCase().contains('united arab emirates') ||
+              (e.iso3 ?? '').toUpperCase() == 'ARE');
+          onCountrySelected(
+              uae >= 0 ? countries[uae].name ?? '' : countryNames.first);
+        }
       }
     } catch (_) {}
     isLoading = false;
@@ -195,6 +259,7 @@ class AddAddressController extends GetxController {
     ];
 
     final address = AddressModel(
+      id: editing?.id, // edit me purani id hi rakhte hai
       title: value.isEmpty ? 'Home' : (value[0].toUpperCase() + value.substring(1)),
       fullName: txtFullName.text.trim(),
       street: streetParts.join(', '),
@@ -206,10 +271,19 @@ class AddAddressController extends GetxController {
       userId: _userId,
       country: selectedCountry,
       state: selectedState,
+      fromServer: editing?.fromServer ?? false,
     );
 
+    // EDIT + server-saved ho to PUT UpdateAddress (existing id ke sath);
+    // warna POST AddAddress (naya ya kabhi upload na hua local address).
+    final bool isUpdate = editing?.fromServer == true;
+    final endpoint =
+        isUpdate ? ApiEndpoints.updateAddress : ApiEndpoints.addAddress;
+    final method = isUpdate ? ApiMethod.put : ApiMethod.post;
+
     bool savedOnServer = false;
-    String message = 'Address added successfully';
+    String message =
+        isUpdate ? 'Address updated successfully' : 'Address added successfully';
     // Backend ke Addresses table me CountryId/StateId SCALAR foreign keys hai.
     // Swagger AddressDto aur website ka working curl dono scalar
     // country_id/state_id bhejte hai — isliye variant 1 = scalar-only
@@ -220,9 +294,12 @@ class AddAddressController extends GetxController {
     for (var variant = 1; variant <= 3 && !savedOnServer; variant++) {
       try {
         final res = await ApiService().request(
-          endpoint: ApiEndpoints.addAddress,
-          method: ApiMethod.post,
-          data: address.toPostJson(variant: variant, isDefault: isChecked ? 1 : 0),
+          endpoint: endpoint,
+          method: method,
+          data: address.toPostJson(
+              variant: variant,
+              isDefault: isChecked ? 1 : 0,
+              serverId: isUpdate ? editing!.id : 0),
           fromJson: (json) => json,
         );
         savedOnServer = res.isSuccess;
@@ -236,8 +313,8 @@ class AddAddressController extends GetxController {
         }
         if (savedOnServer && res.data is Map) {
           final map = Map<String, dynamic>.from(res.data as Map);
-          final newId = map['id'];
-          if (newId is num) address.id = newId.toInt();
+          final newId = map['id'] ?? map['Id'];
+          if (newId is num && editing == null) address.id = newId.toInt();
         }
         // AutoMapper wali error aayi to agla variant try karo (loop chalta rahega)
       } catch (_) {}
@@ -263,10 +340,25 @@ class AddAddressController extends GetxController {
     }
 
     // local copy save (Saved Address page yahi se dikhti hai)
-    address.id ??= DateTime.now().millisecondsSinceEpoch;
     final list = AddressStore.load();
+    if (editing != null) {
+      // EDIT: purani entry hata kar updated daalo (id same rakhte hai)
+      list.removeWhere((e) => e.id == editing!.id);
+      address.fromServer = editing!.fromServer || isUpdate;
+    } else {
+      address.id ??= DateTime.now().millisecondsSinceEpoch;
+      address.fromServer = true; // POST success = server par save ho gaya
+    }
     list.add(address);
     await AddressStore.saveAll(list);
+
+    // dono jagah ki lists refresh — Saved Address page + checkout Delivery page
+    if (Get.isRegistered<SaveAddressController>()) {
+      Get.find<SaveAddressController>().refreshList();
+    }
+    if (Get.isRegistered<DeliveryDetailController>()) {
+      Get.find<DeliveryDetailController>().refreshList();
+    }
 
     isSaving = false;
     update();

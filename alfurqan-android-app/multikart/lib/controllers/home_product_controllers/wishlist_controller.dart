@@ -158,28 +158,33 @@ class WishlistController extends GetxController {
           } catch (_) {}
         }
 
-        // productId -> SARI entry ids (duplicates samet) — delete ke kaam aayegi.
+        // displayId -> SARI entry ids (duplicates samet) — delete ke kaam aayegi.
+        // displayId = productId (parse ho to) warna wishlistId — hamesha unique,
+        // isliye parse miss hone par bhi remove sahi item par hi lagega.
         _serverIds.clear();
         for (final e in serverItems) {
-          if (e.productId == null || e.wishlistId == null) continue;
-          _serverIds.putIfAbsent(e.productId!, () => []).add(e.wishlistId!);
+          if (e.wishlistId == null) continue;
+          _serverIds.putIfAbsent(e.displayId, () => []).add(e.wishlistId!);
         }
 
-        // Display ke liye productId se DEDUPE — server par agar galti se ek
-        // hi product 2-3 baar add ho gaya ho to list me sirf ek baar dikhe.
-        // (Extra duplicate entries server se bhi clean kar dete hai.)
-        final seen = <int>{};
+        // Display ke liye DEDUPE — pehle productId se (same product ki duplicate
+        // server entries ek dikhe), warna displayId se (sab unique rehte hai).
+        // Extra duplicate product entries server se bhi clean kar dete hai.
+        final seenProducts = <int>{};
+        final seenDisplay = <int>{};
         final unique = <ServerWishlistItem>[];
         final duplicateEntryIds = <int>[];
         for (final e in serverItems) {
           final pid = e.productId;
           if (pid != null) {
-            if (seen.contains(pid)) {
+            if (seenProducts.contains(pid)) {
               if (e.wishlistId != null) duplicateEntryIds.add(e.wishlistId!);
               continue;
             }
-            seen.add(pid);
+            seenProducts.add(pid);
           }
+          if (seenDisplay.contains(e.displayId)) continue;
+          seenDisplay.add(e.displayId);
           unique.add(e);
         }
         // background me duplicate server entries delete karo (best effort)
@@ -197,6 +202,7 @@ class WishlistController extends GetxController {
         if (duplicateEntryIds.isNotEmpty) {
           _serverIds.forEach((pid, ids) =>
               ids.removeWhere((id) => duplicateEntryIds.contains(id)));
+          _serverIds.removeWhere((pid, ids) => ids.isEmpty);
         }
 
         // server ki list ko source-of-truth maano — local me replace kar do.
