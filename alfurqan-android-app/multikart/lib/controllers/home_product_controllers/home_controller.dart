@@ -212,6 +212,29 @@ class HomeController extends GetxController {
         d.topCategories.isNotEmpty) {
       homeApiLoaded = true;
     }
+    syncFavStatesFromWishlist();
+    update();
+  }
+
+  /// Sab home lists ke heart icons ko SACH (saved wishlist storage) ke hisaab
+  /// se set karo. Iske bina hearts purani in-memory state dikhate the —
+  /// user ko lagta item wishlist me hai, jabki wahan nahi tha (confusion).
+  /// Wishlist me har add/remove par bhi ye call hoti hai (_notifyUi se).
+  void syncFavStatesFromWishlist() {
+    final ids =
+        WishlistController.loadWishlistItems().map((e) => e.id).toSet();
+    for (final item in dealOfTheDayList) {
+      item.isFav = ids.contains(item.id);
+    }
+    for (final item in findStyleCategoryList) {
+      item.isFav = ids.contains(item.id);
+    }
+    for (final item in findStyleCategoryCategoryWiseList) {
+      item.isFav = ids.contains(item.id);
+    }
+    for (final item in homeKidsCornerList) {
+      item.isFav = ids.contains(item.id);
+    }
     update();
   }
 
@@ -296,6 +319,7 @@ class HomeController extends GetxController {
       // Kids corner horizontal list <- real products
       homeKidsCornerList = List.of(findStyleCategoryList);
     }
+    syncFavStatesFromWishlist();
     update();
   }
 

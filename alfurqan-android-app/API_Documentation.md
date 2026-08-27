@@ -263,3 +263,22 @@
 - Console me ApiService ke Wishlist request/response logs chhape rehte hai —
   agar kabhi phir issue aaye to `flutter run` console ki Wishlist lines
   screenshot/copy karke bhejne se root cause turant pakda jayega.
+
+## 2026-08-27 (v1.0.9+10) Wishlist RACE fix + hearts sahi state (screenshot bug)
+
+- User ne 6 books par heart dabaye (sab red dikhe) par wishlist me sirf 2
+  bache. Root cause RACE CONDITION — deep fix:
+  1) Background server-sync purana local SNAPSHOT pakad kar baad me `_saveAll`
+     overwrite karta tha — sync chalte waqt dabaye gaye naye hearts wipe ho
+     jate the. Ab final merge ATOMIC hai: push ke BAAD fresh local dobara
+     padhkar turant save (beech me koi await nahi) → koi item kabhi wipe nahi.
+  2) Naye items jo sync ke dauraan aaye unhe next auto-sync par push karne ke
+     liye `_serverSynced` smart flag.
+  3) REMOVE ke dauraan sync chale to server rows item ko wapas na le aaye —
+     `_recentlyRemoved` TOMBSTONE set: zombie server rows sync me drop + delete
+     retry; fetch confirm hone par tombstone auto-clear. Dobara add karne par
+     tombstone turant hatt jata hai.
+  4) Home/product lists ke hearts pehle sirf in-memory state dikhate the —
+     ab `syncFavStatesFromWishlist()` har add/remove/home-load par hearts ko
+     SACH (saved wishlist) ke mutabik set karta hai. Ab jo red heart dikhega
+     wo wishlist me hoga HI.

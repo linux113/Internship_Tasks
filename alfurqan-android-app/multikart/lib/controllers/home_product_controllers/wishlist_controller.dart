@@ -4,6 +4,7 @@ import '../../config.dart';
 import '../../models/server_wishlist_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import 'home_controller.dart';
 
 /// Wishlist — LOCAL (guest ke liye, SharedPreferences) + SERVER (logged-in
 /// user ke liye, api/Wishlist/*) dono ke sath.
@@ -38,6 +39,12 @@ class WishlistController extends GetxController {
   static bool _serverSynced = false;
 
   static bool _syncRunning = false;
+
+  /// Is session me RECENTLY REMOVE kiye gaye ids (tombstones). Remove ke baad
+  /// agar sync in-flight ho to server-side rows merge ke waqt item ko WAPAS
+  /// na le aaye — sync in rows ko zombie samajh kar drop + server par delete
+  /// retry bhi karti hai. Fetch confirm ho jane par tombstone saaf ho jata hai.
+  static final Set<int> _recentlyRemoved = {};
 
   static bool get _isLoggedIn =>
       (_staticStorage.read(Session.isLogin) ?? false) == true;
@@ -84,10 +91,14 @@ class WishlistController extends GetxController {
         _prefsKey, jsonEncode(items.map((e) => e.toJson()).toList()));
   }
 
-  /// open wishlist screen / heart taps turant UI me dikh jaye.
+  /// open wishlist screen / heart taps turant UI me dikh jaye — aur home ke
+  /// heart icons bhi SACH (saved wishlist) ke mutabik ho jaye.
   static void _notifyUi() {
     if (Get.isRegistered<WishlistController>()) {
       Get.find<WishlistController>().refreshFromStorage();
+    }
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().syncFavStatesFromWishlist();
     }
   }
 
@@ -99,6 +110,7 @@ class WishlistController extends GetxController {
   static void clearServerCache() {
     _serverIds.clear();
     _serverSynced = false;
+    _recentlyRemoved.clear();
   }
 
   /// Server se fresh wishlist entries lao. Request fail ho to null
@@ -222,6 +234,25 @@ class WishlistController extends GetxController {
     try {
       final fetched = await _fetchServerWishlist();
       if (fetched == null) return; // network fail — local hi rahegi
+
+      // ---- RECENTLY-REMOVED items (tombstones): fetch me jo ab nahi hai
+      // unke tombstone saaf; jo ABHI BHI dikh rahe hai (zombie rows) unhe
+      // merge se pehle drop karo + server par delete retry karo ----
+      if (_recentlyRemoved.isNotEmpty) {
+        bool isRemovedRow(ServerWishlistItem e) =>
+            _recentlyRemoved.contains(e.displayId) ||
+            (e.productId != null && _recentlyRemoved.contains(e.productId));
+        // confirm ho chuke → tombstone saaf
+        _recentlyRemoved
+            .removeWhere((id) => !fetched.any((e) => isRemovedRow(e)));
+        // baaki zombies drop + delete retry
+        final zombies = fetched.where((e) => isRemovedRow(e)).toList();
+        for (final z in zombies) {
+          if (z.wishlistId != null) await _deleteServerEntry(z.wishlistId!);
+        }
+        fetched.removeWhere((e) => isRemovedRow(e));
+      }
+
       final uniqueServer = await _processServerRows(fetched);
 
       // ---- local-only items = server par NAHI dikhe (id/entryId/naam se) ----
@@ -251,18 +282,33 @@ class WishlistController extends GetxController {
         }
       }
 
-      // ---- UNION merge: server items pehle, phir local-only ----
+      // ---- ⭐ FINAL UNION merge — ATOMIC (beach me koi await nahi) ----
+      // PUSHes ke dauraan user ne aur hearts dabaye honge — FRESH local
+      // dobara padhte hai, warna purana snapshot save hokar naye items ko
+      // WIP kar deta tha (isi wajah se 6 hearts par wishlist me sirf 2 bache).
+      final freshLocal = loadWishlistItems();
       final merged = <HomeDealOfTheDayModel>[];
       final seen = <int>{};
+      final seenNames = <String>{};
       for (final s in uniqueServer) {
-        if (seen.add(s.displayId)) merged.add(s.toDealModel());
+        if (seen.add(s.displayId)) {
+          merged.add(s.toDealModel());
+          final n = (s.name ?? '').trim().toLowerCase();
+          if (n.isNotEmpty) seenNames.add(n);
+        }
       }
-      for (final l in localOnly) {
-        if (seen.add(l.id)) merged.add(l);
+      for (final l in freshLocal) {
+        if (seen.contains(l.id)) continue;
+        final n = (l.name ?? '').trim().toLowerCase();
+        // same book server-row me already hai (naam se) to duplicate mat lao
+        if (n.isNotEmpty && seenNames.contains(n)) continue;
+        seen.add(l.id);
+        merged.add(l);
       }
-
       await _saveAll(merged);
-      _serverSynced = true;
+      // sync chalte waqt jo bhi naye items locally aaye, unhe next sync par
+      // push karne ke liye flag reset rakho.
+      _serverSynced = freshLocal.length == localItems.length;
       _notifyUi();
     } catch (_) {
       // koi bhi error — local list safe rahegi
@@ -273,6 +319,7 @@ class WishlistController extends GetxController {
 
   /// Item add karo — local turant + logged-in ho to server par bhi.
   static Future<void> saveWishlistItem(HomeDealOfTheDayModel item) async {
+    _recentlyRemoved.remove(item.id); // dobara add = tombstone hatao
     final items = loadWishlistItems();
     items.removeWhere((e) => e.id == item.id);
     item.isFav = true;
@@ -309,6 +356,7 @@ class WishlistController extends GetxController {
   /// Item remove karo — local turant + logged-in ho to server se bhi.
   /// Server par us product ki SARI entries delete karte hai (duplicates samet).
   static Future<void> removeWishlistItem(int id) async {
+    _recentlyRemoved.add(id); // tombstone — sync ke dauraan wapas na aaye
     final items = loadWishlistItems()..removeWhere((e) => e.id == id);
     await _saveAll(items);
     _notifyUi();
