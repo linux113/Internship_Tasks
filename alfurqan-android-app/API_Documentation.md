@@ -243,3 +243,23 @@
   har entry alag id rakhti hai, isliye list kabhi collapse nahi hoti.
 - Add/remove dono isi displayId par chalte hai → remove hamesha sirf wahi ek
   item hataata hai; add ke baad poori list sahi dikhti hai.
+
+## 2026-08-27 (v1.0.8+9) Wishlist 4-par-atakna FIX (union sync)
+
+- Swagger verify (chunk 23): `GET api/Wishlist/GetWishlist` me KOI parameter/
+  pagination nahi — server cap nahi karta. Problem app-side sync design me thi.
+- Root cause: har add ke baad app server list se LOCAL list ko REPLACE karta
+  tha. GetWishlist naya item turant nahi dikhata (ya shape badalta hai) → naya
+  item chupchaap list se gayab ho jata tha → wishlist purani 4 par atak jati.
+- FIX (wishlist sync engine dobara likha):
+  - Add: local turant + server POST; response ki wishlist ENTRY id register,
+    local list ko kabhi overwrite nahi karte.
+  - Sync: UNION (server items + local-only) — local list server response ki
+    wajah se kabhi CHHOTI nahi hoti; local-only items server par re-push bhi
+    hote hai. Guest favorites login par save rehte hai.
+  - Remove: us product ki SARI server entries delete; entry id na pata ho to
+    ek fresh fetch se dhoondh kar delete. Local se turant hatata hai.
+  - UI (wishlist screen + count) har add/remove par turant refresh.
+- Console me ApiService ke Wishlist request/response logs chhape rehte hai —
+  agar kabhi phir issue aaye to `flutter run` console ki Wishlist lines
+  screenshot/copy karke bhejne se root cause turant pakda jayega.
