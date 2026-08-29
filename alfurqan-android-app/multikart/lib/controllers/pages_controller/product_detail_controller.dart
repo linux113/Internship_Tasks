@@ -49,6 +49,11 @@ class ProductDetailController extends GetxController {
   /// ye method alag rakha hai aur appCtrl.goToProductDetail har naye
   /// product pe isko call karta hai. Iske bina purana/"demo" product hi
   /// atka rehta tha aur AddToCart "demo product" wali error dikhata tha.
+  /// Detail page body ka ScrollController — similar product tap par naya
+  /// product SAME page me load hota hai (nayi route push block ho jati hai),
+  /// isliye page ko TOP par scroll karna zaroori hai.
+  final ScrollController productScroll = ScrollController();
+
   void loadProduct(dynamic args) {
     if (args is ProductApiModel) {
       apiProduct = args;
@@ -57,6 +62,15 @@ class ProductDetailController extends GetxController {
       apiProduct = null;
       product = productList; // purana static demo product fallback
     }
+
+    // similar product se naya product load hua to page TOP par le jao
+    try {
+      if (productScroll.hasClients &&
+          productScroll.hasClients &&
+          productScroll.positions.length == 1) {
+        productScroll.jumpTo(0);
+      }
+    } catch (_) {}
 
     imagesList = [];
     final List<Images> allImages = product.images ?? [];

@@ -29,29 +29,31 @@ class CardBalance extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  //card slider layout
-                  CarouselSlider.builder(
-                    options: CarouselOptions(
-                        autoPlay: false,
-                        aspectRatio: 10.2 / 8,
-                        viewportFraction: .90,
-                        onPageChanged: (index, reason) {
-                          cardCtrl.currentIndex = index;
-                          cardCtrl.update();
-                        }),
-                    itemCount: AppArray().cardList.length,
-                    itemBuilder:
-                        (BuildContext context, int index, int pageViewIndex) {
-                      return CardLayout(
-                          data: AppArray().cardList[index],
-                          index: index,
-                          currentIndex: cardCtrl.currentIndex);
-                    },
-                  ),
+                  // pehle yaha STATIC demo bank cards ka slider tha — backend
+                  // par saved-cards ka api nahi hai, isliye clean empty state.
+                  Container(
+                            width: MediaQuery.of(context).size.width,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: AppScreenUtil().screenWidth(20),
+                                vertical: AppScreenUtil().screenHeight(30)),
+                            margin: EdgeInsets.symmetric(
+                                horizontal: AppScreenUtil().screenWidth(15),
+                                vertical: AppScreenUtil().screenHeight(15)),
+                            decoration: BoxDecoration(
+                                color: cardCtrl.appCtrl.appTheme.greyLight25,
+                                borderRadius: BorderRadius.circular(
+                                    AppScreenUtil().borderRadius(5))),
+                            child: LatoFontStyle(
+                              text: "No saved cards yet",
+                              fontSize: FontSizes.f14,
+                              textAlign: TextAlign.center,
+                              color: cardCtrl.appCtrl.appTheme.contentColor,
+                            ),
+                          ),
                   const BorderLineLayout(),
                   const Space(0, 20),
 
-                  //wallet layout
+                  //wallet layout (REAL balance)
                   const WalletLayout()
                 ]).marginOnly(bottom: AppScreenUtil().screenHeight(50))),
             //back and add new card layout

@@ -4,6 +4,13 @@ class ApiEndpoints {
   ApiEndpoints._();
   static const String login = 'Core/LogInWeb';
   static const String register = 'Core/AddUser';
+  // Profile update (PUT) — body: {name, email, phone, country_code, _method:"PUT"}
+  static const String updateUserProfile = 'Core/UpdateUserProfile';
+  static const String getUserDetail = 'Core/GetUserDetail';
+  // Orders (login ke baad, token se)
+  static const String getUserOrders = 'Orders/GetUserOrders';
+  // Wallet balance (login ke baad)
+  static const String getWallet = 'Wallet_Point/GetWallet';
 
   static const String topCategory = 'https://alfurqan.ae/app/MobileAppApi/GetTopCategory';
   static const String productList = 'https://alfurqan.ae/web/Products/GetAllProductsFront';

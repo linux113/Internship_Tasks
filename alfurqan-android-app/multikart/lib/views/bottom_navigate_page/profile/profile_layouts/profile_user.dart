@@ -44,9 +44,14 @@ class ProfileUser extends StatelessWidget {
                   // guest ko SIGN IN chip dikhe (tap -> login page),
                   // logged-in user ko Edit chip.
                   InkWell(
-                    onTap: () {
+                    onTap: () async {
                       if (!profileCtrl.isLoggedIn) {
                         Get.toNamed(routeName.login);
+                      } else {
+                        // EDIT chip -> Profile Setting kholo; wapas aane par
+                        // updated naam/email dobara dikhe
+                        await Get.toNamed(routeName.profileSetting);
+                        profileCtrl.loadUserData();
                       }
                     },
                     child: Container(

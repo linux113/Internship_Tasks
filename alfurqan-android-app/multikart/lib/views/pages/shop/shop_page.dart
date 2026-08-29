@@ -16,19 +16,21 @@ class ShopPage extends StatelessWidget {
                 ? TextDirection.rtl
                 : TextDirection.ltr,
         child: PopScope(
-          canPop: false,
-          onPopInvoked: (canPop) async {
-            shopCtrl.goToHomePage();
-            return Future(() => true);
-          },
+          // FIX: pehle canPop:false tha — PopScope me onPopInvoked ka return
+          // value IGNORE hota hai, isliye phone back gesture dead tha.
+          canPop: true,
           child: Scaffold(
             appBar: HomeProductAppBar(
               onTap: () async {
                 shopCtrl.goToHomePage();
               },
               titleChild: CommonAppBarTitle(
-                title: "${shopCtrl.name.tr} ${ShopFont().collection}",
-                desc: "2050 ${ShopFont().products}",
+                // TITLE me category ka REAL NAME dikhe (url slug nahi —
+                // "jurisprudence" jaise english slug user ko ajeeb lagte the)
+                title: "${shopCtrl.displayName.isNotEmpty ? shopCtrl.displayName.tr : shopCtrl.name.tr} ${ShopFont().collection}",
+                // pehle "2050 products" hardcoded tha — ab loaded list ka
+                // REAL count dikhta hai (scroll par aur load hote hai)
+                desc: "${shopCtrl.productList.length} ${ShopFont().products}",
               ),
             ),
             body: SingleChildScrollView(

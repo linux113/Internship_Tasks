@@ -40,6 +40,6 @@ class InnerCategoryController extends GetxController{
 
     appCtrl.isNotification = true;
     appCtrl.update();
-    Get.toNamed(routeName.shopPage,arguments: name);
+    Get.toNamed(routeName.shopPage,arguments: {'slug': name, 'name': name});
   }
 }

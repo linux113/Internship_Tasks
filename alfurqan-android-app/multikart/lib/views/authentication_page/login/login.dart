@@ -16,10 +16,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return GetBuilder<LoginController>(builder: (_) {
       return PopScope(
-        canPop: false,
-        onPopInvoked: (canPop) async {
-          return Future(() => loginCtrl.isBack ? true : false);
-        },
+        // FIX: pehle canPop:false + onPopInvoked return true tha — PopScope
+        // me return value IGNORE hota hai, isliye phone back gesture dead tha.
+        // Ab: jahan se aaya hai wapas ja sakta hai (isBack) warna blocked.
+        canPop: loginCtrl.isBack,
+        onPopInvoked: (didPop) {},
         child: Directionality(
           textDirection:
               loginCtrl.appCtrl.isRTL || loginCtrl.appCtrl.languageVal == "ar"

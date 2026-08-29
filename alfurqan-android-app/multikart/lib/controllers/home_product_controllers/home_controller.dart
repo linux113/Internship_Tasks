@@ -382,7 +382,10 @@ class HomeController extends GetxController {
     appCtrl.isSearch = false;
     appCtrl.isNotification = true;
     appCtrl.update();
-    Get.toNamed(routeName.shopPage, arguments: slug);
+    // slug filter ke liye + name TITLE ke liye (title me slug mat dikhao)
+    final catName = CategoryCache.resolve(slug)?.name ?? slug;
+    Get.toNamed(routeName.shopPage,
+        arguments: {'slug': slug, 'name': catName});
   }
 
 

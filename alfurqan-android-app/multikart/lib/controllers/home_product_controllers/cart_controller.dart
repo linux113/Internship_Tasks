@@ -286,6 +286,76 @@ class CartController extends GetxController {
     );
   }
 
+  /// Cart item tap ke liye real product (detail page kholne ke liye).
+  ProductApiModel? productFor(int productId) => _lookupKnownProduct(productId);
+
+  /// Item REMOVE — pehle sirf ek demo bottom sheet khulta tha aur item
+  /// remove hi nahi hota tha. Ab:
+  ///  1) UI/list se TURANT hatao + totals dobara ginho,
+  ///  2) server par quantity 0 wala AddToCart bhejo (is backend me alag
+  ///     DeleteCart api nahi hai — qty 0 se item replace/remove hota hai),
+  ///  3) GetCart se fresh state la kar confirm karo.
+  Future<void> removeFromCart(HomeDealOfTheDayModel item) async {
+    final pid = item.id;
+    cartModelList?.cartList?.removeWhere((e) => e.id == pid);
+    final remaining = cartModelList?.cartList ?? <HomeDealOfTheDayModel>[];
+    if (remaining.isEmpty) {
+      cartModelList = null;
+    } else {
+      double total = 0;
+      for (final e in remaining) {
+        total += (e.mrp ?? 0);
+      }
+      cartModelList!.totalAmount = total;
+      // order detail bhi turant refresh karo (Bag total/Savings)
+      double mrpTotal = 0;
+      for (final e in remaining) {
+        mrpTotal += (e.totalPrice ?? e.mrp ?? 0);
+      }
+      cartModelList!.orderDetail = [
+        OrderDetail(title: "Bag total".tr, value: mrpTotal),
+        if (mrpTotal - total > 0)
+          OrderDetail(title: "Bag savings".tr, value: mrpTotal - total),
+        OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
+        OrderDetail(title: "Delivery".tr, value: 0.0),
+      ];
+    }
+    update();
+    appCtrl.update();
+
+    // server sync (logged-in ho to)
+    if ((storage.read(Session.isLogin) ?? false) == true) {
+      try {
+        final Map<String, dynamic> itemBody = {
+          "id": 0,
+          "product_id": pid,
+          "variation_id": null,
+          "quantity": 0,
+          "sub_total": 0,
+          "wholesale_price": 0,
+        };
+        var res = await ApiService().request<CartApiModel>(
+          endpoint: ApiEndpoints.addToCart,
+          method: ApiMethod.post,
+          data: {"total": 0, "items": itemBody},
+          fromJson: (json) => CartApiModel.fromJson(json),
+        );
+        if (!res.isSuccess && res.code == 400) {
+          res = await ApiService().request<CartApiModel>(
+            endpoint: ApiEndpoints.addToCart,
+            method: ApiMethod.post,
+            data: {"total": 0, "items": [itemBody]},
+            fromJson: (json) => CartApiModel.fromJson(json),
+          );
+        }
+      } catch (_) {}
+      // fresh server state se list final confirm karo
+      try {
+        await getCart();
+      } catch (_) {}
+    }
+  }
+
   /// chhota helper - taaki SocialLoginController import na karna pade sirf toast ke liye
   socialLoginToast(String message) {
     if (message.isEmpty) return;

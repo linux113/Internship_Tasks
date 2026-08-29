@@ -15,11 +15,12 @@ class ProductDetail extends StatelessWidget {
                 ? TextDirection.rtl
                 : TextDirection.ltr,
         child: PopScope(
-          canPop: false,
-          onPopInvoked: (canPop) async {
-            productCtrl.appCtrl.goToHome();
-            Get.back();
-            return Future(() => true);
+          // FIX: pehle canPop:false + onPopInvoked return true tha — PopScope
+          // me callback ka return value IGNORE hota hai, isliye phone ka back
+          // gesture KUCH nahi karta tha. Ab system back normally pop karta hai.
+          canPop: true,
+          onPopInvoked: (didPop) {
+            if (didPop) productCtrl.appCtrl.goToHome();
           },
           child: Scaffold(
             backgroundColor: productCtrl.appCtrl.appTheme.whiteColor,

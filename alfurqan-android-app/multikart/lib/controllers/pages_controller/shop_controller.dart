@@ -33,10 +33,23 @@ class ShopController extends GetxController {
   String rating = "";
   String attribute = "";
 
+  /// Title ke liye REAL name (slug nahi — slug url-friendly hota hai, user
+  /// ko padhne me ajeeb lagta hai). Filter ke liye `name`/slug hi use hota hai.
+  String displayName = "";
+
   @override
   void onReady() {
-    // TODO: implement onReady
-    name = Get.arguments ?? "All".tr;
+    // Arguments: naya format {'slug':..., 'name':...} ya purana plain String.
+    final args = Get.arguments;
+    if (args is Map) {
+      name = (args['slug'] ?? '').toString();
+      displayName = (args['name'] ?? '').toString();
+      if (name.isEmpty) name = "All".tr;
+      if (displayName.isEmpty) displayName = name;
+    } else {
+      name = args ?? "All".tr;
+      displayName = name;
+    }
     categoryList = AppArray().categoryList;
     homeShopPageList = AppArray().homeShopPageList;
     appCtrl.isNotification = true;

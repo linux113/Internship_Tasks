@@ -27,18 +27,16 @@ class DeliveryDetail extends StatelessWidget {
               SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    children: [
                     //address list layout
                     if (deliveryDetailCtrl.deliveryDetail != null)
                       const AddressListLayout(),
                     //add new address button layout
                     const AddAddressButton(),
                     const Space(0, 30),
-                    const BorderLineLayout(),
-                    const Space(0, 30),
-
-                    //expected delivery layout
-                    const ExpectedDeliveryLayout()
+                    // Expected Delivery ka demo GRAY box (static images ke
+                    // liye placeholder) hataya — asli estimate api nahi hai,
+                    // blank gray container user ko "locked/broken" lagta tha.
                   ],
                 ).marginOnly(bottom: AppScreenUtil().screenHeight(80)),
               ),

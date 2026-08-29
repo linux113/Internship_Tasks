@@ -39,6 +39,7 @@ class CategoryController extends GetxController {
   goToCategoryProducts(CategoryApiModel category) {
     appCtrl.isNotification = true;
     appCtrl.update();
-    Get.toNamed(routeName.shopPage, arguments: category.slug);
+    Get.toNamed(routeName.shopPage,
+        arguments: {'slug': category.slug ?? '', 'name': category.name ?? ''});
   }
 }

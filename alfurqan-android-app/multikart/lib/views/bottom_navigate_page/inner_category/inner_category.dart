@@ -19,12 +19,14 @@ class _InnerCategoryState extends State<InnerCategory> {
                 ? TextDirection.rtl
                 : TextDirection.ltr,
         child: PopScope(
-          canPop: false,
-          onPopInvoked: (canPop) async {
-            innerCtrl.appCtrl.isSearch = false;
-            innerCtrl.appCtrl.update();
-            Get.back();
-            return Future(() => true);
+          // FIX: pehle canPop:false tha — phone back gesture dead tha
+          // (PopScope me onPopInvoked ka return value IGNORE hota hai).
+          canPop: true,
+          onPopInvoked: (didPop) {
+            if (didPop) {
+              innerCtrl.appCtrl.isSearch = false;
+              innerCtrl.appCtrl.update();
+            }
           },
           child: Scaffold(
               //app bar layout

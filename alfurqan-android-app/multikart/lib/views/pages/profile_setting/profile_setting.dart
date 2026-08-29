@@ -49,11 +49,13 @@ class ProfileSetting extends StatelessWidget {
                     .marginOnly(top: Insets.i20, bottom: Insets.i30),
               ),
 
-              //cancel and save detail layout
+              //cancel and save detail layout — SAVE ab REAL
+              // api/Core/UpdateUserProfile call karta hai (pehle sirf page
+              // band hota tha, kuch save nahi hota tha)
               BottomLayout(
                 firstButtonText: ProfileFont().cancel,
                 secondButtonText: ProfileFont().saveDetails,firstTap: ()=>Get.back(),
-                  secondTap: ()=>Get.back()
+                  secondTap: ()=>profileCtrl.saveProfile()
               )
             ],
           ),

@@ -7,6 +7,7 @@ class ProductBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<ProductDetailController>(builder: (productCtrl) {
       return SingleChildScrollView(
+        controller: productCtrl.productScroll,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

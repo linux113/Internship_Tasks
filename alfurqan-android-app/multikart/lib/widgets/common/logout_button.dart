@@ -7,6 +7,35 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(builder: (appCtrl) {
+      final bool isLoggedIn =
+          (appCtrl.storage.read(Session.isLogin) ?? false) == true;
+
+      // GUEST mode: LOG OUT ki jagah LOG IN button — tap par seedha login
+      // page (koi confirm dialog nahi).
+      if (!isLoggedIn) {
+        return InkWell(
+          onTap: () {
+            Get.back(); // drawer band
+            Get.toNamed(routeName.login);
+          },
+          child: Container(
+              alignment: Alignment.center,
+              padding: EdgeInsets.symmetric(
+                  vertical: AppScreenUtil().screenHeight(10)),
+              margin: EdgeInsets.symmetric(
+                  horizontal: AppScreenUtil().screenWidth(15),
+                  vertical: AppScreenUtil().screenHeight(15)),
+              decoration: BoxDecoration(
+                  color: appCtrl.appTheme.primary,
+                  borderRadius:
+                      BorderRadius.circular(AppScreenUtil().borderRadius(5))),
+              child: LatoFontStyle(
+                  text: CommonTextFont().signIn.toUpperCase(),
+                  fontSize: FontSizes.f16,
+                  color: appCtrl.appTheme.white)),
+        );
+      }
+
       return InkWell(
           onTap: () {
             showLogoutDialog(

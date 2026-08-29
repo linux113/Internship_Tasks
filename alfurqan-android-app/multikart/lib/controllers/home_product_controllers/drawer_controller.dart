@@ -27,6 +27,18 @@ class DrawerPageController extends GetxController {
 
 //go to page index wise
   goToPage(index) async {
+    // GUEST user ko login-required pages (Orders=5, Your Account=7) direct
+    // mat dikhayo — pehle login par bhejo.
+    final bool loggedIn = (storage.read(Session.isLogin) ?? false) == true;
+    if (!loggedIn && (index == 5 || index == 7)) {
+      final socialLoginCtrl = Get.isRegistered<SocialLoginController>()
+          ? Get.find<SocialLoginController>()
+          : Get.put(SocialLoginController());
+      socialLoginCtrl.showToast('Please login first');
+      Get.back(); // drawer band
+      Get.toNamed(routeName.login);
+      return;
+    }
     if (index == 2) {
       Get.back();
       pageCtrl.pageListModel = pagesList;

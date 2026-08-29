@@ -282,3 +282,30 @@
      ab `syncFavStatesFromWishlist()` har add/remove/home-load par hearts ko
      SACH (saved wishlist) ke mutabik set karta hai. Ab jo red heart dikhega
      wo wishlist me hoga HI.
+
+## 2026-08-29 (v1.1.0+11) Bara fix batch (13 issues)
+
+- #1/#2/#4 Drawer: guest me ab "Hello, Guest" + LOG IN button (pehle Paige
+  Turner + LOG OUT aata tha); login ke baad REAL name. Orders/Your Account
+  guest taps -> login page. Paige photo -> neutral person icon (har jagah).
+- #5 Profile Setting: SAVE ab PUT api/Core/UpdateUserProfile ({name,email,
+  phone,country_code,_method:"PUT"}) — pehle button sirf page band karta
+  tha. EDIT chip profile setting kholta hai + naam/email prefill.
+- #8 Similar product tap: naye product par page TOP par scroll.
+- #9 Shop title: slug ki jagah category NAME + "2050 products" hardcode ki
+  jagah REAL product count. Shop callers ab {'slug','name'} map bhejte hai.
+- #10 Cart REMOVE: pehle sirf demo bottom sheet tha + puri list par ek
+  InkWell jo DEMO "cloths" product page kholta tha. Ab real remove (UI
+  turant + totals recompute + server par qty:0 AddToCart + GetCart confirm);
+  image tap real product detail.
+- #11 Delivery Details ka "Expected Delivery" gray locked blank container
+  (static demo) hata diya.
+- #12 **Phone BACK GESTURE root cause**: template ne WillPopScope -> PopScope
+  migrate kiya par `canPop:false` rakha + onPopInvoked se `return true` —
+  PopScope me callback ka return value IGNORE hota hai isliye gesture dead
+  tha. Sab pages par canPop:true (+cleanup didPop ke baad). Login me
+  canPop = isBack.
+- #13 Order History: demo kapdon ke orders gaye — ab api/Orders/GetUserOrders
+  (lenient parse); guest -> login msg; empty -> "No orders yet".
+- Payment page: static demo cards slider -> "No saved cards yet" (cards ka
+  backend api nahi); Wallet balance ab api/Wallet_Point/GetWallet se REAL.

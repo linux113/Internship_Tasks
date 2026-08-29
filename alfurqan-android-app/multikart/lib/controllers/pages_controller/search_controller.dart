@@ -173,6 +173,6 @@ class SearchScreenController extends GetxController {
   goToShopPage(name) {
     appCtrl.isNotification = true;
     appCtrl.update();
-    Get.toNamed(routeName.shopPage, arguments: name);
+    Get.toNamed(routeName.shopPage, arguments: {'slug': name, 'name': name});
   }
 }

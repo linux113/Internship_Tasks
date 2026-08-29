@@ -33,10 +33,36 @@ class OrderHistory extends StatelessWidget {
                     controller: orderHistoryCtrl.controller, onTap: () => orderHistoryCtrl.historyFilterBottomSheet()),
                 const Space(0, 20),
 
-                //order history layout
-                orderHistoryCtrl.appCtrl.isShimmer
-                    ? const OrderHistoryShimmer()
-                    : const OrderHistoryLayout()
+                //order history layout — DEMO orders nahi: guest ho to login
+                // hint, empty ho to clean "No orders yet".
+                if (orderHistoryCtrl.isLoadingOrders)
+                  const OrderHistoryShimmer()
+                else if (!orderHistoryCtrl.isLoggedIn)
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: AppScreenUtil().screenWidth(15),
+                        vertical: AppScreenUtil().screenHeight(40)),
+                    child: LatoFontStyle(
+                      text: "Please login to see your orders.",
+                      fontSize: FontSizes.f14,
+                      textAlign: TextAlign.center,
+                      color: orderHistoryCtrl.appCtrl.appTheme.contentColor,
+                    ),
+                  )
+                else if (orderHistoryCtrl.orderHistoryList.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: AppScreenUtil().screenWidth(15),
+                        vertical: AppScreenUtil().screenHeight(40)),
+                    child: LatoFontStyle(
+                      text: "No orders yet. Your orders will appear here.",
+                      fontSize: FontSizes.f14,
+                      textAlign: TextAlign.center,
+                      color: orderHistoryCtrl.appCtrl.appTheme.contentColor,
+                    ),
+                  )
+                else
+                  const OrderHistoryLayout()
               ],
             ).width(MediaQuery.of(context).size.width),
           ),

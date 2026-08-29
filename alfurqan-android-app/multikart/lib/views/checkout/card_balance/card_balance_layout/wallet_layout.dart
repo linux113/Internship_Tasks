@@ -1,12 +1,17 @@
 import 'package:multikart/config.dart';
 
+/// Wallet section — pehle STATIC demo wallets (fake balances) dikhate the.
+/// Ab api/Wallet_Point/GetWallet se REAL wallet balance (guest / fetch fail
+/// ho to 0).
 class WalletLayout extends StatelessWidget {
   const WalletLayout({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<AppController>(
-      builder: (appCtrl) {
+    return GetBuilder<CardBalanceController>(
+      builder: (cardCtrl) {
+        final appCtrl = cardCtrl.appCtrl;
+        final balance = cardCtrl.walletBalance ?? 0;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -16,71 +21,62 @@ class WalletLayout extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 fontSize: FontSizes.f16),
             const Space(0, 20),
-            ...AppArray().walletList.map((e) {
-              return Container(
-                padding: EdgeInsets.symmetric(vertical: AppScreenUtil().screenHeight(20),horizontal: AppScreenUtil().screenWidth(20)),
-                margin: EdgeInsets.only(bottom: AppScreenUtil().screenHeight(20)),
-                decoration: BoxDecoration(
-                    color: appCtrl.appTheme.greyLight25,
-                    borderRadius: BorderRadius.circular(
-                        AppScreenUtil().borderRadius(5))),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Image.asset(
-                          e['image'].toString(),
-                          height: AppScreenUtil().screenHeight(30),
-                          width: AppScreenUtil().screenWidth(50),
-                          alignment: Alignment.centerLeft,
-                        ),
-                        const Space(20, 0),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            LatoFontStyle(
-                              text: e['title'].toString(),
-                              fontSize: FontSizes.f14,
-                              fontWeight: FontWeight.w600,
-                              color: appCtrl.appTheme.blackColor,
-                            ),
-                            const Space(0, 5),
-                            Row(
-                              children: [
-                                LatoFontStyle(
-                                  text: CardBalanceFont().balance,
-                                  fontSize: FontSizes.f12,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                  appCtrl.appTheme.contentColor,
-                                ),
-
-                                LatoFontStyle(
-                                  text: "${appCtrl.priceSymbol}${(double.parse(e['balance'].toString()) * appCtrl.rateValue)}",
-                                  fontSize: FontSizes.f14,
-                                  fontWeight: FontWeight.w700,
-                                  color: appCtrl.appTheme.blackColor,
-                                ),
-                              ],
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    LatoFontStyle(
-                      text: e['isLink'] == true ? "delink".tr : "link".tr,
-                      color: appCtrl.appTheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: FontSizes.f12,
-                    )
-                  ],
-                ),
-              );
-            }).toList()
+            Container(
+              padding: EdgeInsets.symmetric(
+                  vertical: AppScreenUtil().screenHeight(20),
+                  horizontal: AppScreenUtil().screenWidth(20)),
+              margin: EdgeInsets.only(bottom: AppScreenUtil().screenHeight(20)),
+              decoration: BoxDecoration(
+                  color: appCtrl.appTheme.greyLight25,
+                  borderRadius: BorderRadius.circular(
+                      AppScreenUtil().borderRadius(5))),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet_outlined,
+                          color: appCtrl.appTheme.primary,
+                          size: AppScreenUtil().size(32)),
+                      const Space(20, 0),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LatoFontStyle(
+                            text: CommonTextFont().wallets,
+                            fontSize: FontSizes.f14,
+                            fontWeight: FontWeight.w600,
+                            color: appCtrl.appTheme.blackColor,
+                          ),
+                          const Space(0, 5),
+                          Row(
+                            children: [
+                              LatoFontStyle(
+                                text: CardBalanceFont().balance,
+                                fontSize: FontSizes.f12,
+                                fontWeight: FontWeight.w600,
+                                color: appCtrl.appTheme.contentColor,
+                              ),
+                              LatoFontStyle(
+                                text: cardCtrl.isLoadingWallet
+                                    ? '...'
+                                    : "${appCtrl.priceSymbol}${(balance * appCtrl.rateValue).toStringAsFixed(2)}",
+                                fontSize: FontSizes.f14,
+                                fontWeight: FontWeight.w700,
+                                color: appCtrl.appTheme.blackColor,
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                ],
+              ),
+            )
           ],
         ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15));
-      }
+      },
     );
   }
 }
