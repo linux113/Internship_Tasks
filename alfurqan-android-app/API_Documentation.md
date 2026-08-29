@@ -323,3 +323,15 @@
     `canPop = isBack` (arguments se) — jahan se aaya wapas ja sakta hai.
 - Ab pure app me koi dead back gesture nahi: product detail, shop, inner
   category, login, onboarding, dashboard — sab verified.
+
+## 2026-08-29 (v1.1.1+12 hotfix-audit) Second deep audit — reference-level
+
+- Full reference audit chalaya: routes (30/31 wired — `changeTheme`/`myCart`
+  template ke unused leftovers, kahin call nahi hote), AppArray getters (sab
+  defined), Session keys (sab defined), controllers/classes (sab maujood),
+  ApiEndpoints (sab defined), assets (logo/m_logo dono disk par), language
+  keys (AppFonts-style usage app me hai hi nahi — sab direct text).
+- "Paige Turner" sirf translation files me DEAD entry — koi view use nahi
+  karta, render nahi hota.
+- Nit clean: product detail scroll-top me duplicate `hasClients` condition
+  hatayi (behaviour same).

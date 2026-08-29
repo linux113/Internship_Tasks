@@ -65,9 +65,7 @@ class ProductDetailController extends GetxController {
 
     // similar product se naya product load hua to page TOP par le jao
     try {
-      if (productScroll.hasClients &&
-          productScroll.hasClients &&
-          productScroll.positions.length == 1) {
+      if (productScroll.hasClients && productScroll.positions.length == 1) {
         productScroll.jumpTo(0);
       }
     } catch (_) {}
