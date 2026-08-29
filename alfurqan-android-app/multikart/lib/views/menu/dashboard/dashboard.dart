@@ -28,7 +28,14 @@ class _DashboardState extends State<Dashboard>
   Widget build(BuildContext context) {
     return GetBuilder<DashboardController>(builder: (_) {
       return PopScope(
+        // FIX: pehle sirf canPop:false tha bina handler — home screen par
+        // phone back gesture kuch nahi karta tha. Ab back dabane par
+        // backPressAction chalega (dusre tab→home, home par double-back exit).
         canPop: false,
+        onPopInvoked: (didPop) {
+          if (didPop) return;
+          dashboardCtrl.backPressAction(context);
+        },
         child: Directionality(
           textDirection: dashboardCtrl.appCtrl.isRTL ||
                   dashboardCtrl.appCtrl.languageVal == "ar"

@@ -309,3 +309,17 @@
   (lenient parse); guest -> login msg; empty -> "No orders yet".
 - Payment page: static demo cards slider -> "No saved cards yet" (cards ka
   backend api nahi); Wallet balance ab api/Wallet_Point/GetWallet se REAL.
+
+## 2026-08-29 (v1.1.1+12) Back-gesture deep-audit — dashboard + onboarding baaki the
+
+- v1.1.0 me sab PAGE-level PopScope fix ho gaye the, par deep audit me 2 root
+  screens abhi bhi `canPop:false` par mile:
+  - **Dashboard (home/root):** pehle back gesture BILKUL dead tha (koi handler
+    hi nahi tha). Ab standard behaviour: dusre bottom-tab par back dabao ->
+    pehle Home tab par aa jao; Home tab par 2 second ke andar back DOBARA
+    dabao tabhi app exit hogi — beech me "Press back again to exit" toast.
+  - **Onboarding (intro):** wahi purana broken pattern (`onPopInvoked` se
+    return true jo PopScope me IGNORE hota hai). Ab login jaisa:
+    `canPop = isBack` (arguments se) — jahan se aaya wapas ja sakta hai.
+- Ab pure app me koi dead back gesture nahi: product detail, shop, inner
+  category, login, onboarding, dashboard — sab verified.

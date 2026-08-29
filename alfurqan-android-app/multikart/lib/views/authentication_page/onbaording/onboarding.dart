@@ -19,10 +19,11 @@ class _OnBoardingScreenState extends State<OnBoardingScreen>
   Widget build(BuildContext context) {
     return GetBuilder<OnBoardingController>(builder: (_) {
       return PopScope(
-        canPop: false,
-        onPopInvoked: (canPop) async {
-          return Future(() => onBoardingCtrl.isBack ? true : false);
-        },
+        // FIX: wahi purana PopScope bug — canPop:false + onPopInvoked ka
+        // return value IGNORE hota hai, isliye back gesture dead tha.
+        // Login screen jaisa pattern: jahan se aaya hai wapas jaa sake (isBack).
+        canPop: onBoardingCtrl.isBack,
+        onPopInvoked: (didPop) {},
         child: Directionality(
           textDirection: onBoardingCtrl.appCtrl.isRTL ||
                   onBoardingCtrl.appCtrl.languageVal == "ar"
