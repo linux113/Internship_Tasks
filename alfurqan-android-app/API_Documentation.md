@@ -387,3 +387,14 @@ Deep line-by-line audit ke baad mile bugs + fixes:
 - Check kiya gaya aur galat NAHI nikla: payment total arguments flow
   (delivery→payment sahi jata hai), OrderSuccess page, qty parse, coupon
   guard (Get.isRegistered), order detail Get.put cycle. Woh sab sahi tha.
+
+## 2026-08-30 (v1.2.2+15) COMPILE FIX — card_balance.dart context shadowing
+
+- Device build error: `CardBalanceController can't be assigned to
+  BuildContext` at card_balance.dart:35 — v1.1.0 ke wallet rewrite me
+  GetBuilder ka builder param galati se `context` naam ka tha, jisse andar
+  ke `MediaQuery.of(context)` ko ye controller (context nahi) lagta tha.
+  FIX: param ka naam `cardBalanceCtrl` kiya — ab asli BuildContext milta
+  hai. Pure lib me ye pattern sirf yahi 1 jagah tha (globally grep verify).
+- Dart compiler ek pass me SAARE errors dikhata hai — us build me sirf
+  yahi 1 error tha, matlab baaki sab compile-clean hai.

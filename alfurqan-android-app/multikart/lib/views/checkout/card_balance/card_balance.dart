@@ -8,7 +8,10 @@ class CardBalance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<CardBalanceController>(builder: (context) {
+    // BUILD-FIX: builder ka param naam `context` tha — andar ke
+    // MediaQuery.of(context) isse CONTROLLER samajhta tha (BuildContext
+    // nahi) aur compile fail ho jata tha. Param ka naam badla.
+    return GetBuilder<CardBalanceController>(builder: (cardBalanceCtrl) {
       return Directionality(
         textDirection:
             cardCtrl.appCtrl.isRTL || cardCtrl.appCtrl.languageVal == "ar"
