@@ -7,3 +7,5 @@ export 'package:multikart/views/checkout/payment/payment_layouts/payment_method_
 export 'package:multikart/views/checkout/payment/payment_layouts/bank_list_drop_down.dart';
 export 'package:multikart/views/checkout/payment/payment_layouts/debit_credit_layout.dart';
 export 'package:multikart/views/checkout/payment/payment_layouts/wallet_list_layout.dart';
+export 'package:multikart/controllers/checkout_controller/checkout_controller.dart';
+export 'package:multikart/views/checkout/payment/payment_layouts/checkout_layout.dart';

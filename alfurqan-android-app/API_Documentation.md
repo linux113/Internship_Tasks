@@ -335,3 +335,40 @@
   karta, render nahi hota.
 - Nit clean: product detail scroll-top me duplicate `hasClients` condition
   hatayi (behaviour same).
+
+## 2026-08-30 (v1.2.0+13) CHECKOUT LIVE + 6 naye features (sab demo/static hatao batch)
+
+- **⭐ PLACE ORDER (sabse bada):** pehle "Pay Now" seedha STATIC success
+  page kholta tha — server par order kabhi nahi jata tha! Ab REAL flow:
+  POST api/Orders/CheckOut (preview, best-effort) -> POST api/Orders/
+  OrderPlace (FINAL). Body OrderSaveDto (swagger verify): {consumer_id,
+  products:[{product_id, variation_id, quantity}], shipping_address_id,
+  billing_address_id, points_amount:false, wallet_balance:false, coupon,
+  delivery_description, delivery_interval, payment_method:"cod"}.
+  Guards: login zaroori, cart khaali nahi, SERVER-saved address chahiye
+  (selected address id delivery step par storage me save hota hai).
+  Success par local cart clear + coupon reset + order success page.
+  Payment page se FAKE offers list + FAKE card/wallet/bank methods hate;
+  unki jagah REAL coupon box (View Coupons link ke sath) + COD selector.
+- **Order Detail REAL:** order history card tap ab real order id bhejta
+  hai; detail page GET api/Orders/GetOrder?id= se LIVE items, status
+  timeline (OrderStatusActivities), shipping address, price breakup —
+  purana static banner/timeline/demo address pura hata diya.
+- **Coupons REAL:** GET api/Coupon/GetAllCoupons (demo coupon list gayab;
+  loading/empty states). APPLY tap -> code storage me save (checkout par
+  auto use).
+- **Profile server prefill:** GET api/Core/GetUserDetail — phone (jo login
+  response me nahi aata) ab server se prefill hota hai.
+- **CHANGE PASSWORD working:** POST api/Core/ChangePassword
+  {current_password, new_password, confirm_password} (PasswordChangeDto).
+  Profile Setting me pehle "Date of birth" label wala box ab "Phone",
+  + Current/New password boxes + real button.
+- **Category tab REDESIGN:** odd/even colored boxes (user: "ugly") ki jagah
+  clean 3-column modern grid — rounded image card + naam, REAL api data,
+  tap -> shop page (slug + naam).
+- **Terms & Conditions + About Us REAL:** backend CMS Pages (GET
+  api/Pages/GetAllPages) se content (slug/title match: "term"/"about",
+  HTML strip karke). Backend me page nahi mila to saaf message — demo
+  Lorem Ipsum wapas nahi aata.
+- **Wallet transactions:** GET api/Wallet_Point/GetPoints — balance ke
+  niche real transaction history list.

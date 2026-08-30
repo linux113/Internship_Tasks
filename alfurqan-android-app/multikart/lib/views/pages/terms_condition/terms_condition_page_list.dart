@@ -3,3 +3,4 @@ export 'package:multikart/views/pages/terms_condition/terms_condition_utils/term
 export 'package:multikart/common/array/terms_condition_array.dart';
 export 'package:multikart/controllers/pages_controller/terms_condition_controller.dart';
 export 'package:multikart/views/pages/terms_condition/terms_condition_layouts/terms_condition_card.dart';
+export 'package:multikart/controllers/pages_controller/cms_page_controller.dart';

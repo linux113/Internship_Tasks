@@ -15,7 +15,10 @@ class OrderHistoryLayout extends StatelessWidget {
                     lastIndex: orderHistoryCtrl.orderHistoryList.length - 1,
                     orderHistoryModel: e.value,
                     onTap: ()=>orderHistoryCtrl.bottomSheetLayout(),
-                  ).gestures(onTap: () => Get.toNamed(routeName.orderDetail));
+                  ).gestures(
+                      // REAL id ke sath detail kholna (demo nahi)
+                      onTap: () => Get.toNamed(routeName.orderDetail,
+                          arguments: {'id': e.value.orderId ?? 0}));
                 }).toList(),
               ],
             )

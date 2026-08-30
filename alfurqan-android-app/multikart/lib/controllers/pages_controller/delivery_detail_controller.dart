@@ -24,11 +24,20 @@ class DeliveryDetailController extends GetxController {
     update();
   }
 
-  //select address
-  selectAddress(val,index){
+  //select address — checkout ke liye selected address ka ID bhi save kar
+  // do (OrderPlace ko shipping_address_id chahiye hota hai)
+  final storage = LocalStorage();
+
+  selectAddress(val, index) {
     value = val.name!;
     selectRadio = index;
     update();
+    try {
+      final list = AddressStore.load();
+      if (index >= 0 && index < list.length) {
+        storage.write('selected_address_id', list[index].id);
+      }
+    } catch (_) {}
   }
 
   @override

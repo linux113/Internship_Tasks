@@ -115,6 +115,7 @@ class OrderHistoryController extends GetxController {
     }
 
     return OrderHistoryModel(
+      orderId: jsonToInt(id),
       orderDay: date.length >= 10 ? date.substring(0, 10) : date,
       daysWiseList: [
         for (var i = 0; i < (items.isEmpty ? 1 : items.length); i++)

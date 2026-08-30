@@ -4,3 +4,4 @@ export 'package:multikart/views/pages/about_us/about_us_utils/about_us_constant.
 export 'package:multikart/views/pages/about_us/about_us_layout/statisic_card.dart';
 export 'package:multikart/views/pages/about_us/about_us_layout/about_us_statistic.dart';
 export 'package:multikart/views/pages/about_us/about_us_layout/about_us_body.dart';
+export 'package:multikart/controllers/pages_controller/cms_page_controller.dart';

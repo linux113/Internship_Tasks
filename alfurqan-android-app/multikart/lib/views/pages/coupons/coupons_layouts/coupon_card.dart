@@ -24,11 +24,18 @@ class CouponCard extends StatelessWidget {
               ),
             ],
           ),
+          // APPLY tap — code select karo (checkout par use hoga)
           LatoFontStyle(
-              text: CouponFont().apply,
-              color: appCtrl.appTheme.primary,
-              fontSize: FontSizes.f14,
-              fontWeight: FontWeight.w600)
+                  text: CouponFont().apply,
+                  color: appCtrl.appTheme.primary,
+                  fontSize: FontSizes.f14,
+                  fontWeight: FontWeight.w600)
+              .gestures(onTap: () {
+            if (Get.isRegistered<CouponsController>()) {
+              Get.find<CouponsController>()
+                  .applyCode(couponModel!.code ?? '');
+            }
+          })
         ]),
         const Space(0, 12),
         LatoFontStyle(

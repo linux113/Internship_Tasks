@@ -28,19 +28,124 @@ class ProfileController extends GetxController {
   TextEditingController txtDob = TextEditingController();
   TextEditingController txtPhone = TextEditingController();
   TextEditingController txtPassword = TextEditingController();
+  // Change password ke liye CURRENT password box (backend ko purana + naya
+  // dono chahiye — PasswordChangeDto)
+  TextEditingController txtCurrentPassword = TextEditingController();
   final FocusNode firstNameFocus = FocusNode();
   final FocusNode lastNameFocus = FocusNode();
   final FocusNode dobFocus = FocusNode();
   final FocusNode mobileNumberFocus = FocusNode();
+  final FocusNode currentPasswordFocus = FocusNode();
   final FocusNode passwordFocus = FocusNode();
 
   @override
   void onReady() {
-    // TODO: implement onReady
     drawerList = profileList;
     loadUserData();
     update();
+    // Server se bhi detail lao (phone etc. jo login response me nahi aata)
+    fetchServerProfile();
     super.onReady();
+  }
+
+  /// GET api/Core/GetUserDetail — token se user pata chalta hai.
+  /// Response (AccountDetailDto): name/email/phone/country_code etc.
+  /// Phone abhi local me nahi hai — yahi se prefill hoga.
+  Future<void> fetchServerProfile() async {
+    if (!isLoggedIn) return;
+    try {
+      final res = await ApiService().request<Map<String, dynamic>>(
+        endpoint: ApiEndpoints.getUserDetail,
+        method: ApiMethod.get,
+        fromJson: (json) {
+          dynamic raw = json;
+          for (var i = 0; i < 3 && raw is Map; i++) {
+            final m = Map<String, dynamic>.from(raw as Map);
+            if (m.containsKey('email') ||
+                m.containsKey('Email') ||
+                m.containsKey('name') ||
+                m.containsKey('phone')) {
+              return m;
+            }
+            raw = m['data'] ?? m['Data'];
+            if (raw == null) return m;
+          }
+          return raw is Map
+              ? Map<String, dynamic>.from(raw as Map)
+              : <String, dynamic>{};
+        },
+      );
+      if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
+        final m = res.data!;
+        final phone = (m['phone'] ?? m['Phone'] ?? '').toString();
+        final name =
+            (m['name'] ?? m['Name'] ?? m['full_name'] ?? '').toString();
+        final email = (m['email'] ?? m['Email'] ?? '').toString();
+        if (phone.isNotEmpty && phone != '0') txtPhone.text = phone;
+        if (userName.isEmpty && name.isNotEmpty) {
+          userName = name;
+          final parts = name.trim().split(RegExp(r'\s+'));
+          txtFirstName.text = parts.first;
+          if (parts.length > 1) {
+            txtLastName.text = parts.sublist(1).join(' ');
+          }
+        }
+        if (userEmail.isEmpty && email.isNotEmpty) userEmail = email;
+        update();
+      }
+    } catch (_) {}
+  }
+
+  bool isChangingPassword = false;
+
+  /// POST api/Core/ChangePassword — body:
+  /// {current_password, new_password, confirm_password} (PasswordChangeDto)
+  Future<void> changePassword() async {
+    if (!isLoggedIn) {
+      _toast('Please login first');
+      Get.toNamed(routeName.login);
+      return;
+    }
+    if (isChangingPassword) return;
+    final current = txtCurrentPassword.text.trim();
+    final newPass = txtPassword.text.trim();
+    if (current.isEmpty || newPass.isEmpty) {
+      _toast('Current aur new password dono likho');
+      return;
+    }
+    if (newPass.length < 6) {
+      _toast('New password kam se kam 6 characters ka ho');
+      return;
+    }
+    isChangingPassword = true;
+    update();
+    try {
+      final res = await ApiService().request(
+        endpoint: ApiEndpoints.changePassword,
+        method: ApiMethod.post,
+        data: {
+          'current_password': current,
+          'new_password': newPass,
+          'confirm_password': newPass,
+        },
+        fromJson: (json) => json,
+      );
+      if (res.isSuccess) {
+        txtCurrentPassword.clear();
+        txtPassword.clear();
+        _toast(res.message.isNotEmpty
+            ? res.message
+            : 'Password changed successfully');
+      } else {
+        _toast(res.message.isNotEmpty
+            ? res.message
+            : 'Password change nahi hua — current password check karein');
+      }
+    } catch (_) {
+      _toast('Password change nahi hua — dobara try karein');
+    }
+    isChangingPassword = false;
+    update();
   }
 
   /// login_controller.dart me jo 'name'/'email' storage me save hue the,

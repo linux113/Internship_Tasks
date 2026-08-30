@@ -19,6 +19,11 @@ class CardBalanceController extends GetxController {
   double? walletBalance;
   bool isLoadingWallet = false;
 
+  /// Wallet/Points transactions (api/Wallet_Point/GetPoints) —
+  /// har row: {title, date, amount}
+  List<Map<String, dynamic>> pointsList = [];
+  bool isLoadingPoints = false;
+
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
   int get _userId {
@@ -30,7 +35,56 @@ class CardBalanceController extends GetxController {
   @override
   void onReady() {
     fetchWalletBalance();
+    fetchPointsHistory();
     super.onReady();
+  }
+
+  /// GetPoints — wallet points ki transactions list (lenient parse).
+  Future<void> fetchPointsHistory() async {
+    if (!isLoggedIn) return;
+    isLoadingPoints = true;
+    update();
+    try {
+      final res = await ApiService().request<List<Map<String, dynamic>>>(
+        endpoint: ApiEndpoints.getPoints,
+        method: ApiMethod.get,
+        queryParams: {'consumer_id': _userId, 'page': 1, 'paginate': 15},
+        fromJson: (json) {
+          dynamic raw = json;
+          for (var i = 0; i < 3 && raw is Map; i++) {
+            raw = raw['data'] ?? raw['Data'] ?? raw['items'];
+          }
+          if (raw is! List) return <Map<String, dynamic>>[];
+          return raw.where((e) => e is Map).map((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            return <String, dynamic>{
+              'title': (jsonToString(m['title'] ??
+                      m['Title'] ??
+                      m['type'] ??
+                      m['description'] ??
+                      m['Description']) ??
+                  'Points'),
+              'date': jsonToString(m['created_at'] ??
+                      m['Created_at'] ??
+                      m['date'] ??
+                      m['Date']) ??
+                  '',
+              'amount': jsonToDouble(m['amount'] ??
+                      m['Amount'] ??
+                      m['points'] ??
+                      m['Points'] ??
+                      m['balance']) ??
+                  0,
+            };
+          }).toList();
+        },
+      );
+      if (res.isSuccess && res.data != null) {
+        pointsList = res.data!;
+      }
+    } catch (_) {}
+    isLoadingPoints = false;
+    update();
   }
 
   /// GetWallet — response shape badal sakta hai, lenient parse.

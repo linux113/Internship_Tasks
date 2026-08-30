@@ -12,7 +12,10 @@ final GestureTapCallback? onTap;
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(builder: (appCtrl) {
       return InkWell(
-        onTap: () => Get.toNamed(routeName.orderDetail),
+        // REAL order id bhejo — detail page ab api/Orders/GetOrder se live
+        // data lane wala hai (pehle static demo page khulta tha)
+        onTap: () => Get.toNamed(routeName.orderDetail,
+            arguments: {'id': orderHistoryModel?.orderId ?? 0}),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -36,22 +36,38 @@ class Coupons extends StatelessWidget {
                       ),
                       const Space(0, 10),
 
-                      //coupon list layout
-                      CouponList(
-                        couponList: couponsList,
-                      )
+                      //coupon list — REAL api se (pehle static demo list
+                      // thi). Loading / empty / error states sambhale hue.
+                      if (couponCtrl.isLoading)
+                        Padding(
+                          padding: EdgeInsets.only(
+                              top: AppScreenUtil().screenHeight(40)),
+                          child: Center(
+                              child: CircularProgressIndicator(
+                                  color: couponCtrl.appCtrl.appTheme.primary)),
+                        )
+                      else if (couponCtrl.couponList.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(
+                              top: AppScreenUtil().screenHeight(40)),
+                          child: Center(
+                            child: LatoFontStyle(
+                                text: couponCtrl.loadFailed
+                                    ? "Coupons load nahi hue — dobara try karein"
+                                    : "Abhi koi coupon available nahi",
+                                color:
+                                    couponCtrl.appCtrl.appTheme.contentColor,
+                                fontSize: FontSizes.f14),
+                          ),
+                        )
+                      else
+                        CouponList(couponList: couponCtrl.couponList)
                     ],
                   ),
                 ),
               ),
-              //maximum saving and apply layout
-              if (couponCtrl.cartModelList != null)
-                CartBottomLayout(
-                    desc: CouponFont().maximumSaving,
-                    buttonName: CouponFont().apply,
-                    isPrimaryDesc: false,
-                    totalAmount:
-                        couponCtrl.cartModelList!.totalAmount.toString())
+              // Niche wala demo "maximum saving" bar hataya — cart ka real
+              // total checkout/payment page par dikhta hai, yaha zaroorat nahi.
             ],
           ),
         ),

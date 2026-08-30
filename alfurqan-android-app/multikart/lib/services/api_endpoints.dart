@@ -9,6 +9,19 @@ class ApiEndpoints {
   static const String getUserDetail = 'Core/GetUserDetail';
   // Orders (login ke baad, token se)
   static const String getUserOrders = 'Orders/GetUserOrders';
+  // Ek order ka FULL detail (items + status timeline + address + totals)
+  static const String getOrder = 'Orders/GetOrder';
+  // Checkout preview (totals) + FINAL order place — OrderSaveDto body
+  static const String checkout = 'Orders/CheckOut';
+  static const String placeOrder = 'Orders/OrderPlace';
+  // Coupons list
+  static const String getCoupons = 'Coupon/GetAllCoupons';
+  // Change password — body: {current_password, new_password, confirm_password}
+  static const String changePassword = 'Core/ChangePassword';
+  // CMS pages (Terms & Conditions / About Us ka content backend se)
+  static const String getPages = 'Pages/GetAllPages';
+  // Wallet points transactions
+  static const String getPoints = 'Wallet_Point/GetPoints';
   // Wallet balance (login ke baad)
   static const String getWallet = 'Wallet_Point/GetWallet';
 

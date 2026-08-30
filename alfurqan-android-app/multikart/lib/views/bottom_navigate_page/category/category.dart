@@ -1,5 +1,11 @@
 import '../../../config.dart';
 
+/// CATEGORY TAB — REDESIGN.
+/// Pehle: odd/even staggered colored text boxes — user feedback: "bilkul
+/// ugly lag raha hai". Ab clean MODERN GRID: har category ka rounded image
+/// card + niche naam, 3 columns, sab REAL api data (GetHomePageDataApp ke
+/// Top Categories). Tap → us category ke products (slug + naam ke sath
+/// shop page).
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({Key? key}) : super(key: key);
 
@@ -13,39 +19,75 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CategoryController>(builder: (_) {
+      final appCtrl = categoryCtrl.appCtrl;
       return Directionality(
-        textDirection: categoryCtrl.appCtrl.isRTL ||
-            categoryCtrl.appCtrl.languageVal == "ar"
-            ? TextDirection.rtl
-            : TextDirection.ltr,
+        textDirection:
+            appCtrl.isRTL || appCtrl.languageVal == "ar"
+                ? TextDirection.rtl
+                : TextDirection.ltr,
         child: Scaffold(
-          body: categoryCtrl.appCtrl.isShimmer
+          backgroundColor: appCtrl.appTheme.whiteColor,
+          body: appCtrl.isShimmer
               ? const CategoryShimmer()
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      //category list
-                      ...categoryCtrl.categoryList.asMap().entries.map((e) {
-                        return CategoryCardLayout(
-                          categoryModel: categoryCtrl.categoryList[e.key],
-                          index: e.key,
-                          isEven: e.key.isEven,
-                          onTap: ()async {
-                            categoryCtrl.appCtrl.isShimmer = true;
-                            categoryCtrl.appCtrl.update();
-                            var data = {'data': e.value, 'index': e.key};
-
-                            Get.toNamed(routeName.innerCategory, arguments: data);
-                            await Future.delayed(DurationsClass.s1);
-                            categoryCtrl.appCtrl.isShimmer = false;
-                            categoryCtrl.appCtrl.update();
-                            Get.forceAppUpdate();
-                          },
+              : categoryCtrl.categoryList.isEmpty
+                  ? Center(
+                      child: LatoFontStyle(
+                          text: "Categories load nahi hui",
+                          color: appCtrl.appTheme.contentColor,
+                          fontSize: FontSizes.f14),
+                    )
+                  : GridView.builder(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: AppScreenUtil().screenWidth(15),
+                          vertical: AppScreenUtil().screenHeight(15)),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.72,
+                        crossAxisSpacing: AppScreenUtil().screenWidth(12),
+                        mainAxisSpacing: AppScreenUtil().screenHeight(16),
+                      ),
+                      itemCount: categoryCtrl.categoryList.length,
+                      itemBuilder: (context, index) {
+                        final cat = categoryCtrl.categoryList[index];
+                        return GestureDetector(
+                          onTap: () => categoryCtrl.goToCategoryProducts(cat),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // ---- rounded image card ----
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: appCtrl.appTheme.greyLight25,
+                                    borderRadius: BorderRadius.circular(
+                                        AppScreenUtil().borderRadius(12)),
+                                    border: Border.all(
+                                        color: appCtrl.appTheme.greyLight25),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(
+                                        AppScreenUtil().borderRadius(12)),
+                                    child: imageNetwork(
+                                        url: cat.displayImageUrl ?? '',
+                                        fit: BoxFit.cover),
+                                  ),
+                                ),
+                              ),
+                              const Space(0, 8),
+                              // ---- category name ----
+                              LatoFontStyle(
+                                  text: cat.name ?? '',
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  fontSize: FontSizes.f12,
+                                  fontWeight: FontWeight.w600,
+                                  color: appCtrl.appTheme.blackColor),
+                            ],
+                          ),
                         );
-                      }).toList()
-                    ],
-                  ),
-                ),
+                      },
+                    ),
         ),
       );
     });

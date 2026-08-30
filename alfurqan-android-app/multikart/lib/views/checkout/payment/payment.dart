@@ -1,13 +1,21 @@
+import 'package:multikart/controllers/home_product_controllers/cart_controller.dart';
+
 import '../../../config.dart';
 
+/// PAYMENT (checkout step 3) — pehle "Pay Now" seedha STATIC success page
+/// kholta tha (server par order kabhi nahi jata tha) + fake offers/cards
+/// dikhte the. Ab: coupon box + COD selector (REAL OrderSaveDto fields) aur
+/// PLACE ORDER button → CheckoutController.placeOrder() → server par asli
+/// order (api/Orders/OrderPlace) → success page.
 class Payment extends StatelessWidget {
   final paymentCtrl = Get.put(PaymentController());
+  final checkoutCtrl = Get.put(CheckoutController());
 
   Payment({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<PaymentController>(builder: (_) {
+    return GetBuilder<CheckoutController>(builder: (_) {
       return Directionality(
         textDirection: paymentCtrl.appCtrl.isRTL ||
             paymentCtrl.appCtrl.languageVal == "ar"
@@ -28,34 +36,38 @@ class Payment extends StatelessWidget {
                   child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //offer promotion layout
-                  const OfferPromotionLayout(),
+                  //coupon box (REAL — OrderPlace body me jata hai)
+                  const CheckoutCouponBox(),
                   const Space(0, 30),
                   const BorderLineLayout(),
                   const Space(0, 30),
 
-                  //payment method layout
-                  const PaymentMethod(),
+                  //payment method (REAL — payment_method field)
+                  const CheckoutPaymentSelector(),
                   const Space(0, 30),
 
-                  //cart order detail(price)
+                  //cart order detail(price) — REAL cart ka model (pehle
+                  // static demo cartList tha)
                   CartOrderDetailLayout(
-                      cartModelList: cartList, isDeliveryShow: false),
+                      cartModelList: Get.isRegistered<CartController>() &&
+                              Get.find<CartController>().cartModelList != null
+                          ? Get.find<CartController>().cartModelList!
+                          : cartList,
+                      isDeliveryShow: false),
                   const Space(0, 100)
                 ],
               ).marginSymmetric(vertical: Insets.i20)),
 
-              //view detail and pay now layout
+              //PLACE ORDER — ab REAL server call (pehle static success page
+              // seedha kholta tha!)
               CartBottomLayout(
                   desc: CartFont().viewDetail,
-                  buttonName: PaymentFont().payNow,
+                  buttonName: checkoutCtrl.isPlacing
+                      ? "Placing Order..."
+                      : "Place Order",
                   totalAmount: paymentCtrl.totalAmount.toString(),
-                     /* (double.parse(paymentCtrl.totalAmount.toString()) *
-                          paymentCtrl.appCtrl.rateValue)
-                          .toString(),*/
                   onTap: () {
-                    Get.toNamed(routeName.orderSuccess,
-                        arguments: paymentCtrl.totalAmount.toString());
+                    if (!checkoutCtrl.isPlacing) checkoutCtrl.placeOrder();
                   })
             ],
           ),

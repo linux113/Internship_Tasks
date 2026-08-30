@@ -73,7 +73,72 @@ class WalletLayout extends StatelessWidget {
                   ),
                 ],
               ),
-            )
+            ),
+
+            // ============ Points / transactions history (REAL) ============
+            if (cardCtrl.isLoggedIn) ...[
+              LatoFontStyle(
+                  text: "Transaction History",
+                  color: appCtrl.appTheme.blackColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: FontSizes.f16),
+              const Space(0, 15),
+              if (cardCtrl.isLoadingPoints)
+                Center(
+                    child: Padding(
+                  padding: EdgeInsets.all(AppScreenUtil().size(12)),
+                  child: CircularProgressIndicator(
+                      color: appCtrl.appTheme.primary, strokeWidth: 2),
+                ))
+              else if (cardCtrl.pointsList.isEmpty)
+                LatoFontStyle(
+                    text: "Abhi koi transaction nahi",
+                    color: appCtrl.appTheme.contentColor,
+                    fontSize: FontSizes.f13)
+              else
+                ...cardCtrl.pointsList.map((p) {
+                  return Container(
+                    margin: EdgeInsets.only(
+                        bottom: AppScreenUtil().screenHeight(10)),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: AppScreenUtil().screenWidth(15),
+                        vertical: AppScreenUtil().screenHeight(12)),
+                    decoration: BoxDecoration(
+                        color: appCtrl.appTheme.greyLight25,
+                        borderRadius: BorderRadius.circular(
+                            AppScreenUtil().borderRadius(5))),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              LatoFontStyle(
+                                  text: (p['title'] ?? '').toString(),
+                                  fontSize: FontSizes.f13,
+                                  fontWeight: FontWeight.w600,
+                                  color: appCtrl.appTheme.blackColor),
+                              if (((p['date'] ?? '') as String).isNotEmpty)
+                                LatoFontStyle(
+                                    text: (p['date'] ?? '').toString(),
+                                    fontSize: FontSizes.f11,
+                                    color: appCtrl.appTheme.contentColor),
+                            ],
+                          ),
+                        ),
+                        LatoFontStyle(
+                            text:
+                                "${appCtrl.priceSymbol}${((p['amount'] as num) * appCtrl.rateValue).toStringAsFixed(2)}",
+                            fontSize: FontSizes.f13,
+                            fontWeight: FontWeight.w700,
+                            color: appCtrl.appTheme.primary),
+                      ],
+                    ),
+                  );
+                }),
+              const Space(0, 10),
+            ],
           ],
         ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15));
       },
