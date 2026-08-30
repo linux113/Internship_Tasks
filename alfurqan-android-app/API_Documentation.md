@@ -372,3 +372,18 @@
   Lorem Ipsum wapas nahi aata.
 - **Wallet transactions:** GET api/Wallet_Point/GetPoints — balance ke
   niche real transaction history list.
+
+## 2026-08-30 (v1.2.1+14) Bug-hunt pass — 2 real bugs pakde aur fix kiye
+
+Deep line-by-line audit ke baad mile bugs + fixes:
+- **BUG 1 (CMS instance mix-up):** Terms & About EK hi CmsPageController
+  instance share karte the — About kholte hi piche pada Terms page bhi
+  About ka content dikhane lagta tha. FIX: har page ka alag TAGGED
+  instance ('cms-term' / 'cms-about') + GetBuilder tag ke sath.
+- **BUG 2 (currency hardcode):** Order Detail page par price "AED"
+  hardcoded tha — user ki SELECTED currency ignore hoti. FIX: ab wallet
+  jaisa `priceSymbol × rateValue` use hota hai (USD select karo to $ me
+  dikhega).
+- Check kiya gaya aur galat NAHI nikla: payment total arguments flow
+  (delivery→payment sahi jata hai), OrderSuccess page, qty parse, coupon
+  guard (Get.isRegistered), order detail Get.put cycle. Woh sab sahi tha.

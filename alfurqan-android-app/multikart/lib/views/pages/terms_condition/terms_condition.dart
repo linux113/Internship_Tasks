@@ -6,14 +6,21 @@ import '../../../config.dart';
 /// demo text wapas NAHI aayega.
 class TermsAndCondition extends StatelessWidget {
   final termsConditionCtrl = Get.put(TermsAndConditionController());
-  final cmsCtrl = Get.put(CmsPageController());
+  // BUG-FIX: Terms/About PEHLE ek hi CmsPageController share karte the —
+  // About kholne se Terms page ka content bhi badal jata tha. Ab har page
+  // ka ALAG tagged instance hai ('cms-term' vs 'cms-about').
+  final cmsCtrl = Get.isRegistered<CmsPageController>(tag: 'cms-term')
+      ? Get.find<CmsPageController>(tag: 'cms-term')
+      : Get.put(CmsPageController(), tag: 'cms-term');
 
   TermsAndCondition({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     cmsCtrl.loadFor('term');
-    return GetBuilder<CmsPageController>(builder: (_) {
+    return GetBuilder<CmsPageController>(
+        tag: 'cms-term',
+        builder: (_) {
       final appCtrl = termsConditionCtrl.appCtrl;
       return Directionality(
         textDirection: appCtrl.isRTL || appCtrl.languageVal == "ar"

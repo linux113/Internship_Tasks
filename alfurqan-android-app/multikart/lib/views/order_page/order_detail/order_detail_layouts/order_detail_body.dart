@@ -103,14 +103,14 @@ class OrderDetailBody extends StatelessWidget {
                         const Space(0, 4),
                         LatoFontStyle(
                             text:
-                                "Qty ${it['qty']} × AED ${(it['price'] as num).toStringAsFixed(2)}",
+                                "Qty ${it['qty']} × ${appCtrl.priceSymbol}${((it['price'] as num) * appCtrl.rateValue).toStringAsFixed(2)}",
                             fontSize: FontSizes.f12,
                             color: appCtrl.appTheme.contentColor),
                       ]),
                 ),
                 LatoFontStyle(
                     text:
-                        "AED ${(it['lineTotal'] as num).toStringAsFixed(2)}",
+                        "${appCtrl.priceSymbol}${((it['lineTotal'] as num) * appCtrl.rateValue).toStringAsFixed(2)}",
                     fontSize: FontSizes.f13,
                     fontWeight: FontWeight.w700,
                     color: appCtrl.appTheme.blackColor),
@@ -235,7 +235,7 @@ class OrderDetailBody extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.blackColor),
             LatoFontStyle(
-                text: "AED ${ctrl.total.toStringAsFixed(2)}",
+                text: "${appCtrl.priceSymbol}${(ctrl.total * appCtrl.rateValue).toStringAsFixed(2)}",
                 fontSize: FontSizes.f15,
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.primary),
@@ -256,7 +256,7 @@ class OrderDetailBody extends StatelessWidget {
             fontSize: FontSizes.f13,
             color: appCtrl.appTheme.contentColor),
         LatoFontStyle(
-            text: "AED ${val.toStringAsFixed(2)}",
+            text: "${appCtrl.priceSymbol}${(val * appCtrl.rateValue).toStringAsFixed(2)}",
             fontSize: FontSizes.f13,
             color: appCtrl.appTheme.blackColor),
       ]),

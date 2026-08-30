@@ -5,14 +5,19 @@ import '../../../config.dart';
 /// saaf message dikhega — demo wapas nahi.
 class AboutUs extends StatelessWidget {
   final aboutUsCtrl = Get.put(AboutUsController());
-  final cmsCtrl = Get.put(CmsPageController());
+  // BUG-FIX: tagged alag instance (Terms se content mix nahi hoga)
+  final cmsCtrl = Get.isRegistered<CmsPageController>(tag: 'cms-about')
+      ? Get.find<CmsPageController>(tag: 'cms-about')
+      : Get.put(CmsPageController(), tag: 'cms-about');
 
   AboutUs({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     cmsCtrl.loadFor('about');
-    return GetBuilder<CmsPageController>(builder: (_) {
+    return GetBuilder<CmsPageController>(
+        tag: 'cms-about',
+        builder: (_) {
       final appCtrl = aboutUsCtrl.appCtrl;
       return Directionality(
         textDirection: appCtrl.isRTL || appCtrl.languageVal == "ar"
