@@ -398,3 +398,18 @@ Deep line-by-line audit ke baad mile bugs + fixes:
   hai. Pure lib me ye pattern sirf yahi 1 jagah tha (globally grep verify).
 - Dart compiler ek pass me SAARE errors dikhata hai — us build me sirf
   yahi 1 error tha, matlab baaki sab compile-clean hai.
+
+## 2026-08-30 (v1.2.3+16) STRICT team-review pass — BUG #3 (infinite refetch) fix
+
+6-reviewer style full audit (type-hunter, API-review, controller logic,
+view/nav, null-safety, const-check) ke baad:
+- **BUG #3 (REAL):** CmsPageController ka guard sirf `content.isNotEmpty`
+  tha — agar backend me Terms/About page NAHI mila (content khaali), to
+  har rebuild par naya fetch hota jata (build->fetch->update->build->
+  fetch... INFINITE REFETCH LOOP, data/battery waste + LG sakta tha app).
+  FIX: `_attempted` flag — ek page par ek hi baar attempt (Retry chhod kar).
+- Confirmed SAFE (galat nahi nikla): saare `!` asserts guarded hain
+  (pehle != null checks), const constructors sahi, route arguments dono
+  taraf match, ApiService ka "data" unwrap + mere lenient parsers dono
+  cases cover karte hai, base URL https://alfurqan.ae/api/ + endpoints
+  swagger se exact match.

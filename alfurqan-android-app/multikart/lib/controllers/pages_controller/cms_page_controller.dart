@@ -16,14 +16,20 @@ class CmsPageController extends GetxController {
   bool loadFailed = false;
 
   String? _lastMatch;
+  // BUG-FIX #3: pehle guard sirf "content.isNotEmpty" tha — agar backend me
+  // page nahi mila (content khaali) to HAR rebuild par naya fetch chalta
+  // jata (infinte refetch loop). Ab ek hi baar attempt hota hai; Retry ke
+  // alawa dubara fetch nahi (jab tak page dobara khula na ho).
+  bool _attempted = false;
 
   /// match: 'term' (terms & conditions) / 'about' (about us) jaisa keyword —
   /// page ke slug ya title me dhundha jayega.
   Future<void> loadFor(String match) async {
     // View build ke andar call hota hai — same page dobara fetch na ho
     if (isLoading) return;
-    if (_lastMatch == match && content.isNotEmpty) return;
+    if (_lastMatch == match && _attempted) return;
     _lastMatch = match;
+    _attempted = true;
     isLoading = true;
     loadFailed = false;
     update();
@@ -71,6 +77,8 @@ class CmsPageController extends GetxController {
   }
 
   void retry() {
+    // Retry par dobara attempt allowed
+    _attempted = false;
     if (_lastMatch != null) loadFor(_lastMatch!);
   }
 
