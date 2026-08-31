@@ -43,8 +43,10 @@ class AppBarActionLayout extends StatelessWidget {
               appCtrl.update();
               Get.forceAppUpdate();
             }).paddingSymmetric(
-                horizontal: AppScreenUtil()
-                    .screenWidth(appCtrl.isHeart && appCtrl.isCart ? 0 : 10)),
+                // FIX (user report): bell icon hatte hi Heart ka padding 0
+                // ho jata tha — Search aur Heart ek dusre se CHIPKE hue
+                // dikhte the. Ab hamesha 10 gap rahega.
+                horizontal: AppScreenUtil().screenWidth(10)),
           if (appCtrl.isCart)
             const BuyIcon().paddingSymmetric(
                 horizontal: AppScreenUtil().screenWidth(15),

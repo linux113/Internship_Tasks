@@ -495,3 +495,7 @@ Swagger deep-dive me `GET /api/Setting/GetUserNotifications` mila (pehle "notifi
 ### Verified
 - 542 Dart files bracket scan: 0 problems; language maps: 0 orphan entries.
 - Swagger confirm: Cart me sirf GetCart + AddToCart hote hain (DeleteCart naam ka endpoint backend me hai hi nahi — qty 0 hi sahi tareeqa hai).
+
+## 31 Aug 2026 (v1.4.1+21) App-bar icon spacing fix
+
+User report: search icon "chipka hua" lagta hai. Wajah: bell icon hate hi Heart icon ka horizontal padding 0 ho jata tha (condition `isHeart && isCart ? 0 : 10`). Ab Heart hamesha 10 padding rakhta hai — Search/Heart/Cart ke beech barabar gap.
