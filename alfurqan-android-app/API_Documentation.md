@@ -466,3 +466,11 @@ User ne agency-agents repo (msitarzewski/agency-agents) lagakar FULL strict revi
 - `lib/views/menu/drawer/drawer_screen.dart` (index 2 hide)
 - `lib/common/array/about_us_array.dart` (stats text)
 - `pubspec.yaml` version 1.3.1+18
+
+## 31 Aug 2026 (v1.3.2+19) COMPILE FIX — hi.dart ka ek missing key (release build error)
+
+- **Error (user ka release build):** `lib/common/language/hi.dart: Expected ',' before this` — poori file par ~500 errors cascade ho rahe the.
+- **Root cause:** v1.3.1 ki language-edit script ne `hi.dart` me `"aboutDesc":` KEY ko galti se hata diya tha (sirf value line reh gayi thi). Dart compiler map ko SET samajh baitha, isliye file ke HAR entry par "Expected ','" cascade error. Asli defect sirf 1 line ka tha.
+- **Fix:** `"aboutDesc":` key wapas restore (line 551). Baaki en/ar/kr files verify — sab sahi.
+- **Anti-repeat:** naya validator add kiya — saari language maps me "orphan value line" (bina key wali string entry) scan: 0 issues. Bracket scan 542 files: 0 problems. Ab `pubspec.yaml` version 1.3.2+19.
+- Note: is build me v1.3.1 ke saare improvements (nayi onboarding images, Help text, Pages hide) bhi shaamil hain.
