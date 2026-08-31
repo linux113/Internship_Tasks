@@ -37,7 +37,27 @@ class Notification extends StatelessWidget {
                     notificationModel: e.value,
                     index: e.key,
                   );
-                })
+                }),
+
+                // EMPTY state: koi notification nahi to saaf message —
+                // pehle static demo list aati thi, ab khaali state REAL hai.
+                if (!notificationCtrl.isLoading &&
+                    notificationCtrl.filterList.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(
+                        top: AppScreenUtil().screenHeight(40)),
+                    child: Center(
+                      child: LatoFontStyle(
+                        text: notificationCtrl.loadFailed
+                            ? "Notifications load nahi ho payi — baad me dobara try karein"
+                            : "Abhi koi notification nahi hai",
+                        fontSize: FontSizes.f13,
+                        textAlign: TextAlign.center,
+                        color:
+                            notificationCtrl.appCtrl.appTheme.contentColor,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

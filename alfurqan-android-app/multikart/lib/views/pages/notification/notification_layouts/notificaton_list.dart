@@ -18,16 +18,13 @@ class NotificationList extends StatelessWidget {
                       : notificationCtrl.appCtrl.appTheme.greyLight25,
                   border: Border(
                     bottom: BorderSide(
-                      color:notificationModel!.isRead!
-                          ? notificationCtrl
-                          .filterList[index! - 1].isRead ==
-                          false
-                          ? notificationCtrl
-                          .appCtrl.appTheme.whiteColor
-                          : notificationCtrl
-                          .appCtrl.appTheme.whiteColor
-                          : notificationCtrl
-                          .appCtrl.appTheme.borderColor,
+                      // CRASH-FIX: pehle yaha filterList[index! - 1] access
+                      // hota tha — pehli row (index 0) par RangeError (red
+                      // screen) aata tha. Logic dono hi branches me white hi
+                      // de raha tha, isliye seedha safe color rakha.
+                      color: notificationModel!.isRead!
+                          ? notificationCtrl.appCtrl.appTheme.whiteColor
+                          : notificationCtrl.appCtrl.appTheme.borderColor,
                     ),
                   )),
               padding: EdgeInsets.symmetric(

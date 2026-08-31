@@ -74,7 +74,9 @@ class DashboardController extends GetxController {
       appCtrl.isHeart = true;
       appCtrl.isCart = true;
       appCtrl.isShare = false;
-      appCtrl.isSearch = false;
+      // FIX: Category tab par search icon band tha — icon row aadhi
+      // ("shifted") lagti thi. Ab Search wapas (books search karne ke liye).
+      appCtrl.isSearch = true;
       appCtrl.isNotification = false;
     } else if (appCtrl.selectedIndex == 2) {
       appCtrl.isHeart = true;

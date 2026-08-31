@@ -36,6 +36,10 @@ class ApiEndpoints {
   static const String addToCart = 'Cart/AddToCart';
   static const String getCart = 'Cart/GetCart';
 
+  // ---------------- Notifications ----------------
+  // Swagger me Setting/GetUserNotifications mila — user ki real notifications.
+  static const String getUserNotifications = 'Setting/GetUserNotifications';
+
   // ---------------- Location (countries/states) ----------------
   // NOTE: api/Core/* (api namespace) use karo — web/CoreFront wali list ke
   // CountryId backend ke Core_Countries table se match nahi karte, jisse

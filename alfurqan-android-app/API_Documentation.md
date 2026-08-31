@@ -474,3 +474,24 @@ User ne agency-agents repo (msitarzewski/agency-agents) lagakar FULL strict revi
 - **Fix:** `"aboutDesc":` key wapas restore (line 551). Baaki en/ar/kr files verify — sab sahi.
 - **Anti-repeat:** naya validator add kiya — saari language maps me "orphan value line" (bina key wali string entry) scan: 0 issues. Bracket scan 542 files: 0 problems. Ab `pubspec.yaml` version 1.3.2+19.
 - Note: is build me v1.3.1 ke saare improvements (nayi onboarding images, Help text, Pages hide) bhi shaamil hain.
+
+## 31 Aug 2026 (v1.4.0+20) GHOST CART ka asli root-cause fix + Category search icon + Notifications REAL API
+
+### 🐛 Bug fix 1 — Cart me item automatic/Remove ke baad bhi wapas aata tha (GHOST)
+User report: maine product add hi nahi kiya fir bhi cart me wahi kitaab dikhti hai; Remove karke bhi wapas aa jaati hai.
+**Asli wajah (2 deep bugs mile):**
+1. Cart view mapper zero-quantity lines ko dabakar wapas `"Qty: 1"` bana raha tha. Backend Remove (qty=0) accept karta hai par GetCart me zero-qty line bhejta rehta hai → app me book wapas "Qty: 1" ban kar GHOST ki tarah dikhti thi. **Fix:** zero-quantity lines ab list me hi nahi aati.
+2. Remove call me hamesha `"id": 0` bheja jata tha (cart-line ka asli id nahi) — backend line match nahi kar pata tha, isliye remove server par stick nahi hota tha. **Fix:** ab GetCart ke items se REAL cart-line id match karke bheji jaati hai + list-form body primary.
+
+### 🐛 Bug fix 2 — Category page ke icons "shifted" lagte the
+Category tab par search icon OFF tha (sirf heart+cart) — row aadhi lagti thi. **Fix:** Category tab par bhi Search icon ON (books directly search karo).
+
+### ✨ New — Notifications ab REAL (pehle static/demo thi)
+Swagger deep-dive me `GET /api/Setting/GetUserNotifications` mila (pehle "notifications API hai hi nahi" lagta tha). Notification page ab REAL API se jood gaya: loading/failed/empty — teeno states saaf message ke saath. Static demo notifications hata di. Drawer/bell abhi bhi hidden hain (user ne kaha tha); API ready hai — bole to 1 line me wapas ON.
+
+### 💥 Crash fix — Notification page pehli row par RangeError (red screen)
+`notificaton_list.dart` me `filterList[index! - 1]` — index 0 par crash hota tha. Safe color logic se replace.
+
+### Verified
+- 542 Dart files bracket scan: 0 problems; language maps: 0 orphan entries.
+- Swagger confirm: Cart me sirf GetCart + AddToCart hote hain (DeleteCart naam ka endpoint backend me hai hi nahi — qty 0 hi sahi tareeqa hai).

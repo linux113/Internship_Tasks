@@ -233,17 +233,18 @@ class CartController extends GetxController {
     double bagTotalFinal = 0; // selling prices ka sum
 
     for (final item in apiCart.items) {
-      // GetCart kabhi-kabhi product detail (name/image/price) NAHI bhejta.
-      // Us case me app ke paas pehle se loaded product pools (home api +
-      // newest) se id match karke detail bharo — warna "Product #264" jaisa
-      // naam aur khali image dikhti thi.
+      // GHOST-FIX: backend Remove (quantity 0) karne ke baad bhi GetCart me
+      // wahi line quantity 0 ke saath bhejta rehta hai. Pehle hum use
+      // dabakar wapas "Qty: 1" bana dete the — isliye wahi kitaab hamesha
+      // wapas dikhti thi. Ab zero-quantity line list me hi NAHI aayegi.
+      if ((item.quantity ?? 0) <= 0) continue;
       ProductApiModel? product = item.product;
       if ((product == null || (product.name ?? '').isEmpty) &&
           item.productId != null) {
         final found = _lookupKnownProduct(item.productId!);
         if (found != null) product = found;
       }
-      final int qty = (item.quantity ?? 1) <= 0 ? 1 : (item.quantity ?? 1);
+      final int qty = item.quantity!; // upar qty<=0 lines skip ho chuki hain
 
       // per-unit price: pehle product detail se, warna line subTotal se nikaalo
       double unitMrp = product?.price ?? 0;
@@ -337,25 +338,37 @@ class CartController extends GetxController {
     // server sync (logged-in ho to)
     if ((storage.read(Session.isLogin) ?? false) == true) {
       try {
+        // REAL cart-line id dhundo — pehle hamesha "id": 0 bheja jata tha,
+        // isliye backend line match hi nahi kar pata tha aur remove server
+        // par stick NAHI hota tha (GetCart wahi item wapas la deta tha).
+        int lineId = 0;
+        for (final l in (cartApiModel?.items ?? const <CartItemModel>[])) {
+          if ((l.productId ?? -1) == pid) {
+            lineId = l.id ?? 0;
+            break;
+          }
+        }
         final Map<String, dynamic> itemBody = {
-          "id": 0,
+          "id": lineId,
           "product_id": pid,
           "variation_id": null,
           "quantity": 0,
           "sub_total": 0,
           "wholesale_price": 0,
         };
+        // list form PRIMARY (GetCart jaisa shape backend ko natural lagta
+        // hai); kuch builds single-object maangti hain — wo fallback.
         var res = await ApiService().request<CartApiModel>(
           endpoint: ApiEndpoints.addToCart,
           method: ApiMethod.post,
-          data: {"total": 0, "items": itemBody},
+          data: {"total": 0, "items": [itemBody]},
           fromJson: (json) => CartApiModel.fromJson(json),
         );
-        if (!res.isSuccess && res.code == 400) {
-          res = await ApiService().request<CartApiModel>(
+        if (!res.isSuccess) {
+          await ApiService().request<CartApiModel>(
             endpoint: ApiEndpoints.addToCart,
             method: ApiMethod.post,
-            data: {"total": 0, "items": [itemBody]},
+            data: {"total": 0, "items": itemBody},
             fromJson: (json) => CartApiModel.fromJson(json),
           );
         }
