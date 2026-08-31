@@ -43,6 +43,12 @@ class _DrawerScreenState extends State<DrawerScreen>
               const DrawerUserLayout(),
               const Space(0, 15),
               ...dashboardCtrl.drawerList.asMap().entries.map((e) {
+                // HIDE (user request): index 10 = Notification (backend me
+                // API nahi hai), index 12 = About us. Index mapping wahi
+                // rakhi hai taaki goToPage(index) sahi kaam kare.
+                if (e.key == 10 || e.key == 12) {
+                  return const SizedBox.shrink();
+                }
                 return DrawerDataListLayout(
                     data: e.value,
                     animationController: _animationController,

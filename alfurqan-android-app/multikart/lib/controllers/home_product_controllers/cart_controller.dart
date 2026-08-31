@@ -175,6 +175,17 @@ class CartController extends GetxController {
   }
 
   /// Cart ka latest data fetch karna (Cart/GetCart)
+  // ---------------- Coupon (checkout tak carry hota hai) ----------------
+  /// Coupons page par APPLY karne se code storage me save hota hai
+  /// ('coupon_code') — cart screen par chip + remove option dikhate hai.
+  String get appliedCoupon => storage.read('coupon_code')?.toString() ?? '';
+
+  Future<void> clearCoupon() async {
+    await storage.write('coupon_code', '');
+    update();
+    snackBar('Coupon removed');
+  }
+
   getCart() async {
     isCartLoading = true;
     update();

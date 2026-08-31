@@ -20,9 +20,8 @@ class AppBarActionLayout extends StatelessWidget {
                         ? 0
                         : 10
                     : 10)),
-          if (appCtrl.isNotification)
-            const NotificationIcon()
-                .paddingSymmetric(horizontal: AppScreenUtil().screenWidth(15)),
+          // HIDE (user request): bell/notification icon ab app bar me NAHI
+          // dikhega (notifications page abhi backend API ke bina static thi).
           if (appCtrl.isHeart)
             HeartIcon(
               color: appCtrl.appTheme.blackColor,

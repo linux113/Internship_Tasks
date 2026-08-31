@@ -413,3 +413,26 @@ view/nav, null-safety, const-check) ke baad:
   taraf match, ApiService ka "data" unwrap + mere lenient parsers dono
   cases cover karte hai, base URL https://alfurqan.ae/api/ + endpoints
   swagger se exact match.
+
+## 2026-08-31 (v1.3.0+17) Screenshot feedback batch — cart ghost item, drawer texts, hides
+
+User ke 4 screenshots se mile issues + fixes:
+- **CART "auto-product":** CartController singleton rehne se cart tab dobara
+  kholne par PURANA data dikhta tha; plus server cart ka purana leftover
+  item (remove tab kaam nahi karta tha jab add hua tha). FIX: cart screen
+  har baar khulne par FRESH GetCart (initState refresh). Agar phir bhi
+  koi item dikhe to wo SERVER par sach me saved hai — Remove button ab
+  server par bhi delete karta hai.
+- **Drawer fashion texts:** "Men, Women, Kids, Beauty.." (fashion template
+  ka text) -> "Quran, Hadees, Fiqh, Seerah & more". Home/Orders/Wishlist/
+  Account subtitles bhi book-shop ke hisaab se (Saved Cards hata diya
+  kyunki saved-cards backend me hai hi nahi).
+- **HIDE (user request):** drawer se Notification (index 10 — backend API
+  nahi hai) + About us (index 12) gayab; app bar ka BELL icon bhi har jagah
+  se hata diya. Index mapping wahi rakhi (goToPage sahi chalta hai).
+- **Cart "Coupons:" dead label -> FUNCTIONAL:** ab "View Coupons" link se
+  asli coupons page khulta hai; APPLY karne se code cart me green chip me
+  dikhta hai, X se remove; Place Order par coupon apne aap lagta hai
+  (pehle ka coupon plumbing isi 'coupon_code' storage se chalti thi).
+- Strict checks: 542 files 0 problems; DeleteIcon/Space/BorderLineLayout
+  sab existing widgets hi use hue.

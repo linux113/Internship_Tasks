@@ -11,6 +11,19 @@ class _CartScreenState extends State<CartScreen> {
   final cartCtrl = Get.put(CartController());
 
   @override
+  void initState() {
+    super.initState();
+    // FIX (cart "auto-product" shikayat): CartController singleton rehne ki
+    // wajah se dobara open karne par PURANA cart dikh sakta tha. Ab har
+    // baar cart screen khulne par server se FRESH cart lao — purana/server
+    // ka leftover item sirf tabhi dikhega jab server par sach me bacha ho
+    // (use Remove se hataya ja sakta hai — ab server par bhi kaam karta hai).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      cartCtrl.getCart();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (_) {
       return Directionality(

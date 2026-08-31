@@ -169,27 +169,29 @@ class AppArray {
     {
       'title': 'home'.tr,
       'icon': svgAssets.homeSvg,
-      'subTitle': 'Offers, Top Deals, Top Brands'.tr
+      'subTitle': 'Deals, Banners & Top Categories'.tr
     },
     {
       'title': 'Shop by Category'.tr,
+      // FIX: pehle fashion template ka "Men, Women, Kids, Beauty.." aata
+      // tha — book shop me wo text galat tha.
       'icon': svgAssets.category,
-      'subTitle': 'Men, Women, Kids, Beauty..'.tr
+      'subTitle': 'Quran, Hadees, Fiqh, Seerah & more'.tr
     },
     {
       'title': 'Orders'.tr,
       'icon': svgAssets.order,
-      'subTitle': 'Ongoing Orders, Recent Orders..'.tr
+      'subTitle': 'Your recent orders'.tr
     },
     {
       'title': 'Your Wishlist'.tr,
       'icon': svgAssets.heart,
-      'subTitle': 'Your Save Products'.tr
+      'subTitle': 'Your saved books'.tr
     },
     {
       'title': 'Your Account'.tr,
       'icon': svgAssets.profile,
-      'subTitle': 'Profile, Settings, Saved Cards...'.tr
+      'subTitle': 'Profile, Settings, Wallet...'.tr
     },
     {
       'title': 'Language'.tr,
