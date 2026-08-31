@@ -4,16 +4,16 @@ final dynamic en = {
   //onboard fonts
   "alreadyAccount": 'Already have an account?',
   "signIn": 'Sign In',
-  'Welcome to Biggest Online Store': 'Welcome to Biggest Online Store',
-  'Perfect Pair for Everyone': 'Perfect Pair for Everyone',
-  'Find all New Favourites': 'Find all New Favourites',
+  'Welcome to Biggest Online Store': 'Welcome to Al Furqan Book Shop',
+  'Perfect Pair for Everyone': 'Books For Every Reader',
+  'Find all New Favourites': 'Find Your Next Favourite Book',
   'startShopping': 'Start Shopping',
   "onBoard1":
-      "Latest Trends In Clothing For Women, Men & Kids At Multikart. Find New Arrival, Fashion Catalogs, Collections & Lookbooks Every Week.",
+      "Explore Quran, Hadees, Fiqh, Seerah and a huge collection of authentic Islamic books at Al Furqan Book Shop.",
   'onBoard2':
-      '500+ Brands And More Than 1,00,000 +  Apparel And Accessories. Discover What Works Best For You With  30 Days Return Policy.',
+      'Authentic Islamic books for every age - kids stories, duas, tafseer, Arabic learning and more - delivered to your doorstep.',
   'onBoard3':
-      'New Arrivals, Fashion Catalogs & Collections Every Week. Premium Brands. Free Shipping Available. Hassle Free Installations. Secure Payments.',
+      'Easy ordering, cash on delivery and fast shipping across the UAE. Start your reading journey with us today.',
   'skip': "SKIP",
 
   //login
@@ -217,7 +217,7 @@ final dynamic en = {
   "Jumpsuit": "Jumpsuit",
   "recentSearch": "Recent Search",
   "trendingCategory": "Trending Category",
-  "topBrandForMultikart": "Top Brands On Multikart",
+  "topBrandForMultikart": "Top Publishers On Al Furqan",
 
   //product detail font
   "inclusiveOfAllTaxes": "inclusive of all taxes",
@@ -485,7 +485,7 @@ final dynamic en = {
   "20/05/2020": "20/05/2020",
 
   //terms and condition font
-  "termsConditionForMultikart": "Terms and Conditions for Multikart",
+  "termsConditionForMultikart": "Terms and Conditions for Al Furqan Book Shop",
   "termsCondition": "Terms & Condition",
   "Introduction": "Introduction",
   "Intellectual Property Rights": "Intellectual Property Rights",
@@ -533,15 +533,15 @@ final dynamic en = {
       "I want to unsubscribe from promotional emails and SMS",
   "I want help with returns & refunds": "I want help with returns & refunds",
   "helpListDec":
-      "The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from 'de Finibus Bonorum et Malorum by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.",
+      "For any help with your order, delivery, payment, wallet or refund, please contact Al Furqan Book Shop support at support@alfurqan.ae - our team will be happy to assist you.",
 
   //about us font
   "aboutUs": "About Us",
   "introduction": "Introduction",
   "aboutDesc":
-      "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, ",
+      "Al Furqan Book Shop is a trusted Islamic bookstore offering Quran, Hadees, Fiqh, Seerah, Arabic learning and childrens Islamic books, delivered across the UAE with easy ordering and cash on delivery.",
   "ourBrand":
-      "Each Brands have a unique personality and exclusive design. They have the freedom to develop the styles and garments that create the right appeal – and all our Brands are united",
+      "We carefully select authentic Islamic books from trusted publishers so that every reader - from kids to scholars - finds the right book for their journey.",
   "ourBrandTitle": "Our Brands",
   "selectLanguage": "Select Language",
   "selectCurrency": "Select Currency",
@@ -552,7 +552,7 @@ final dynamic en = {
   "Search": "Search",
   "Delivered": "Delivered",
   "title":
-      "Multikart is premier fashion destination for the latest trends and hottest styles.",
+      "Al Furqan Book Shop is your trusted destination for authentic Islamic books and Arabic learning.",
   "+ users": "+ users",
   "+ stores": "+ stores",
   "M+ orders": "M+ orders",

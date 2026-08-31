@@ -44,9 +44,13 @@ class _DrawerScreenState extends State<DrawerScreen>
               const Space(0, 15),
               ...dashboardCtrl.drawerList.asMap().entries.map((e) {
                 // HIDE (user request): index 10 = Notification (backend me
-                // API nahi hai), index 12 = About us. Index mapping wahi
-                // rakhi hai taaki goToPage(index) sahi kaam kare.
-                if (e.key == 10 || e.key == 12) {
+                // API nahi hai), index 12 = About us.
+                // HIDE (agency-agents strict audit): index 2 = "Pages" —
+                // ye template ka developer sitemap hai (Login/OTP/Reset
+                // demo navigation), production users ke liye nahi.
+                // Index mapping wahi rakhi hai taaki goToPage(index)
+                // sahi kaam kare.
+                if (e.key == 2 || e.key == 10 || e.key == 12) {
                   return const SizedBox.shrink();
                 }
                 return DrawerDataListLayout(

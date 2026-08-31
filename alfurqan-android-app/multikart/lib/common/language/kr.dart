@@ -4,16 +4,16 @@ final dynamic kr = {
   //onboard fonts
   "alreadyAccount": '이미 계정이 있습니까? ',
   "signIn": '로그인',
-  'Welcome to Biggest Online Store': '빅게스트 온라인 스토어에 오신 것을 환영합니다',
-  'Perfect Pair for Everyone': '모두를 위한 완벽한 짝',
-  'Find all New Favourites': '모든 새로운 즐겨찾기 찾기',
+  'Welcome to Biggest Online Store': '알 푸르칸 북샵에 오신 것을 환영합니다',
+  'Perfect Pair for Everyone': '모든 독자를 위한 책',
+  'Find all New Favourites': '다음에 읽을 책을 찾아보세요',
   'startShopping': '쇼핑 시작',
   "onBoard1":
-      "Multikart에서 여성, 남성 및 아동용 의류의 최신 트렌드. 매주 새로운 도착, 패션 카탈로그, 컬렉션 및 룩북을 찾으십시오.",
+      "알 푸르칸 북샵에서 꾸란, 하디스, 피끄흐, 시라 등 다양한 이슬람 도서 컬렉션을 만나보세요.",
   'onBoard2':
-      '500+ 이상의 브랜드 및 1,00,000 + 이상의 의류 및 액세서리. 30일 반품 정책을 통해 가장 적합한 제품을 찾아보세요.',
+      '모든 연령을 위한 정통 이슬람 도서 - 어린이 이야기, 기도문, 타프시르, 아랍어 학습 등 - 문 앞까지 배송해 드립니다.',
   'onBoard3':
-      '매주 새로운 도착, 패션 카탈로그 및 컬렉션. 프리미엄 브랜드. 무료 배송 가능. 번거롭지 않은 설치. 안전한 지불.',
+      '간편한 주문, 착불 결제, UAE 전역 빠른 배송. 지금 바로 독서 여행을 시작하세요.',
   'skip': "건너 뛰기",
 
   //login
@@ -216,7 +216,7 @@ final dynamic kr = {
   "Jumpsuit": "점프수트",
   "recentSearch": "최근 검색",
   "trendingCategory": "인기 카테고리",
-  "topBrandForMultikart": "멀티 카트의 최고 브랜드",
+  "topBrandForMultikart": "알 푸르칸 인기 출판사",
 
   //product detail font
   "inclusiveOfAllTaxes": "모든 세금 포함",
@@ -481,7 +481,7 @@ final dynamic kr = {
   "20/05/2020": "2020년 5월 20일",
 
   //terms and condition font
-  "termsConditionForMultikart": "멀티카트 이용약관",
+  "termsConditionForMultikart": "알 푸르칸 북샵 이용약관",
   "termsCondition": "약관 및 조건",
   "Introduction": "소개",
   "Intellectual Property Rights": "지적 재산권",
@@ -524,13 +524,13 @@ final dynamic kr = {
       "프로모션 이메일 및 SMS 수신을 거부하고 싶습니다.",
   "I want help with returns & refunds": "반품 및 환불에 대한 도움을 받고 싶습니다.",
   "helpListDec":
-      "1500년대부터 사용된 Lorem Ipsum의 표준 청크는 관심 있는 사람들을 위해 아래에 재현되어 있습니다. Cicero의 'de Finibus Bonorum et Malorum'의 섹션 1.10.32 및 1.10.33도 H. Rackham이 1914년 번역한 영어 버전과 함께 정확한 원본 형식으로 복제됩니다.",
+      "주문, 배송, 결제, 지갑 또는 환불에 관한 도움이 필요하시면 support@alfurqan.ae로 알 푸르칸 북샵 지원팀에 문의하세요. 기꺼이 도와드리겠습니다.",
 
   //about us font
   "aboutUs": "회사 소개",
   "introduction": "소개",
   "aboutDesc":
-      "대중의 믿음과 달리 Lorem Ipsum은 단순히 임의의 텍스트가 아닙니다. 기원전 45년의 고전 라틴 문학에 뿌리를 두고 있어 2000년이 넘었습니다. 버지니아에 있는 Hampden-Sydney College의 라틴어 교수인 Richard McClintock은 가장 잘 알려지지 않은 라틴어 단어 중 하나를 찾았습니다.",
+      "알 푸르칸 북샵은 꾸란, 하디스, 피끄흐, 시라, 아랍어 학습, 어린이 이슬람 도서를 제공하는 믿을 수 있는 이슬람 서점으로, UAE 전역에 간편 주문과 착불 결제로 배송합니다.",
   "ourBrand":
       "각 브랜드는 독특한 개성과 독특한 디자인을 가지고 있습니다. 그들은 적절한 매력을 만들어내는 스타일과 의복을 자유롭게 개발할 수 있습니다. 그리고 우리의 모든 브랜드는 하나입니다.",
   "ourBrandTitle": "우리 브랜드",
@@ -542,7 +542,7 @@ final dynamic kr = {
   "Korean": "한국인",
   "Search": "검색",
   "Delivered": "배달됨",
-  "title": "Multikart는 최신 트렌드와 가장 핫한 스타일을 위한 최고의 패션 목적지입니다.",
+  "title": "알 푸르칸 북샵은 정통 이슬람 도서와 아랍어 학습을 위한 믿을 수 있는 곳입니다.",
   "+ users": "+ 사용자",
   "+ stores": "+ 백화점",
   "M+ orders": "중+ 주문",

@@ -436,3 +436,33 @@ User ke 4 screenshots se mile issues + fixes:
   (pehle ka coupon plumbing isi 'coupon_code' storage se chalti thi).
 - Strict checks: 542 files 0 problems; DeleteIcon/Space/BorderLineLayout
   sab existing widgets hi use hue.
+
+## 31 Aug 2026 (v1.3.1+18) AGENCY-AGENTS STRICT FULL-POWER AUDIT — onboarding fashion images+text khatam, Help Lorem khatam, Pages menu hide
+
+User ne agency-agents repo (msitarzewski/agency-agents) lagakar FULL strict review karaya — team roles: **Mobile App Builder, Code Reviewer, AppSec Engineer, Reality Checker, API Tester, UI Designer**. Report:
+
+### 🔴 BLOCKERS found & FIXED (user-visible)
+1. **Onboarding ke TEENO images pure fashion template the** — phone mockup jisme "Multikart" logo, Women/Men/Kids/Beauty/Footwear, "Welcome To Multikart Flat 50% OFF", "Pink Hoodie by Mango", "Blue Denim Jacket $32". App ka PEHLA screen! → 3 NAI bookstore images banayi (Quran stack + lantern / rehal par khuli kitab + bachchon ki books / delivery scooter + books parcel + masjid). Theme green #044015, koi embedded text nahi.
+2. **Onboarding TEXTS fashion the** (4 languages): "Latest Trends In Clothing For Women, Men & Kids At Multikart...", titles "Perfect Pair for Everyone" etc. → book-shop copy: Quran/Hadees/Fiqh/Seerah collection, har umr ki asli Islamic books, COD + UAE fast shipping. en/ar/hi/kr sab update.
+3. **Help page ke SARE jawab Lorem Ipsum the** (`helpListDec`) — drawer se Help abhi bhi khulti hai. → REAL support text (order/delivery/payment/wallet/refund ke liye support@alfurqan.ae) 4 languages me.
+4. **Drawer "Pages" (index 2)** template ka developer sitemap tha (OnBoarding/Login/OTP/Reset demo navigation) → production se HIDE kar diya (indexes ab hidden: 2, 10, 12; mapping intact).
+
+### 🟡 SUGGESTIONS fixed (dead-code brand leakage — render nahi hoti, phir bhi saaf)
+- "title" key: "Multikart is premier fashion destination..." → Al Furqan tagline (4 langs).
+- `aboutDesc` key: Lorem Ipsum → real shop intro (4 langs).
+- `about_us_array` stats: "Multikart have 150+ users/stores/orders/brands" → book-shop stats.
+- `ourBrand` fashion brand text → trusted publishers line.
+- `topBrandForMultikart` / `termsConditionForMultikart` values → Al Furqan (4 langs).
+
+### ✅ PASSED checks
+- 542 Dart files bracket/syntax scan: 0 problems.
+- AppSec: koi hardcoded API key/secret nahi; Bearer token storage attach; cleartextTraffic flag nahi (default block).
+- Reality Checker greps: koi rendered "Multikart"/fashion/Lorem text nahi bacha (sirf dead coupon/product arrays me MULTIKART10 string — kisi view me use nahi).
+- `productArray`/`couponArray`/`about_us_body` etc dead code hain (compile-safe), koi view render nahi karta.
+
+### Files changed
+- `lib/common/language/{en,ar,hi,kr}.dart` (40 replacements, assertion-verified)
+- `assets/onBoarding/onBoarding{1,2,3}.png` (new bookstore illustrations)
+- `lib/views/menu/drawer/drawer_screen.dart` (index 2 hide)
+- `lib/common/array/about_us_array.dart` (stats text)
+- `pubspec.yaml` version 1.3.1+18
