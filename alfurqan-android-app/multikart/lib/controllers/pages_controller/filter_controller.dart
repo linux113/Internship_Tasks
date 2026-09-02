@@ -1,11 +1,19 @@
 import '../../config.dart';
+import 'shop_controller.dart';
 
 class FilterController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
       ? Get.find<AppController>()
       : Get.put(AppController());
-  RangeValues currentRangeValues = const RangeValues(0, 100);
 
+  /// Price slider ki range — AED me real books ki pricing ke hisaab se
+  /// (pehle 0..100 tha, isse mehengi books filter me chhoot jaati thi).
+  static const double maxPrice = 300;
+  RangeValues currentRangeValues = const RangeValues(0, maxPrice);
+
+  // Purane fashion-template filter state (Brand/Size/Occasion/Color) — ab
+  // UI me nahi dikhate (book store ke liye bematlab the); yeh fields sirf
+  // purani unused layout files ke compile-ke liye rakhe hai.
   List brandFilterList = [];
   List occasionFilterList = [];
   List sizeList = [];
@@ -17,39 +25,83 @@ class FilterController extends GetxController {
   int selectSize = 0;
   var data = [
     {"val": "0.0"},
-    {"val": "10.0"},
-    {"val": "20.0"},
-    {"val": "30.0"},
-    {"val": "40.0"},
     {"val": "50.0"},
-    {"val": "60.0"},
-    {"val": "70.0"},
-    {"val": "80.0"},
-    {"val": "90.0"},
-    {"val": "100.0"}
+    {"val": "100.0"},
+    {"val": "150.0"},
+    {"val": "200.0"},
+    {"val": "250.0"},
+    {"val": "300.0"}
   ];
 
-  //select brand
+  //select brand (unused UI ke liye)
   selectBrandFunction(index) {
     selectedBrand = index;
     update();
   }
 
-  //select occasion
+  //select occasion (unused UI ke liye)
   selectOccasionFunction(index) {
     selectedOccasion = index;
     update();
   }
 
-  //reset
+  /// APPLY — pehle YE BUTTON KUCH NAHI KARTA THA (sirf Get.back)!! Ab REAL:
+  /// sort + price range ShopController me set karke API se fresh list lata
+  /// hai (GetAllProductsFront ke real params: field, sort, price).
+  void applyToShop() {
+    if (Get.isRegistered<ShopController>()) {
+      final shop = Get.find<ShopController>();
+
+      // price filter (poori range select = koi price filter nahi)
+      if (currentRangeValues.start <= 0 &&
+          currentRangeValues.end >= maxPrice) {
+        shop.priceRange = "";
+      } else {
+        shop.priceRange =
+            "${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}";
+      }
+
+      // sort mapping — sirf backend ke known-safe fields use karo
+      switch (dropDownVal) {
+        case "Price: Low to High":
+          shop.sortField = "price";
+          shop.sortDirection = "asc";
+          break;
+        case "Price: High to Low":
+          shop.sortField = "price";
+          shop.sortDirection = "desc";
+          break;
+        case "What's New":
+          shop.sortField = "created_at";
+          shop.sortDirection = "desc";
+          break;
+        default: // Recommended
+          shop.sortField = "created_at";
+          shop.sortDirection = "asc";
+      }
+      shop.getProducts(reset: true);
+    }
+    Get.back();
+  }
+
+  //reset — selections + shop ke applied filters dono clear karke fresh list
   resetFilter() {
     dropDownVal = "Recommended".tr;
     selectedBrand = 0;
     selectedOccasion = 0;
     selectedColor = 0;
     selectSize = 0;
-    currentRangeValues = const RangeValues(0, 100);
+    currentRangeValues = const RangeValues(0, maxPrice);
     update();
+    if (Get.isRegistered<ShopController>()) {
+      final shop = Get.find<ShopController>();
+      shop.priceRange = "";
+      shop.rating = "";
+      shop.attribute = "";
+      shop.sortField = "created_at";
+      shop.sortDirection = "asc";
+      shop.getProducts(reset: true);
+    }
   }
 
   @override

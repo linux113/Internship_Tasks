@@ -27,9 +27,10 @@ class ShopController extends GetxController {
   int currentPage = 1;
   bool hasMore = true;
 
-  // filters (baad me filter page se update honge)
+  // filters (filter page se update hote hai — applyToShop/resetFilter)
   String priceRange = ""; // e.g. "100,500"
   String sortDirection = "asc"; // asc | desc
+  String sortField = "created_at"; // backend ke known-safe: created_at | price
   String rating = "";
   String attribute = "";
 
@@ -93,7 +94,7 @@ class ShopController extends GetxController {
         "page": currentPage,
         "paginate": 12,
         "status": 1,
-        "field": "created_at",
+        "field": sortField,
         "price": priceRange,
         "category": categoryFilter,
         "tag": "",

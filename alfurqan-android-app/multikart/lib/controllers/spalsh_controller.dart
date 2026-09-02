@@ -2,6 +2,7 @@
 import 'dart:developer';
 
 import 'package:multikart/config.dart';
+import 'package:multikart/services/api_service.dart';
 
 class SplashController extends GetxController {
   bool isTapped = false;
@@ -31,6 +32,14 @@ final storage = LocalStorage();
 
     bool isIntro = storage.read(Session.isIntro) ?? false;
     log(isIntro.toString());
+    // SELF-HEAL: auth token saved hai par login flag kisi wajah se false
+    // reh gaya ho to yahi theek kar do — user se bewajah dobara login nahi
+    // manga jayega (user report: app kholte hi login screen aati thi jabki
+    // profile me wo already logged-in tha).
+    final storedToken = ApiService().token;
+    if ((storedToken ?? '').isNotEmpty && isLogin != true) {
+      await storage.write(Session.isLogin, true);
+    }
     // FIX: pehle Get.toNamed use hota tha — Splash stack ME HI pada rehta
     // tha, aur login page par back dabane par splash dobara chal kar
     // checkLogin -> login par wapas phenk deta tha (user ko lagta tha

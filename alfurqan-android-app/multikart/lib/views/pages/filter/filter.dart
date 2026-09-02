@@ -31,37 +31,27 @@ class Filter extends StatelessWidget {
                     //short by layout
                     const SortByLayout(),
 
-                    FilterWidget().titleText(FilterFont().brandsFilter),
-                    //brand layout
-                    const BrandLayout(),
+                    // FIX (user report — strict): yaha STATIC fashion filters
+                    // the — Brand (Zara/Mast & harbour/gucci), Size (S/M/L/
+                    // XL), Occasion (Casual/Sports/Party), Colors. Book store
+                    // ke liye sab bematlab + fake data tha, isliye remove.
+                    // Ab sirf REAL filters: Sort + Price (API se apply).
 
-                    FilterWidget().titleText(FilterFont().size),
-                    // size layout
-                    const SizeLayout(),
-                    const Space(0, 20),
                     FilterWidget().titleText(FilterFont().price),
 
                     const Space(0, 20),
                     //range slider
                     const RangeValueLayout(),
                     const CustomRangeSlider(),
-                    const Space(0, 20),
-                    FilterWidget().titleText(FilterFont().occasion),
-
-                    //occasion layout
-                    const OccasionLayout(),
-                    const Space(0, 20),
-                    FilterWidget().titleText(FilterFont().colors),
-
-                    //color layout
-                    const ColorLayout(),
                     const Space(0, 20)
                   ]).marginSymmetric(
                       horizontal: AppScreenUtil().screenWidth(15))),
               BottomLayout(
                   firstButtonText: FilterFont().reset,
                   secondButtonText: FilterFont().applyFilter,firstTap: ()=>filterCtrl.resetFilter(),
-                  secondTap: ()=>Get.back())
+                  // FIX: pehle APPLY sirf sheet band karta tha — kuch apply
+                  // hi nahi hota tha! Ab sort+price REAL API call lagata hai.
+                  secondTap: ()=>filterCtrl.applyToShop())
             ])),
       );
     });

@@ -83,9 +83,19 @@ class LoginController extends GetxController {
 
   @override
   void onReady() {
-    // TODO: implement onReady
     isBack = Get.arguments ?? false;
-
+    // FIX (user report): already logged-in user ko app kholte hi dobara
+    // LOGIN screen dikh jaata tha (kisi navigation/state-mismatch ki wajah
+    // se). Ab agar session active hai to login screen kabhi render hi nahi
+    // hogi — seedha dashboard par wapas. Logout ke baad flag false hota
+    // hai, isliye waha koi farak nahi padega.
+    final loggedIn = (storage.read(Session.isLogin) ?? false) == true;
+    if (loggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAllNamed(routeName.dashboard);
+      });
+      return;
+    }
     update();
     super.onReady();
   }

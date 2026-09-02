@@ -26,7 +26,8 @@ class CustomValueLayout extends StatelessWidget {
                 EdgeInsets.all(AppScreenUtil().size(5)),
                 alignment: Alignment.center,
                 child: Text(
-                    "\$$val"),
+                    // FIX: hardcoded '$' tha — ab selected currency ka symbol dikhega (AED etc.).
+                    "${filterCtrl.appCtrl.priceSymbol}$val"),
               )
                   : Container();
             }).toList()

@@ -222,6 +222,40 @@ class ProfileController extends GetxController {
     }
   }
 
+  /// REAL DATE PICKER — DOB free-text input tha (kuch bhi type ho sakta
+  /// tha). Ab calendar se hi select hoga; format yyyy-MM-dd (backend
+  /// friendly). Field readOnly hai, typing band.
+  Future<void> pickDob(BuildContext context) async {
+    DateTime initial = DateTime(2000, 1, 1);
+    final parsed = DateTime.tryParse(txtDob.text.trim());
+    final today = DateTime.now();
+    if (parsed != null &&
+        parsed.isAfter(DateTime(1900)) &&
+        parsed.isBefore(today)) {
+      initial = parsed;
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: today,
+      builder: (context, child) {
+        // app ke green theme ke saath picker
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: appCtrl.appTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      txtDob.text =
+          "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      update();
+    }
+  }
+
   void _toast(String msg) {
     final socialLoginCtrl = Get.isRegistered<SocialLoginController>()
         ? Get.find<SocialLoginController>()

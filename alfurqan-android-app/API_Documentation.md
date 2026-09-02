@@ -499,3 +499,23 @@ Swagger deep-dive me `GET /api/Setting/GetUserNotifications` mila (pehle "notifi
 ## 31 Aug 2026 (v1.4.1+21) App-bar icon spacing fix
 
 User report: search icon "chipka hua" lagta hai. Wajah: bell icon hate hi Heart icon ka horizontal padding 0 ho jata tha (condition `isHeart && isCart ? 0 : 10`). Ab Heart hamesha 10 padding rakhta hai — Search/Heart/Cart ke beech barabar gap.
+
+## 02 Sep 2026 (v1.5.0+22) 4 ISSUES ek saath — login-repeat, cart reload, STATIC fashion filters, DOB text-input
+
+### 1) App kholo to dobara login maangta tha (j自律ki user logged-in tha)
+- **Fix A:** Splash par SELF-HEAL — agar auth token saved hai par login flag false reh gaya ho to flag auto-correct.
+- **Fix B:** LoginController me auto-bounce — already logged-in state me login screen kabhi bhi khule to seedha dashboard par wapas (render hi nahi hoti). Logout ke baad flag false hota hai, waha koi effect nahi.
+
+### 2) Cart Remove karne par poora screen "reload" hota tha
+- `getCart()` har baar full shimmer dikhata tha. Ab **silent refresh**: Remove ke baad item turant gayab + server state background me confirm — koi reload flash nahi.
+
+### 3) Collection FILTERS me static fashion data tha (STRICT FIX)
+- **Removed:** Brand (Zara/Mast & harbour/Tokyo talkies/Vogue/gucci), Size (S/M/L/XL/2XL), Occasion (Casual/Sports/Party), Colors — sab template ke fake filters.
+- **BIGGER find:** purana APPLY button kuch hi nahi karta tha (sirf sheet band)! Ab REAL: Sort (Recommended / What's New / Price High→Low / Low→High) + Price slider (0–300, selected currency symbol ke saath) seedha `GetAllProductsFront` ke params (field/sort/price) par apply hota hai. RESET bhi ab actually filters clear karke fresh list lata hai.
+- Dropdown se "Popularity"/"Customer Rating" hataye — backend me unke fields nahi, fake option nahi dikhana.
+
+### 4) Profile setting me DOB plain text input tha (STRICT FIX)
+- Ab **readOnly field + calendar icon + REAL date picker** (green theme). Format yyyy-MM-dd (backend friendly). Galat dates ("32/13/9999") ab impossible. Note: abhi backend ki UpdateUserProfile dob accept nahi karti — value app me save/display hota hai; backend field add ho to 1 line me bhej denge.
+
+### Verified
+- 542 Dart files bracket scan: 0 problems; language maps: 0 orphans.

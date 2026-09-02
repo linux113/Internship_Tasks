@@ -22,8 +22,8 @@ class CustomRangeSlider extends StatelessWidget {
         child: RangeSlider(
           values: filterCtrl.currentRangeValues,
           min: 0,
-          max: 100,
-          divisions: 10,
+          max: FilterController.maxPrice, // 300 (mehengī books bhi cover)
+          divisions: 6,
           onChanged: (RangeValues values) {
             filterCtrl.currentRangeValues = values;
             filterCtrl.update();

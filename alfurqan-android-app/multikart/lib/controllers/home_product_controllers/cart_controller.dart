@@ -186,9 +186,15 @@ class CartController extends GetxController {
     snackBar('Coupon removed');
   }
 
-  getCart() async {
-    isCartLoading = true;
-    update();
+  /// [silent] = true -> loading shimmer NAHI dikhta (background refresh).
+  /// Remove/add ke baad yehi use hota hai — pehle poora screen shimmer ke
+  /// saath "reload" hota tha (user complaint), ab list instantly update
+  /// hoti hai aur server state chupchaap confirm ho jaati hai.
+  getCart({bool silent = false}) async {
+    if (!silent) {
+      isCartLoading = true;
+      update();
+    }
 
     final res = await ApiService().request<CartApiModel>(
       endpoint: ApiEndpoints.getCart,
@@ -373,9 +379,10 @@ class CartController extends GetxController {
           );
         }
       } catch (_) {}
-      // fresh server state se list final confirm karo
+      // fresh server state se list final confirm karo — SILENT (shimmer/
+      // reload nahi dikhega; pehle yahi poora screen reload lagta tha)
       try {
-        await getCart();
+        await getCart(silent: true);
       } catch (_) {}
     }
   }

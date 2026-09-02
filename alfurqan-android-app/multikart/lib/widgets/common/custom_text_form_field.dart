@@ -16,6 +16,7 @@ class CustomTextFormField extends StatelessWidget {
   final Widget? suffixIcon;
   final TextStyle? style;
   final bool obscureText;
+  final bool readOnly;
   final FormFieldValidator<String>? validator;
   final TextInputType? keyboardType;
   final EdgeInsetsGeometry? padding;
@@ -47,6 +48,7 @@ class CustomTextFormField extends StatelessWidget {
     this.suffixIcon,
     this.style,
     this.obscureText = false,
+    this.readOnly = false,
     this.validator,
     this.padding,
     this.fillColor,
@@ -80,6 +82,7 @@ class CustomTextFormField extends StatelessWidget {
       controller: controller,
       style: style ?? AppCss.body1,
       obscureText: obscureText,
+      readOnly: readOnly,
       validator: validator,
       keyboardType: keyboardType ?? TextInputType.text,
       maxLines: maxLines,

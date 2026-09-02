@@ -25,12 +25,20 @@ class PersonalDetailLayout extends StatelessWidget {
                 context, profileCtrl.lastNameFocus, profileCtrl.dobFocus);
           }),
           const Space(0, 30),
+          // FIX (user report — strict): DOB plain TEXT INPUT tha — user
+          // kuch bhi type kar sakta tha ("abc", "32/13/9999"). Ab readOnly
+          // field + tap par REAL DATE PICKER khulta hai (calendar icon ke
+          // saath). Format backend-friendly yyyy-MM-dd.
           CustomTextFormField(
               radius: 5,
               labelText: ProfileFont().dob,
               controller: profileCtrl.txtDob,
               focusNode: profileCtrl.dobFocus,
-              keyboardType: TextInputType.name),
+              readOnly: true,
+              suffixIcon: Icon(Icons.date_range_outlined,
+                  color: profileCtrl.appCtrl.appTheme.contentColor),
+              keyboardType: TextInputType.none,
+              onTap: () => profileCtrl.pickDob(context)),
           const Space(0, 30),
           const GenderLayout()
         ],

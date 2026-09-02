@@ -9,13 +9,13 @@ class SortByDropDown extends StatelessWidget {
       return DropdownButton(
         value: shopCtrl.dropDownVal,
         items: [
-          //add items in the dropdown
+          // Sirf wohi sort options jinke liye backend ka real field hai
+          // (created_at / price). "Popularity"/"Customer Rating" ke liye
+          // backend field available nahi — fake option dikhana nahi hai.
           DropdownMenuItem(
             value: "Recommended",
             child: Text(FilterFont().recommended),
           ),
-          DropdownMenuItem(
-              value: "Popularity", child: Text(FilterFont().popularity)),
           DropdownMenuItem(
             value: "What's New",
             child: Text(FilterFont().whatsNew),
@@ -27,10 +27,6 @@ class SortByDropDown extends StatelessWidget {
           DropdownMenuItem(
             value: "Price: Low to High",
             child: Text(FilterFont().lowToHigh),
-          ),
-          DropdownMenuItem(
-            value: "Customer Rating",
-            child: Text(FilterFont().customerRating),
           )
         ],
         onChanged: (value) {
