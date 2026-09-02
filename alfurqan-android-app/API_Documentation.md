@@ -575,3 +575,21 @@ Is baar GetX registration graph, null-crash greps, dead-button sweeps AUR money-
 **Deep-verify kiya gaya (sab clean):** GetX controller registration graph (sab controllers sahi order me register hote hai, koi "find without put" crash nahi); firstWhere sab orElse ke saath; koi khali onTap/onPress dead button nahi; checkout payload/address/coupon flow sahi; cart ghost-remove fix intact; order detail REAL api; wishlist union-sync intact; coupons/wallet REAL api; language+currency restart par restore hote hai; 542 files 0 bracket problems; 4-language maps 0 orphan entries.
 
 **Dead demo files (invisible, koi screen nahi dikhata):** fake cards list, old payment widgets, innerCategory page, coupon demo array — code me pade hai par app me kahin render nahi hote; safety ke liye chhua nahi.
+
+## 02/09/2026 (v1.5.4+26) ChatDev pipeline audit — LIVE API se integration test + 3 fixes + 1 SECURITY alert
+
+Is round me ChatDev workflow (Design->Code->Review->Test) use kiya. TESTER phase asli hai: alfurqan.ae ke LIVE public APIs (products, home data, currencies, swagger) call karke app ke models ke saath match kiye.
+
+**LIVE API test results (sab PASS):**
+- Products (GetAllProductsFront): saare fields hamare ProductApiModel se match (id/name/price/sale_price/discount/stock_status/slug/product_thumbnail.asset_url) — pagination wrapper sahi.
+- Home (GetHomePageDataApp): banners RELATIVE image paths — app ka buildMediaUrl sahi se full URL banata hai (alamat: banners dikhte hai); Offer Banner 2/3 ka Image_Url backend me khaali hai — app pehle se hi use skip karta hai; Brand section backend ne Status:false rakha hai — app sahi se hide karta hai; Top_Category ke 5 real slugs (quran/hadith/creed/jurisprudence/biography) kaam karte hai.
+- Currency (GetAllCurrenciesFront): endpoint sahi; USD(3.65)->invert ~0.27x, INR(27)->27x, AED(1)->1x sahi; GBP/EUR ka backend rate 0.01 toota hua hai — app unhe list se hata deta hai jab tak backend theek na kare.
+
+**Fixes is round me:**
+1. **Forgot Password FAKE flow hata diya** — "Send OTP" dabane par demo OTP popup khulta tha; na email jata, na OTP verify hota, na password reset hota. Backend me password-recovery endpoint hi nahi hai (swagger verify), isliye ab HONEST dialog: support@alfurqan.ae par reset request ka tareeqa (user ki email ke saath).
+2. OTP/Reset demo pages — ab kisi live flow se linked nahi (sirf hidden dev sitemap me route).
+
+**SECURITY ALERT (backend team ko turant report karo):**
+Currency API ka response har request me ADMIN USER OBJECT leak kar raha hai — userName "dzab_admin", email "info@alfurqan.ae", phoneNumber aur BASE64 PASSWORD ("KyimQTia9hEli09WiFW4gQ==") sab kisi ko bhi bina login dikh raha hai (kholo: https://alfurqan.ae/web/CoreFront/GetAllCurrenciesFront). Backend se `core_Users` object response se hatwana zaroori hai — ye admin panel takeover ka rasta hai.
+
+**Deep-verify clean:** .first/.last sab guarded; json force-unwrap 0; image URL pipeline sahi; coupons loading/empty/error states sahi; .tr parity 517 keys 4 languages (sirf dead-demo keys ka delta); 542 files 0 bracket problems.

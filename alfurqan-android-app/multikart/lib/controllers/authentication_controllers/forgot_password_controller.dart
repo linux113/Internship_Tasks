@@ -1,5 +1,4 @@
 import 'package:multikart/config.dart';
-import 'package:multikart/views/authentication_page/otp/otp.dart';
 
 class ForgotPasswordController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -8,28 +7,24 @@ class ForgotPasswordController extends GetxController {
 
   TextEditingController txtEmail = TextEditingController();
 
-  //sentOtp
+  /// FIX (strict no-fake): pehle "Send OTP" ek DEMO OTP popup kholta tha —
+  /// na email jata, na OTP verify hota, na password reset hota (template ka
+  /// nakli flow). Backend me password-recovery ka koi endpoint hi nahi hai
+  /// (swagger verify — sirf ChangePassword hai jo logged-in user ke liye hai).
+  /// Isliye ab HONEST dialog: support se reset karwane ka tareeqa.
   sendOtp() async {
-    Get.generalDialog(
-      pageBuilder: (context, anim1, anim2) {
-        return Align(
-          alignment: Alignment.center,
-          child: Container(
-            height: AppScreenUtil().screenHeight(250),
-            margin: EdgeInsets.symmetric(
-                horizontal: AppScreenUtil().screenWidth(12)),
-            child: OtpScreen(),
-          ),
-        );
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return SlideTransition(
-          position: Tween(begin: const Offset(0, -1), end: const Offset(0, 0))
-              .animate(anim1),
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 300),
+    final email = txtEmail.text.trim();
+    Get.defaultDialog(
+      title: 'Password Reset',
+      middleText:
+          'App me abhi automatic password reset available nahi hai.\n\n'
+          'Apni registered email${email.isNotEmpty ? ' ($email)' : ''} se '
+          'support@alfurqan.ae par request bhejein — hamari team aapka '
+          'password reset karke jawab de degi.',
+      textConfirm: 'OK',
+      confirmTextColor: Colors.white,
+      buttonColor: appCtrl.appTheme.primary,
+      onConfirm: () => Get.back(),
     );
   }
 }
