@@ -80,7 +80,8 @@ class FindStyleListCard extends StatelessWidget {
           ]),
           const Space(0, 5),
           Rating(
-            val: double.parse(data!.rating.toString()),
+            val: double.tryParse(data!.rating?.toString() ?? '0') ??
+                0, // CRASH-FIX: rating null -> double.parse('null') crash
             onRatingUpdate: (val) {},
           ),
           LatoFontStyle(

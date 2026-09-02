@@ -42,10 +42,11 @@ class _CartScreenState extends State<CartScreen> {
                               desc: CartFont().viewDetail,
                               buttonName: CartFont().placeOrder,
                               totalAmount:
-                                  (double.parse(cartCtrl
-                                              .cartModelList!.totalAmount
-                                              .toString()) *
-                                          cartCtrl.appCtrl.rateValue).toStringAsFixed(2),
+                                  ((cartCtrl.cartModelList!
+                                                  .totalAmount ??
+                                              0) *
+                                          cartCtrl.appCtrl.rateValue)
+                                      .toStringAsFixed(2), // CRASH-FIX: null total safe
                               onTap: () {
                                 cartCtrl.appCtrl.isHeart = false;
                                 cartCtrl.update();

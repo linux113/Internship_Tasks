@@ -41,9 +41,20 @@ class LogoutButton extends StatelessWidget {
             showLogoutDialog(
               () async {
                 appCtrl.selectedIndex = 0;
-                // FIX: erase() await nahi ho raha tha — usse pehle hi login
-                // page khul jata tha aur token kabhi-kabhi bacha rehta tha.
-                await appCtrl.storage.erase();
+                // FIX: pehle storage.erase() SE SAB KUCH wipe ho jata tha —
+                // isIntro (onboarding flag) aur language bhi, isliye logout
+                // ke baad user ko dobara onboarding dikhti thi. Ab sirf USER
+                // data clear hota hai; onboarding/language yaad rehti hai.
+                // Token + isLogin + coupon + saved addresses clear rahenge
+                // (privacy leak nahi).
+                await appCtrl.storage.remove('token');
+                await appCtrl.storage.remove(Session.isLogin);
+                await appCtrl.storage.remove('id');
+                await appCtrl.storage.remove('name');
+                await appCtrl.storage.remove('email');
+                await appCtrl.storage.remove('coupon_code');
+                await appCtrl.storage.remove('selected_address_id');
+                await appCtrl.storage.remove('local_addresses');
                 // Pichhle user ka cart/wishlist memory me pada rehta tha —
                 // naye user ke login par purana data dikh sakta tha.
                 if (Get.isRegistered<CartController>()) {

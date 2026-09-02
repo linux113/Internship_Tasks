@@ -58,7 +58,8 @@ class _ProductColorLayoutState extends State<ProductColorLayout>
               _animationController!.forward();
               productCtrl.selectedColor = e.key;
               productCtrl.imagesList = [];
-              productCtrl.colorSelected = int.parse(e.value.id.toString());
+              productCtrl.colorSelected =
+                    int.tryParse(e.value.id?.toString() ?? '0') ?? 0; // CRASH-FIX
               productCtrl.update();
               for (var i = 0; i < widget.product!.images!.length; i++) {
 

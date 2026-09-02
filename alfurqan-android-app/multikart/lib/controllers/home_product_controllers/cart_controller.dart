@@ -290,6 +290,10 @@ class CartController extends GetxController {
         (apiCart.total ?? 0) > 0 ? apiCart.total! : bagTotalFinal;
     final double savings = bagTotalMrp - bagTotalFinal;
 
+    // EDGE-FIX: saari lines zero-qty nikli (ya koi valid item nahi bana) to
+    // EMPTY cart dikhao — warna khali CartModel se "blank" screen aati thi.
+    if (viewItems.isEmpty) return null;
+
     return CartModel(
       cartList: viewItems,
       totalAmount: total,

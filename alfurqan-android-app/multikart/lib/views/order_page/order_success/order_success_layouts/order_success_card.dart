@@ -27,7 +27,7 @@ class OrderSuccessCard extends StatelessWidget {
                 OrderSummarySizeQuantity(orderSummaryModel: orderSummaryModel),
                 LatoFontStyle(
                     text:
-                        "${appCtrl.priceSymbol}${double.parse(orderSummaryModel!.price.toString())}",
+                        "${appCtrl.priceSymbol}${double.tryParse(orderSummaryModel!.price?.toString() ?? '0') ?? 0}", // CRASH-FIX: price null safety
                     fontWeight: FontWeight.w600,
                     fontSize: FontSizes.f14,
                     color: appCtrl.appTheme.blackColor),

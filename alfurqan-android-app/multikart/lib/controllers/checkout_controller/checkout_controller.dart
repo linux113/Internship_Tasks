@@ -136,7 +136,9 @@ class CheckoutController extends GetxController {
       'billing_address_id': addressId,
       'points_amount': false,
       'wallet_balance': false,
-      'coupon': coupon,
+      // FIX: khaali coupon string bhejne par kuch backends 400 reject karte
+      // hai — coupon ho tabhi key bhejo.
+      if (coupon.isNotEmpty) 'coupon': coupon,
       'delivery_description': '',
       'delivery_interval': '',
       'payment_method': paymentMethod,
@@ -171,10 +173,16 @@ class CheckoutController extends GetxController {
           c.update();
         }
         await storage.write('coupon_code', '');
+        // FIX: navigation ke BAAD update() mat karo — offAll se ye page pop
+        // hota hai aur controller delete ho sakta hai (update-after-dispose
+        // race). Pehle state theek karo, phir navigate karke RETURN.
+        isPlacing = false;
+        update();
         _toast(res.message.isNotEmpty
             ? res.message
             : 'Order placed successfully!');
         Get.offAllNamed(routeName.orderSuccess, arguments: totalText);
+        return;
       } else {
         _toast(res.message.isNotEmpty
             ? res.message

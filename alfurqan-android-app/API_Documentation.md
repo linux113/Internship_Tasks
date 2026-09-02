@@ -519,3 +519,27 @@ User report: search icon "chipka hua" lagta hai. Wajah: bell icon hate hi Heart 
 
 ### Verified
 - 542 Dart files bracket scan: 0 problems; language maps: 0 orphans.
+
+## 02 Sep 2026 (v1.5.1+23) SENIOR-DEV DEEP AUDIT — layer-by-layer, 8 bugs mile aur fix hue
+
+Audit ka tareeqa: har layer (navigation/state/API/model/UI/persistence/language/money-path) alag se test — crash-prone patterns (null→parse, firstWhere bina orElse, update-after-dispose, storage-leak) sab grep + line-by-line reads se.
+
+### 🐛 BUGS FOUND & FIXED
+1. **4 × NULL-PARSE CRASH spots** — `double.parse(x.toString())` jahan `x == null` hone par `double.parse("null")` → FormatException (red screen):
+   - Home rating card (`find_style_list_card.dart`) — rating null par crash hota.
+   - Order SUCCESS screen price (`order_success_card.dart`) — sabse khatarnaak jagah par crash risk.
+   - Cart total (`cart.dart`) — `totalAmount` (double?) null par crash.
+   - Product color tap (`product_color_layout.dart`) — variation id null par crash.
+   → Sab null-safe (`tryParse ?? 0` / direct `?? 0`).
+2. **Cart EMPTY-screen bug** — zero-qty filter ke baad agar koi item na bache to EMPTY CartModel (khali list) return hota tha → blank screen dikhti. Ab `viewItems.isEmpty` par null → proper "Cart is Empty" page.
+3. **Logout poore storage ki safai karta tha** — `storage.erase()` se onboarding-flag (isIntro) + language bhi wipe — logout ke baad user ko dobara onboarding dikhti thi. Ab sirf USER data clear: token, isLogin, id/name/email, coupon_code, selected_address_id, local_addresses. Onboarding + language yaad rehti hai. (Privacy note verify: token same LocalStorage me tha — ab bhi clear hota hai, koi leak nahi.)
+4. **Checkout success ke baad update-after-dispose race** — `Get.offAllNamed` ke baad controller delete ho sakta tha, phir `update()` call → crash-log/race. Ab pehle state reset, phir navigate, phir return.
+5. **Empty coupon server ko jata tha** — `coupon: ''` bhejne par kai backends 400 reject. Ab coupon ho tabhi key bheji jaati hai.
+
+### ✅ PASSED (koi bug nahi mila)
+- `firstWhere` bina orElse wale spots — sab already orElse ke saath (address controller).
+- Cart qty-0 ghost fix + silent refresh + real line-id remove (pichhle round) — logic correct.
+- Login auto-bounce VS logout flow — logout pehle flag clear karta hai, bounce nahi aata. SAFE.
+- Splash self-heal — token/flag mismatch correct karta hai.
+- Filter apply → ShopController → API params (field/sort/price) — wiring sahi.
+- 542 files bracket scan: 0 problems; language maps: 0 orphans.
