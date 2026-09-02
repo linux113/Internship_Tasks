@@ -1070,11 +1070,12 @@ class AppArray {
     {"title": "Cancelled Orders".tr},
   ];
 
-  //Time Filter type
+  //Time Filter type — FIX: pehle fake duplicate "2021"/"2021" entries thin
+  // (aur APPLY button kuch karta hi nahi tha). Ab real client-side filter
+  // inhi indices se chalta hai: 0=All Time, 1=Last 30 Days, 2=Last 6 Months.
   var timeFilterType = [
+    {"title": "All Time".tr},
     {"title": "Last 30 Days".tr},
     {"title": "Last 6 Months".tr},
-    {"title": "2021".tr},
-    {"title": "2021".tr},
   ];
 }

@@ -21,6 +21,15 @@ class OrderHistoryController extends GetxController {
   int orderTypeValue = 0;
   int timeFilterTypeValue = 0;
 
+  // ACTUALLY-APPLIED filter values (radio sirf pending selection hai —
+  // APPLY dabane par yaha copy hota hai). Pehle APPLY button sirf
+  // Get.back() karta tha, filter kuch nahi karta tha (decorative tha!).
+  int appliedOrderType = 0;
+  int appliedTimeFilter = 0;
+
+  /// Search box ka live text (order number / item name / status se match).
+  String searchQuery = '';
+
   bool isLoadingOrders = false;
 
   /// Guest ho to true — view "Please login to see your orders" dikhayegi.
@@ -31,9 +40,79 @@ class OrderHistoryController extends GetxController {
     orderHistoryList = []; // demo orders hata diye — real api se bharenge
     orderType = AppArray().orderType;
     timeFilterType = AppArray().timeFilterType;
+    // FIX: search box pehle decorative tha (type karne par kuch nahi hota
+    // tha). Ab har keystroke par visibleOrders filter hoti hai.
+    controller.addListener(() {
+      searchQuery = controller.text;
+      update();
+    });
     update();
     fetchOrders();
     super.onReady();
+  }
+
+  /// APPLY button — pending radio selection ko lagoo karo aur UI refresh.
+  void applyFilters() {
+    appliedOrderType = orderTypeValue;
+    appliedTimeFilter = timeFilterTypeValue;
+    update();
+  }
+
+  /// Applied filters ke hisaab se dikhne wale orders (client-side filter —
+  /// backend ko filter param support nahi karta, isliye yahi sahi jagah hai).
+  List<OrderHistoryModel> get visibleOrders {
+    var list = orderHistoryList;
+
+    // Live search (order id / date / item name / status — case-insensitive)
+    final q = searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list.where((o) {
+        if ((o.orderId?.toString() ?? '').contains(q)) return true;
+        if ((o.orderDay ?? '').toLowerCase().contains(q)) return true;
+        final items = o.daysWiseList ?? const <DaysWiseList>[];
+        return items.any((it) =>
+            (it.name ?? '').toLowerCase().contains(q) ||
+            (it.status ?? '').toLowerCase().contains(q) ||
+            (it.deliveryStatus ?? '').toLowerCase().contains(q));
+      }).toList();
+    }
+
+    // Type filter: 0=All, 1=Open, 2=Return, 3=Cancelled
+    if (appliedOrderType != 0) {
+      list = list.where((o) {
+        final first = (o.daysWiseList?.isNotEmpty == true)
+            ? o.daysWiseList!.first
+            : null;
+        final s = (first?.status ?? first?.deliveryStatus ?? '')
+            .toString()
+            .toLowerCase();
+        switch (appliedOrderType) {
+          case 1: // Open — delivered/cancelled/returned NAHI
+            return !(s.contains('deliver') ||
+                s.contains('cancel') ||
+                s.contains('return'));
+          case 2:
+            return s.contains('return');
+          case 3:
+            return s.contains('cancel');
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
+    // Time filter: 0=All Time, 1=Last 30 Days, 2=Last 6 Months
+    if (appliedTimeFilter != 0) {
+      final cutoff = DateTime.now()
+          .subtract(Duration(days: appliedTimeFilter == 1 ? 30 : 182));
+      list = list.where((o) {
+        final d = DateTime.tryParse(o.orderDay ?? '');
+        // date parse na ho to time-filter me mat ghusedo (wrong hide na ho —
+        // "All Time" me ye hamesha dikhte hai)
+        return d != null && !d.isBefore(cutoff);
+      }).toList();
+    }
+    return list;
   }
 
   /// Real orders laao (token se — backend khud user identify karta hai).
@@ -163,6 +242,11 @@ class OrderHistoryController extends GetxController {
 
   //order history filter bottom sheet
   historyFilterBottomSheet() {
+    // sheet khulne par radio = pehle se APPLIED filter dikhao (warna har
+    // baar "All" reset dikhta, jabki list filtered rehti — mismatch bug).
+    orderTypeValue = appliedOrderType;
+    timeFilterTypeValue = appliedTimeFilter;
+    update();
     Get.bottomSheet(
       const OrderHistoryFilter(),
       backgroundColor: Colors.white,

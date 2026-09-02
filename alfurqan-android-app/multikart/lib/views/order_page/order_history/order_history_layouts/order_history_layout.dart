@@ -6,13 +6,16 @@ class OrderHistoryLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<OrderHistoryController>(builder: (orderHistoryCtrl) {
-      return (orderHistoryCtrl.orderHistoryList.isNotEmpty)
+      // visibleOrders = applied filters ke baad ki REAL list (pehle raw
+      // list dikhti thi kyunki APPLY button decorative tha).
+      final orders = orderHistoryCtrl.visibleOrders;
+      return (orders.isNotEmpty)
           ? Column(
               children: [
-                ...orderHistoryCtrl.orderHistoryList.asMap().entries.map((e) {
+                ...orders.asMap().entries.map((e) {
                   return OrderHistoryCard(
                     index: e.key,
-                    lastIndex: orderHistoryCtrl.orderHistoryList.length - 1,
+                    lastIndex: orders.length - 1,
                     orderHistoryModel: e.value,
                     onTap: ()=>orderHistoryCtrl.bottomSheetLayout(),
                   ).gestures(

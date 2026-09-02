@@ -34,8 +34,11 @@ class SearchScreenController extends GetxController {
 
   @override
   void onReady() {
-    recommendedList = AppArray().recommendedList;
-    innerCategoryProduct = AppArray().innerCategoryProduct;
+    // FIX: pehle 1-2 sec ke liye FASHION demo chips (Denim/Skirts/Jeans)
+    // flash hoti thin, phir real categories aati thin. Ab khaali start —
+    // _loadRecommended() sirf real alfurqan.ae categories bharega.
+    recommendedList = [];
+    innerCategoryProduct = [];
     // har keystroke pe filter — widget me koi change nahi karna pada
     controller.addListener(() => onSearchChanged(controller.text));
     _loadRecentSearches();

@@ -543,3 +543,18 @@ Audit ka tareeqa: har layer (navigation/state/API/model/UI/persistence/language/
 - Splash self-heal — token/flag mismatch correct karta hai.
 - Filter apply → ShopController → API params (field/sort/price) — wiring sahi.
 - 542 files bracket scan: 0 problems; language maps: 0 orphans.
+
+## 02/09/2026 (v1.5.2+24) Full-app sharp audit — 2 aur decorative filters REAL banaye, saari static-fashion flash band, 4-language gaps fill
+
+Full automated audit chalaya (language parity, route wiring, asset existence, crash greps — 542 files, 0 bracket problems). Pakade gaye issues aur fixes:
+
+1. **Order History filter decorative tha (CRITICAL FIX)** — Apply ka button sirf sheet band karta tha, filter kabhi lagta hi nahi tha. Ab REAL client-side filter: All/Open/Return/Cancelled orders + All Time/Last 30 Days/Last 6 Months (pehle fake duplicate "2021" entries thin). Sheet khulne par purana applied selection bhi yaad rehta hai.
+2. **Order History search box decorative tha (FIX)** — type karne par kuch nahi hota tha (koi listener hi nahi tha). Ab har keystroke par order number / item name / status / date se live filter hota hai.
+3. **Home page static fashion flash (FIX)** — API fail hone par Deals of the Day me Pink Hoodie/Denim Jacket aur Kids Corner me kids-fashion demo data dikhta tha. Ab koi demo preload nahi — sections khaali hone par hide ho jate hain.
+4. **Search page "Recommended" chips flash (FIX)** — real categories aane tak 1-2 sec fashion chips (Denim/Skirts/Jeans) dikhti thin. Ab seedha real alfurqan.ae categories aati hain.
+5. **Missing translations (FIX)** — "Time Filter" (timeFilters) AR/HI/KR me missing tha (camelCase raw dikhta tha); Add Address ka "stateProvision" label sabhi languages me missing tha; Order History ke filter labels ("All Orders", "Open Orders", "Return Orders", "Cancelled Orders", "Last 30 Days", "Last 6 Months", "All Time") sabhi languages me missing the; drawer ke subtitles (Home/Category/Orders/Wishlist/Account ke neeche ki lines) aur address-type chip "Home" ab 4 languages me translated.
+6. **Onboarding SKIP/DONE raw English (FIX)** — keys language maps me hi nahi thin, ab 'skip'/'done' keys se 4 languages me translated. Null-safety bhi tighten ki.
+
+**Verify kiya gaya (clean):** fake credit cards ("Paige Turner") kisi bhi screen par render nahi hote (dead demo array); coupons page REAL API se chalta hai; wallet balance REAL API se; profile guest mode me "Guest" dikhata hai (fake name nahi); sare routes wired; koi missing image asset nahi jo use hoti ho; koi unsafe int.parse/double.parse nahi; debug prints nahi.
+
+**Known cosmetic (next update me ho sakta hai):** currency names (UAE Dirham/British pound) aur sort dropdown labels English me hi rehte hain har language me — logic se bound hai, risky refactor, baad me index-based banake translate karenge.

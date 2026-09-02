@@ -10,8 +10,10 @@ class SkipTextWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // FIX: 'DONE'/'SKIP' keys map me nahi the — AR/HI/KR mode me raw
+    // English dikhta tha. 'done'/'skip' keys 4 languages me maujood hai.
     return  Text(
-     isDone! ? 'DONE'.tr : 'SKIP'.tr,
+     (isDone ?? false) ? 'done'.tr : 'skip'.tr,
     )
         .fontFamily(GoogleFonts.lato().fontFamily.toString())
         .fontSize(AppScreenUtil().fontSize(FontSizes.f16))

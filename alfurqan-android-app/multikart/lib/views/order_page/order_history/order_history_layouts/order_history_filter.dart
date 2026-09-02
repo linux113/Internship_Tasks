@@ -40,7 +40,12 @@ class OrderHistoryFilter extends StatelessWidget {
                 firstButtonText: CardBalanceFont().back.toUpperCase(),
                 secondButtonText: CouponFont().apply.toUpperCase(),
                 firstTap: ()=> Get.back(),
-                secondTap: ()=> Get.back()
+                // FIX: pehle APPLY bhi sirf Get.back() karta tha (decorative
+                // button — filter kabhi lagta hi nahi tha). Ab REAL apply.
+                secondTap: () {
+                  orderHistoryCtrl.applyFilters();
+                  Get.back();
+                }
             )
           ],
         ),

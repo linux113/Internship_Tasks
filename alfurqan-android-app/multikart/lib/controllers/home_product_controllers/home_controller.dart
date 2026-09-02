@@ -78,12 +78,17 @@ class HomeController extends GetxController {
   getData() async {
     appCtrl.isShimmer = true;
     appCtrl.update();
-    dealOfTheDayList = AppArray().homeDealOfTheDayList;
-    findStyleCategory = AppArray().homeFindStyleCategory;
-    findStyleCategoryList = AppArray().homeFindStyleCategoryList;
-    biggestDealBrandList = AppArray().biggestDealBrandList;
-    homeKidsCornerList = AppArray().homeKidsCornerList;
-    offerCornerList = AppArray().offerCornerList;
+    // FIX (strict no-static rule): pehle yaha FASHION demo lists
+    // (Pink Hoodie / Denim Jacket / kids clothes) preload hoti thin — API
+    // fail hone par user ko kapdon ka fake data dikhta tha. Ab sab khaali
+    // start hota hai; sirf REAL alfurqan.ae api data bharta hai. Khaali
+    // rehne par views section hide kar dete hain (guards laga diye hai).
+    dealOfTheDayList = [];
+    findStyleCategory = [];
+    findStyleCategoryList = [];
+    biggestDealBrandList = [];
+    homeKidsCornerList = [];
+    offerCornerList = [];
     loginWidth = ScreenUtil().screenWidth;
     loginHeight = 500.w;
     update();

@@ -6,6 +6,11 @@ class HomeDealsOfTheDayLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(builder: (homeCtrl) {
+      // API fail/empty ho to header ke neeche khaali section na dikhe —
+      // poora section hide (demo fallback data ab load hi nahi hota).
+      if (homeCtrl.dealOfTheDayList.isEmpty) {
+        return const SizedBox.shrink();
+      }
       return Padding(
         padding:
             EdgeInsets.symmetric(horizontal: AppScreenUtil().screenWidth(15)),

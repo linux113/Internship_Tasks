@@ -6,6 +6,11 @@ class KidsCorner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(builder: (homeCtrl) {
+      // Real trending products (Tranding_Products) nahi aaye to section
+      // hide — pehle static kids-fashion demo list dikh jati thi.
+      if (homeCtrl.homeKidsCornerList.isEmpty) {
+        return const SizedBox.shrink();
+      }
       return Padding(
         padding: EdgeInsets.symmetric(
             horizontal: AppScreenUtil().screenWidth(15),
