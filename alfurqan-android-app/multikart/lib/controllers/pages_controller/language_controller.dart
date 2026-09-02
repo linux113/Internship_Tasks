@@ -68,7 +68,14 @@ class LanguageController extends GetxController {
     HomeController homeController = Get.find();
     dashboardController.drawerList = AppArray().drawerList;
     pageCtrl.pageListModel = pagesList;
-    productCtrl.product = productList;
+    // FIX: pehle language badalte hi open Product Detail page ka product
+    // STATIC demo (`productList` fashion jacket) se overwrite ho jata tha
+    // — user ko achanak puruson ki denim jacket dikhti aur AddToCart
+    // "demo product" error deta tha. Ab sirf tab reset karo jab koi real
+    // api product open hi na ho.
+    if (productCtrl.apiProduct == null) {
+      productCtrl.product = productList;
+    }
     appCtrl.bottomList = AppArray().bottomSheet;
     homeController.getData();
     homeController.offerCornerList = AppArray().offerCornerList;

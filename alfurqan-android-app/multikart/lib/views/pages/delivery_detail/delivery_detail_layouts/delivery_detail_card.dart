@@ -10,8 +10,10 @@ class DeliveryDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(
       builder: (appCtrl) {
+        // FIX: template ka hidden gesture — address card par DOUBLE-TAP se
+        // DEMO fashion product ka detail page khul jata tha (user ko samajh
+        // hi nahi aata kya hua). Ab double-tap kuch nahi karta.
         return InkWell(
-          onDoubleTap: ()=>appCtrl.goToProductDetail(),
           child: Container(
             margin:
             EdgeInsets.only(bottom: AppScreenUtil().screenHeight(15)),

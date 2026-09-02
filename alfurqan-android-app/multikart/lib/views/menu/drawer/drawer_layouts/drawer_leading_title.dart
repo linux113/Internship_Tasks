@@ -62,6 +62,8 @@ class DrawerLeadingTitle extends StatelessWidget {
           ThemeSwitcher(
               onToggle: (val) {
                 appCtrl.isRTL = val;
+                // FIX: restart par bhi RTL yaad rahe.
+                appCtrl.storage.write('isRTL', val);
                 appCtrl.update();
                 Get.forceAppUpdate();
               },

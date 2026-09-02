@@ -558,3 +558,20 @@ Full automated audit chalaya (language parity, route wiring, asset existence, cr
 **Verify kiya gaya (clean):** fake credit cards ("Paige Turner") kisi bhi screen par render nahi hote (dead demo array); coupons page REAL API se chalta hai; wallet balance REAL API se; profile guest mode me "Guest" dikhata hai (fake name nahi); sare routes wired; koi missing image asset nahi jo use hoti ho; koi unsafe int.parse/double.parse nahi; debug prints nahi.
 
 **Known cosmetic (next update me ho sakta hai):** currency names (UAE Dirham/British pound) aur sort dropdown labels English me hi rehte hain har language me — logic se bound hai, risky refactor, baad me index-based banake translate karenge.
+
+## 02/09/2026 (v1.5.3+25) MEGA DEEP AUDIT round 2 — line-by-line controllers+views, 8 aur bugs fix
+
+Is baar GetX registration graph, null-crash greps, dead-button sweeps AUR money-path (cart→checkout→payment→order) ke saath saare controllers line-by-line padhe. Pakde gaye bugs:
+
+1. **Home page fashion fallback (FIX)** — Category API kabhi fail ho jaye to HOME par fashion demo categories + banners (men/women/kids tiles) dikhne lagte the. Ab khaali rakhte hai — fake kabhi nahi dikhega.
+2. **Product Detail "Similar Products" 2 bugs (FIX)** — (a) real api aane tak/about na aane par fashion demo row (Blue Denim Jacket) dikhti thi; (b) ek product se doosra product kholne par PURANE product ka similar list atka rehta tha aur naya fetch hi nahi hota tha (controller reuse bug). Ab har product par similar reset + fresh fetch, aur data na ho to section hide.
+3. **Language change = Demo product bug (FIX)** — language badalte hi khula hua Product Detail page ka product STATIC demo fashion jacket se overwrite ho jata tha (AddToCart "demo product" error deta tha). Ab real product ko touch hi nahi karta.
+4. **Address card ka hidden DOUBLE-TAP gesture (FIX)** — checkout address list par double-tap karne se DEMO fashion product khul jata tha (template ka chhupa hua gesture). Hata diya.
+5. **"null" text bug x3 (FIX)** — Order Success / Payment / Delivery Detail pages par arguments na mile to screen par literal "null" likha aata tha. Ab '0'.
+6. **RTL setting restart par reset (FIX)** — Settings/Profile/Drawer teeno jagah ka RTL toggle app restart par bhool jata tha (kabhi save hi nahi hota tha). Ab save + restart par restore hota hai.
+7. **Dark Mode switch galat position (FIX)** — theme dark rehne ke baad bhi app restart par settings ka Mode switch OFF dikhata tha (state restore nahi hoti thi). Ab sahi position dikhta hai.
+8. **Settings ka Notification toggle decorative tha (REMOVE)** — wo switch kuch bhi nahi karta tha (kahin use/persist hi nahi hota tha). Settings se hata diya; sirf 2 REAL working toggles: Mode + RTL.
+
+**Deep-verify kiya gaya (sab clean):** GetX controller registration graph (sab controllers sahi order me register hote hai, koi "find without put" crash nahi); firstWhere sab orElse ke saath; koi khali onTap/onPress dead button nahi; checkout payload/address/coupon flow sahi; cart ghost-remove fix intact; order detail REAL api; wishlist union-sync intact; coupons/wallet REAL api; language+currency restart par restore hote hai; 542 files 0 bracket problems; 4-language maps 0 orphan entries.
+
+**Dead demo files (invisible, koi screen nahi dikhata):** fake cards list, old payment widgets, innerCategory page, coupon demo array — code me pade hai par app me kahin render nahi hote; safety ke liye chhua nahi.

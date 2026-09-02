@@ -42,6 +42,12 @@ class AppController extends GetxController {
   @override
   void onReady() async {
     bottomList = AppArray().bottomSheet;
+    // FIX: settings restore — pehle app restart par (1) RTL choice kho
+    // jati thi (hamesha false par reset), (2) dark-mode ka switch settings
+    // me OFF dikhata tha jabki theme dark hi thi (isTheme kabhi restore
+    // nahi hota tha — sirf ThemeService storage padhta tha).
+    isTheme = storage.read('isDarkMode') ?? false;
+    isRTL = storage.read('isRTL') ?? false;
     // User ne pehle koi currency select ki thi to app restart par bhi wahi
     // chalni chahiye (pehle har restart par ₹ par reset ho jati thi).
     final stored = CurrencyStore.read();

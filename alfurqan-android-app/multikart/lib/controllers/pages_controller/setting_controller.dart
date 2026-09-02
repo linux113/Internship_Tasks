@@ -6,10 +6,13 @@ class SettingController extends GetxController {
       : Get.put(AppController());
 
 
+  // FIX: Notification toggle HATA DIYA — wo decorative tha
+  // (isNotificationShow kahin read/persist hi nahi hota tha, aur app me
+  // push notifications wired nahi hai). Sirf REAL working toggles yaha:
+  // Mode (theme, persist hota hai) aur RTL (ab persist hota hai).
   var settingData = <ProfileModel>[
     ProfileModel(icon: svgAssets.setting,title: 'Mode'.tr,subTitle: ''),
     ProfileModel(icon: svgAssets.setting,title: 'RTL'.tr,subTitle: ''),
-    ProfileModel(icon: svgAssets.notification,title: 'Notification'.tr,subTitle: 'Offers, Order tracking messages..'.tr),
   ];
 
 }

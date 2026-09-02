@@ -43,7 +43,8 @@ class DeliveryDetailController extends GetxController {
   @override
   void onReady() {
     refreshList();
-    totalAmount = Get.arguments.toString();
+    // FIX: arguments null ho to "null" literal dikhta tha.
+    totalAmount = Get.arguments?.toString() ?? '0';
     update();
     super.onReady();
   }

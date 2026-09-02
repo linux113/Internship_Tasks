@@ -34,6 +34,9 @@ class SettingCard extends StatelessWidget {
               ThemeSwitcher(
                   onToggle: (val) {
                     appCtrl.isRTL = val;
+                    // FIX: restart par bhi RTL yaad rahe (pehle har baar
+                    // reset ho jata tha — toggle kaam hi nahi karta tha).
+                    appCtrl.storage.write('isRTL', val);
                     appCtrl.update();
                     Get.forceAppUpdate();
                   },

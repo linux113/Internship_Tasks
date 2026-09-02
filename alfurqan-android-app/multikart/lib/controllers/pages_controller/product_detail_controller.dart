@@ -34,11 +34,15 @@ class ProductDetailController extends GetxController {
   @override
   void onReady() {
     loadProduct(Get.arguments);
-    similarList = AppArray().similarProductList;
+    // FIX (strict no-static): pehle yaha fashion demo similar products
+    // (Blue Denim Jacket etc) load hote the — real api aane tak (ya api
+    // fail hone par hamesha ke liye) user ko kapde dikhte the. Ab khaali
+    // start; section empty hone par view hide kar deta hai.
+    similarList = [];
     update();
     super.onReady();
 
-    // similar products bhi real api se lao (same category), demo list overwrite karo
+    // similar products real api se lao (same category)
     if (apiProduct != null) {
       fetchSimilarProducts();
     }
@@ -79,7 +83,15 @@ class ProductDetailController extends GetxController {
         imagesList.add(allImages[i]);
       }
     }
+    // FIX: controller REUSE hota hai (onReady sirf pehli baar) — naye
+    // product par purane product ka similar list atka rehta tha aur fetch
+    // bhi dobara nahi hota tha. Ab har load par similar reset + fresh fetch.
+    similarList = [];
+    similarApiProducts = [];
     update();
+    if (apiProduct != null) {
+      fetchSimilarProducts();
+    }
   }
 
   /// "You may also like" section — isi product ki category ke real products

@@ -32,8 +32,8 @@ class PaymentController extends GetxController {
 
   @override
   void onReady() {
-    // TODO: implement onReady
-    totalAmount = Get.arguments.toString();
+    // FIX: arguments null ho to "null" literal dikhta tha.
+    totalAmount = Get.arguments?.toString() ?? '0';
     update();
     super.onReady();
   }

@@ -9,8 +9,9 @@ class OrderSuccessController extends GetxController {
 
   @override
   void onReady() {
-    // TODO: implement onReady
-    totalAmount = Get.arguments.toString();
+    // FIX: arguments null ho to screen par literal "null" dikhta tha
+    // (Get.arguments.toString() null par "null" deta hai).
+    totalAmount = Get.arguments?.toString() ?? '0';
     update();
     super.onReady();
   }

@@ -23,13 +23,16 @@ class ProductBody extends StatelessWidget {
                   deliverOfferModel: productCtrl.product.deliverOfferModel),
             const BorderLineLayout(),
 
-            //similar product text layout
-            ProductDetailWidget().commonText(
-                text: ProductDetailFont().similarProducts,
-                fontSize: FontSizes.f14),
+            //similar product section — sirf tab dikhao jab real api se
+            //items aaye ho (pehle header + fashion demo row hamesha dikhta
+            //tha, api fail hone par bhi)
+            if (productCtrl.similarList.isNotEmpty) ...[
+              ProductDetailWidget().commonText(
+                  text: ProductDetailFont().similarProducts,
+                  fontSize: FontSizes.f14),
 
-            //similar product layout
-            SimilarProductLayout(data: productCtrl.similarList),
+              SimilarProductLayout(data: productCtrl.similarList),
+            ],
           ],
         ),
       );

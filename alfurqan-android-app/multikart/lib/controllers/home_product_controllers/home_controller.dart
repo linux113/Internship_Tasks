@@ -259,9 +259,11 @@ class HomeController extends GetxController {
       bannerList =
           apiCategoryList.map((e) => e.toHomeBannerModel()).toList();
     } else {
-      // api fail ho jaye to purana static/demo data hi fallback ke roop me dikhao
-      homeCategoryList = AppArray().homeCategory;
-      bannerList = AppArray().homeBanner;
+      // FIX (strict no-static): pehle api fail hone par fashion demo
+      // categories/banners (men/women/kids) home par dikh jate the. Ab
+      // khaali rakhte hai — views empty list par section render nahi karte.
+      homeCategoryList = [];
+      bannerList = [];
     }
     update();
   }
