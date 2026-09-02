@@ -502,7 +502,7 @@ User report: search icon "chipka hua" lagta hai. Wajah: bell icon hate hi Heart 
 
 ## 02 Sep 2026 (v1.5.0+22) 4 ISSUES ek saath — login-repeat, cart reload, STATIC fashion filters, DOB text-input
 
-### 1) App kholo to dobara login maangta tha (j自律ki user logged-in tha)
+### 1) App kholo to dobara login maangta tha (jabki user logged-in tha)
 - **Fix A:** Splash par SELF-HEAL — agar auth token saved hai par login flag false reh gaya ho to flag auto-correct.
 - **Fix B:** LoginController me auto-bounce — already logged-in state me login screen kabhi bhi khule to seedha dashboard par wapas (render hi nahi hoti). Logout ke baad flag false hota hai, waha koi effect nahi.
 
