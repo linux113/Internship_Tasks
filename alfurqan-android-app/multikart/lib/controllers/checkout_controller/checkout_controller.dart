@@ -28,6 +28,12 @@ class CheckoutController extends GetxController {
 
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
+  /// Issue#3 fix ke liye: Order success page ko REAL order dikhani hai
+  /// (pehle STATIC fashion cloths ka fake summary dikhta tha!). Order
+  /// place hote hi yaha snapshot banta hai — offAllNamed ke baad bhi
+  /// static field survive karti hai (payment controller delete ho jata hai).
+  static Map<String, dynamic>? lastPlacedOrder;
+
   int get _userId {
     final raw = storage.read('id');
     if (raw is num) return raw.toInt();
@@ -165,6 +171,40 @@ class CheckoutController extends GetxController {
       );
 
       if (res.isSuccess) {
+        // ---- Issue#3: success page ke liye REAL order snapshot banao ----
+        // cart clear hone se PEHLE items ka naam/qty/price pakad lo.
+        final snapItems = <Map<String, dynamic>>[];
+        final c0 = _cartCtrl;
+        for (final e in (c0?.cartModelList?.cartList ?? [])) {
+          final m = RegExp(r'(\d+)').firstMatch(e.byWhom ?? '');
+          final qty = m != null ? (int.tryParse(m.group(1)!) ?? 1) : 1;
+          snapItems.add({
+            'name': e.name ?? '',
+            'image': e.image ?? '',
+            'qty': qty,
+            'price': e.mrp ?? 0,
+          });
+        }
+        // response se order id — shape lenient (id / order_id / data.id...)
+        int orderId = 0;
+        try {
+          dynamic d = res.data;
+          for (var i = 0; i < 3 && d is Map; i++) {
+            final v = d['id'] ?? d['Id'] ?? d['order_id'] ?? d['Order_Id'];
+            if (v != null) {
+              orderId = int.tryParse(v.toString()) ?? 0;
+              break;
+            }
+            d = d['data'] ?? d['Data'] ?? d['order'] ?? d['Order'];
+          }
+        } catch (_) {}
+        lastPlacedOrder = {
+          'items': snapItems,
+          'total': _currentTotal(),
+          'orderId': orderId,
+          'payment': paymentMethod == 'cod' ? 'Cash on Delivery' : paymentMethod,
+        };
+
         // local cart saaf + coupon reset
         final c = _cartCtrl;
         if (c != null) {

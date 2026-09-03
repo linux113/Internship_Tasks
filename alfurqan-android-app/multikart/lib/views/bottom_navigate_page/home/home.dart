@@ -36,6 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         HomeBannerList(),
 
+                        //services strip (Issue #2 — Free Shipping/COD etc,
+                        // real api se; khaali ho to apne aap hide)
+                        ServicesStrip(),
+
                         //deals of the day
                         HomeDealsOfTheDayLayout(),
 

@@ -18,7 +18,9 @@ class OrderSuccess extends StatelessWidget {
               centerTitle: false,
               elevation: 0,
               automaticallyImplyLeading: false,
-              leading: const BackArrowButton(),
+              // FIX: success page root hota hai — back arrow dabane par kuch
+              // nahi hota tha (dead button). Hata diya.
+              leading: const SizedBox.shrink(),
               backgroundColor: orderSuccessCtrl.appCtrl.appTheme.whiteColor,
               title: Text(OrderSuccessFont().orderPlaced)),
           body: Stack(alignment: Alignment.bottomCenter, children: [

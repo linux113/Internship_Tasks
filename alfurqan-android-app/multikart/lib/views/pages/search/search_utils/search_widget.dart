@@ -2,12 +2,10 @@ import 'package:multikart/config.dart';
 
 class SearchWidget {
 
-  //suffix icon
-  Widget suffixIcon(){
-    return const CameraIcon().paddingDirectional(
-        start: AppScreenUtil().size(5),
-        end: AppScreenUtil().size(10),
-        top: AppScreenUtil().size(4));
+  //suffix icon — FIX (Issue #12): camera icon (image search) abhi backend
+  // support nahi karta, user request par HIDE kar diya.
+  Widget? suffixIcon(){
+    return null;
   }
 
   //prefix icon

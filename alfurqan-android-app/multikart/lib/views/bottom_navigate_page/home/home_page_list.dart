@@ -30,3 +30,4 @@ export 'package:multikart/views/bottom_navigate_page/home/home_layouts/find_your
 //home model
 export 'package:multikart/models/home_banner_model.dart';
 export 'package:multikart/models/home_category_model.dart';
+export 'package:multikart/views/bottom_navigate_page/home/home_layouts/services/services_strip.dart';

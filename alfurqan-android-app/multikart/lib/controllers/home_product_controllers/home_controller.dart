@@ -59,6 +59,8 @@ class HomeController extends GetxController {
 
   /// Real brands (sirf tab jab backend Brand.Status=true kare).
   List<HomePageBrand> brandList = [];
+  // Issue#2: home page services strip (Free Shipping/COD...) — real api se.
+  List<HomePageService> homeServices = [];
 
   static void _addUnique(List<ProductApiModel> list, ProductApiModel p) {
     if (p.id == null) return;
@@ -200,6 +202,10 @@ class HomeController extends GetxController {
 
     // --- Brands (sirf jab backend Status=true kare; abhi false hai to khaali) ---
     brandList = d.brandStatus ? d.brands : <HomePageBrand>[];
+
+    // --- Services strip (Issue #2 — pehle home par service container tha
+    // hi nahi; ab Services api section se real data) ---
+    homeServices = d.services;
 
     // --- Kids corner / New Arrivals <- Tranding_Products ---
     if (d.trending.isNotEmpty) {

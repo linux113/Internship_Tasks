@@ -1,4 +1,5 @@
 
+import 'package:flutter/services.dart';
 import 'package:multikart/config.dart';
 
 class CustomTextFormField extends StatelessWidget {
@@ -35,6 +36,8 @@ class CustomTextFormField extends StatelessWidget {
   final FocusNode? focusNode;
   final TextStyle? hintStyle;
   final BoxConstraints? suffixIconConstraints;
+  // Issue#7: phone fields me symbols block karne ke liye (digitsOnly)
+  final List<TextInputFormatter>? inputFormatters;
 
   CustomTextFormField({
     Key? key,
@@ -68,6 +71,7 @@ class CustomTextFormField extends StatelessWidget {
 
     this.focusNode,
     this.hintStyle,
+    this.inputFormatters,
   }) : super(key: key);
 
   @override
@@ -80,6 +84,7 @@ class CustomTextFormField extends StatelessWidget {
 
     return TextFormField(
       controller: controller,
+      inputFormatters: inputFormatters,
       style: style ?? AppCss.body1,
       obscureText: obscureText,
       readOnly: readOnly,

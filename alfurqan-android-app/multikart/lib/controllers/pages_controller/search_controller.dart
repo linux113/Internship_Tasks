@@ -46,6 +46,10 @@ class SearchScreenController extends GetxController {
     // "Recommended for you" chips fashion naam (Denim/Skirts) dikhati thin —
     // ab real alfurqan.ae categories se bharo.
     _loadRecommended();
+    // FIX (Issue #1): pehle products pool SIRF pehle keystroke PAR load
+    // hota tha — user type karta aur 2-4 sec spinner/silence ("search kaam
+    // nahi kar raha"). Ab page khulte hi background me pool load shuru.
+    _loadAllProducts();
     super.onReady();
   }
 
@@ -162,11 +166,25 @@ class SearchScreenController extends GetxController {
       loadFailed = true;
     }
     final lower = query.toLowerCase();
-    searchResultApi = _allApiProducts
-        .where((p) =>
-            (p.name ?? '').toLowerCase().contains(lower) ||
-            (p.shortDescription ?? '').toLowerCase().contains(lower))
-        .toList();
+    // FIX (Issue #1): pehle SIRF naam + short_description me match hota tha
+    // — English queries (quran/seerah/fiqh) ya SKU code (F0010069) type
+    // karne par kuch NAHI milta tha, kyunki book names Arabic me hai.
+    // Ab SKU, slug (English hota hai), description aur CATEGORY names bhi
+    // match hote hai — English/Arabic dono queries kaam karengi.
+    searchResultApi = _allApiProducts.where((p) {
+      if ((p.name ?? '').toLowerCase().contains(lower)) return true;
+      if ((p.shortDescription ?? '').toLowerCase().contains(lower)) {
+        return true;
+      }
+      if ((p.description ?? '').toLowerCase().contains(lower)) return true;
+      if ((p.sku ?? '').toLowerCase().contains(lower)) return true;
+      if ((p.slug ?? '').toLowerCase().contains(lower)) return true;
+      for (final c in p.categories) {
+        if ((c.name ?? '').toLowerCase().contains(lower)) return true;
+        if ((c.slug ?? '').toLowerCase().contains(lower)) return true;
+      }
+      return false;
+    }).toList();
     searchResults = searchResultApi.map((e) => e.toFindStyleModel()).toList();
     isSearchLoading = false;
     update();

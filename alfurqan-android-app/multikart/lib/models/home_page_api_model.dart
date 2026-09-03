@@ -261,6 +261,33 @@ List<HomePageBanner> _parseBannerList(dynamic raw) {
 }
 
 /// Poora home api response (data.contentApp node).
+/// Home page Services (GetHomePageDataApp -> contentApp.Services.Services)
+/// — "Free Shipping / COD / 24x7 Support" jaisa strip. Backend abhi ek
+/// "Test" placeholder bhejta hai — use UI SKIP karta hai (Issue #2).
+class HomePageService {
+  final String title;
+  final String description;
+  final String image; // full url (buildMediaUrl applied)
+  final bool status;
+
+  HomePageService(
+      {this.title = '',
+      this.description = '',
+      this.image = '',
+      this.status = false});
+
+  factory HomePageService.fromJson(Map<String, dynamic> json) {
+    return HomePageService(
+      title: jsonToString(json['Title'] ?? json['title']) ?? '',
+      description:
+          jsonToString(json['Description'] ?? json['description']) ?? '',
+      image: buildMediaUrl(
+          jsonToString(json['Image_Url'] ?? json['image'] ?? json['Image'])),
+      status: jsonToBool(json['Status'] ?? json['status']) ?? false,
+    );
+  }
+}
+
 class HomePageDataModel {
   final List<HomePageBanner> banners;
   final List<HomePageBanner> offerBanners;
@@ -269,6 +296,9 @@ class HomePageDataModel {
   final List<FindYourMatchTab> matchTabs;
   final List<HomePageCategory> topCategories;
   final List<HomePageBrand> brands;
+
+  /// Services strip (Issue #2) — contentApp.Services se.
+  final List<HomePageService> services;
 
   /// Brand section ka Status flag — backend jab taak false rakhe, home par
   /// brands section bilkul nahi dikhega (demo brands kabhi nahi).
@@ -291,6 +321,7 @@ class HomePageDataModel {
     this.matchTabs = const [],
     this.topCategories = const [],
     this.brands = const [],
+    this.services = const [],
     this.brandStatus = false,
     this.dealsTitle = '',
     this.dealsDescription = '',
@@ -316,6 +347,7 @@ class HomePageDataModel {
     final offerSec = section(content, 'Offer_Banner');
     final catSec = section(content, 'Top_Category');
     final brandSec = section(content, 'Brand');
+    final servicesSec = section(content, 'Services');
 
     return HomePageDataModel(
       brandStatus: jsonToBool(brandSec['Status']) ?? false,
@@ -359,6 +391,17 @@ class HomePageDataModel {
             FindYourMatchTab.fromJson(
                 Map<String, dynamic>.from(matchSec[key] as Map)),
       ],
+      services: servicesSec['Services'] is List
+          ? (servicesSec['Services'] as List)
+              .where((e) => e is Map)
+              .map((e) => HomePageService.fromJson(
+                  Map<String, dynamic>.from(e as Map)))
+              // backend ka "Test" placeholder home par NA dikhe —
+              // real services aate hi apne aap dikhne lagenge.
+              .where((sv) =>
+                  sv.status && sv.title.trim().toLowerCase() != 'test')
+              .toList()
+          : const [],
       topCategories: catSec['TopCategories'] is List
           ? (catSec['TopCategories'] as List)
               .where((e) => e is Map)

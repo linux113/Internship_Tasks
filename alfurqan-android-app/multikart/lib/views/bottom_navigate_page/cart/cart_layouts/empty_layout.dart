@@ -31,7 +31,25 @@ final String? title,desc;
               color: appCtrl.appTheme.contentColor,
             ),
             const Space(0, 30),
-            CustomButton(title: CommonTextFont().startShopping.toUpperCase(),fontSize: FontSizes.f16,fontWeight: FontWeight.w600,)
+            // FIX (Issue #8): "Start Shopping" button ka koi onTap hi nahi
+            // tha (dead button). Ab home tab par le jata hai.
+            CustomButton(
+              title: CommonTextFont().startShopping.toUpperCase(),
+              fontSize: FontSizes.f16,
+              fontWeight: FontWeight.w600,
+              onTap: () {
+                appCtrl.selectedIndex = 0;
+                appCtrl.isHeart = true;
+                appCtrl.isCart = true;
+                appCtrl.isSearch = true;
+                appCtrl.isNotification = true;
+                Get.until((route) =>
+                    route.settings.name == routeName.dashboard ||
+                    route.isFirst);
+                appCtrl.update();
+                Get.forceAppUpdate();
+              },
+            )
           ],
         ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15)),
       );

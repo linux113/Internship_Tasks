@@ -597,3 +597,20 @@ Currency API ka response har request me ADMIN USER OBJECT leak kar raha hai — 
 ## 03/09/2026 (v1.5.5+27) Release build error (card_balance context) — PURANA ZIP tha, kuch fix ki zaroorat nahi thi
 
 User ka build error: "card_balance.dart:35:50 — CardBalanceController can't be assigned to BuildContext" — ye bug v1.2.2+15 (commit da09cf0) me pehle hi fix ho chuka tha (GetBuilder param ka naam `context` se `cardBalanceCtrl` kiya gaya tha, MediaQuery shadowing issue). Verify kiya: repo code + ZIP dono me FIXED file hai. Project-wide sweep me yahi shadowing pattern aur kisi file me NAHI mila. Error isliye aaya kyunki (a) Downloads me pada PURANA zip use ho gaya, ya (b) purane build artifacts cache ho gaye. Action: fresh zip download + flutter clean mandatory.
+
+## 03/09/2026 (v1.6.0+28) USER TESTING ROUND — 14 issues ka fix (device report)
+
+1. **Search** — products pool page khulte hi background me load hota hai (pehle pehle keystroke par 2-4 sec rukta tha); matching ab name + short/full description + SKU (F0010069) + slug (English) + category names me hoti hai — English/Arabic dono queries chalengi.
+2. **Home Services strip** — GetHomePageDataApp ke Services section se real strip add ki (banner ke neeche). Backend abhi "Test" bhejta hai — wo filter hota hai; admin me real services daalo to apne aap dikhenge.
+3. **Order Success static fashion summary** — HATA DIYA. Ab asli ordered items (naam/qty/price/total) + payment method (COD) dikhta hai (CheckoutController.lastPlacedOrder snapshot).
+4. **Track Order blank/white screen** — Track Order ab REAL Order History kholta hai (bina id ke broken detail nahi jaata).
+5. **Continue Shopping loop** — pehle PUSH hota tha isliye success page root me phansa deta tha aur har back wahi le aata tha. Ab offAll se category tab; stack clean.
+6. **Phone inputs** — Add Address mobile + Profile phone + pincode: sirf digits (symbols block), max 15.
+7. **Start Shopping (empty cart)** — dead button tha; ab home tab par le jata hai.
+8. **Order History detail "load nahi ho paya"** — card tap par summary bhi bhejte hai: detail TURANT real data se khulti hai, api GetOrder background refresh; fail ho to bhi real data rehta hai (white error screen nahi).
+9. **Order History filter** — status words aur bhi cover (complet/success/reject/refund), nayi date formats (dd-MM-yyyy/dd/MM/yyyy), unknown date wale orders hide nahi hote.
+10. **About Us** — backend CMS khali hone par REAL shop intro (alfurqan.ae — Islamic bookstore UAE, COD, support) dikhta hai; CMS aate hi overwrite.
+11. **Search camera icon** — hide (backend image-search nahi hai).
+12. **Similar product naam** — 2 lines wrap + ellipsis, image ke barabar width (white space khatam).
+13. **Share icon** — dead tha; ab native share sheet product ke website link ke saath (share_plus dependency add hui — pubspec).
+14. Karein verify: 543 files 0 bracket problems; lang maps clean.

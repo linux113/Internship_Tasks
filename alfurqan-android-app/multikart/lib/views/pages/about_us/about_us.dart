@@ -55,25 +55,47 @@ class AboutUs extends StatelessWidget {
                       fontSize: FontSizes.f13,
                       color: appCtrl.appTheme.contentColor)
                 else
-                  Column(children: [
-                    const Space(0, 50),
-                    Center(
+                  // Issue#11: backend CMS khali ho to bhi ASLI shop info
+                  // dikhao (website/about ke real details); backend me
+                  // Pages content aate hi wahi overwrite karega.
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    if (cmsCtrl.loadFailed) ...[
+                      const Space(0, 20),
+                      Center(
                         child: LatoFontStyle(
-                            text: cmsCtrl.loadFailed
-                                ? "Content load nahi hua — Retry par tap karein"
-                                : "About Us ka content abhi backend me add nahi hua",
-                            textAlign: TextAlign.center,
-                            fontSize: FontSizes.f13,
-                            color: appCtrl.appTheme.contentColor)),
+                                text: "Retry",
+                                color: appCtrl.appTheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: FontSizes.f14)
+                            .gestures(onTap: () => cmsCtrl.retry()),
+                      ),
+                    ],
+                    const Space(0, 20),
+                    LatoFontStyle(
+                        text:
+                            "Al Furqan Book Shop (alfurqan.ae) is an online Islamic bookstore based in the UAE. We bring you a wide collection of authentic Islamic books — Quran, Hadees, Fiqh, Seerah, Aqeedah, children's Islamic stories, Arabic learning and more.",
+                        overflow: TextOverflow.clip,
+                        fontSize: FontSizes.f13,
+                        color: appCtrl.appTheme.contentColor),
                     const Space(0, 15),
-                    if (cmsCtrl.loadFailed)
-                      LatoFontStyle(
-                              text: "Retry",
-                              color: appCtrl.appTheme.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: FontSizes.f14)
-                          .gestures(onTap: () => cmsCtrl.retry()),
-                  ]),
+                    LatoFontStyle(
+                        text:
+                            "Our aim is simple: make authentic Islamic knowledge easily available for every home, with fair prices, Cash on Delivery and fast shipping across the UAE.",
+                        overflow: TextOverflow.clip,
+                        fontSize: FontSizes.f13,
+                        color: appCtrl.appTheme.contentColor),
+                    const Space(0, 15),
+                    LatoFontStyle(
+                        text:
+                            "Shop easily from the app, save your favourite books to the wishlist, and track your orders anytime. For any help, our support team is one email away: support@alfurqan.ae",
+                        overflow: TextOverflow.clip,
+                        fontSize: FontSizes.f13,
+                        color: appCtrl.appTheme.contentColor),
+                    const Space(0, 40),
+                  ]).marginSymmetric(
+                      horizontal: AppScreenUtil().screenWidth(15)),
                 const Space(0, 30),
               ],
             ).marginSymmetric(

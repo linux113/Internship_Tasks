@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 import '../../../../config.dart';
 
 class PinCodeTextBox extends StatelessWidget {
@@ -14,6 +16,8 @@ class PinCodeTextBox extends StatelessWidget {
           focusNode: addAddressCtrl.pinCodeFocus,
           keyboardType: TextInputType.number,
           maxLength: 10,
+          // FIX (Issue #7): pincode me bhi sirf digits type honge.
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onFieldSubmitted: (value) {
             AddAddressWidget().fieldFocusChange(
                 context,

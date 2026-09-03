@@ -41,27 +41,78 @@ class OrderDetailController extends GetxController {
 
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
+  // Issue#9: order history se aaya summary (api fail hone par bhi detail
+  // khaali/white screen na dikhe — isi se turant prefill hota hai).
+  bool _prefilledFromSummary = false;
+
   @override
   void onReady() {
-    // order history se {'id': 123} aata hai; purane kisi caller ne seedha
-    // int bheja ho to wo bhi handle.
+    // order history se {'id': 123, 'summary': OrderHistoryModel} aata hai;
+    // purane kisi caller ne seedha int bheja ho to wo bhi handle.
     final args = Get.arguments;
     if (args is Map) {
       orderId = int.tryParse(args['id']?.toString() ?? '') ?? 0;
+      if (args['summary'] is OrderHistoryModel) {
+        _prefillFromSummary(args['summary'] as OrderHistoryModel);
+      }
     } else if (args is num) {
       orderId = args.toInt();
     }
     if (orderId > 0) {
       fetchOrderDetail();
-    } else {
+    } else if (!_prefilledFromSummary) {
       loadFailed = true;
     }
     update();
     super.onReady();
   }
 
+  /// History list wale REAL row se turant detail bharo — api GetOrder ka
+  /// fresh data aane par ye overwrite ho jayega; api fail ho jaye to bhi
+  /// user ko uske order ka asli naam/qty/amount/status dikhta rahega
+  /// (blank white screen + "load nahi ho paya" NAHI — Issue #9).
+  void _prefillFromSummary(OrderHistoryModel o) {
+    _prefilledFromSummary = true;
+    orderNumber = (o.orderId ?? 0) > 0 ? '${o.orderId}' : '';
+    orderDate = o.orderDay ?? '';
+    final list = o.daysWiseList ?? const <DaysWiseList>[];
+    items = list.map((it) {
+      // 'AED 45.00' jaisi price string se number nikaalo
+      final totalStr = (it.size ?? '');
+      final lineTotal = double.tryParse(
+              totalStr.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+          0;
+      final qty = it.qty ?? 1;
+      final unit = qty > 0 ? lineTotal / qty : lineTotal;
+      return <String, dynamic>{
+        'name': it.name ?? '',
+        'image': it.image ?? '',
+        'qty': qty,
+        'price': unit,
+        'lineTotal': lineTotal,
+      };
+    }).toList();
+    if (list.isNotEmpty) {
+      status = (list.first.status ??
+              list.first.deliveryStatus ??
+              '')
+          .toString();
+      // pehli line ka total ko grand total maano (history row me total
+      // wahi hota hai); api aane par sahi breakup aa jayega.
+      final t = double.tryParse(
+              (list.first.size ?? '').replaceAll(RegExp(r'[^0-9.]'), '')) ??
+          0;
+      if (t > 0) {
+        subtotal = t;
+        total = t;
+      }
+    }
+  }
+
   Future<void> fetchOrderDetail() async {
-    isLoading = true;
+    // prefill ho chuka ho to data dikhte hue background me refresh karo —
+    // poora spinner wali white screen NAHI (Issue #9).
+    isLoading = !_prefilledFromSummary;
     loadFailed = false;
     update();
     try {
@@ -93,11 +144,13 @@ class OrderDetailController extends GetxController {
       );
       if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
         _parse(res.data!);
-      } else {
+      } else if (!_prefilledFromSummary) {
+        // Issue#9: summary se prefill ho chuka hai to ERROR screen mat
+        // dikhao — real order data pehle se dikh raha hai.
         loadFailed = true;
       }
     } catch (_) {
-      loadFailed = true;
+      if (!_prefilledFromSummary) loadFailed = true;
     }
     isLoading = false;
     update();

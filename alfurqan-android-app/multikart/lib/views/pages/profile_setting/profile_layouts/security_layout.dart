@@ -1,4 +1,5 @@
 import 'package:multikart/config.dart';
+import 'package:flutter/services.dart';
 
 /// PROFILE SETTING — security section.
 /// Pehle: phone box ka label "Date of birth" aata tha (template bug) aur
@@ -21,6 +22,12 @@ class SecurityLayout extends StatelessWidget {
           // ---- Phone (pehle galat label "Date of birth" tha) ----
           ProfileWidget().securityTextBox("Phone",
               keyboardType: TextInputType.phone,
+              // FIX (Issue #7): profile phone me bhi symbols type hote
+              // the — ab sirf digits (max 15).
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(15),
+              ],
               focusNode: profileCtrl.mobileNumberFocus,
               controller: profileCtrl.txtPhone,
               onFieldSubmitted: (value) {

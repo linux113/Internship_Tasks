@@ -84,12 +84,20 @@ class FindStyleListCard extends StatelessWidget {
                 0, // CRASH-FIX: rating null -> double.parse('null') crash
             onRatingUpdate: (val) {},
           ),
-          LatoFontStyle(
-            text: data!.name!.tr,
-            fontSize: FontSizes.f14,
-            fontWeight: FontWeight.normal,
-            color: appCtrl.appTheme.blackColor,
-          ).paddingOnly(left: AppScreenUtil().screenWidth(5)),
+          // FIX (Issue #13): lambe naam par card image se ZYADA chauda ho
+          // jata tha (horizontal list me ajeeb white space). Ab naam image
+          // jitni hi chaudai me WRAP hota hai — max 2 lines, fir '...'
+          SizedBox(
+            width: AppScreenUtil().screenWidth(160),
+            child: LatoFontStyle(
+              text: data!.name!,
+              fontSize: FontSizes.f14,
+              fontWeight: FontWeight.normal,
+              color: appCtrl.appTheme.blackColor,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ).paddingOnly(left: AppScreenUtil().screenWidth(5)),
+          ),
           const Space(0, 5),
           PriceLayout(
               totalPrice:

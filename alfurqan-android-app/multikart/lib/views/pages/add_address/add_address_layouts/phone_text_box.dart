@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 import '../../../../config.dart';
 
 class PhoneTextBox extends StatelessWidget {
@@ -13,6 +15,12 @@ class PhoneTextBox extends StatelessWidget {
           controller: addAddressCtrl.txtMobileNumber,
           focusNode: addAddressCtrl.mobileNumberFocus,
           keyboardType: TextInputType.phone,
+          // FIX (Issue #7): pehle phone field me symbols (+*%#...) bhi type
+          // ho jate the. Ab sirf digits, max 15 (UAE 9-10 hota hai).
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(15),
+          ],
           onFieldSubmitted: (value) {
             AddAddressWidget().fieldFocusChange(
                 context,

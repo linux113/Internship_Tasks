@@ -19,9 +19,14 @@ class OrderHistoryLayout extends StatelessWidget {
                     orderHistoryModel: e.value,
                     onTap: ()=>orderHistoryCtrl.bottomSheetLayout(),
                   ).gestures(
-                      // REAL id ke sath detail kholna (demo nahi)
+                      // REAL id + summary (Issue #9): detail page summary se
+                      // TURANT khula, api fail ho jaye to bhi blank/white
+                      // error screen NAHI — tab tak data dikhata rahe.
                       onTap: () => Get.toNamed(routeName.orderDetail,
-                          arguments: {'id': e.value.orderId ?? 0}));
+                          arguments: {
+                            'id': e.value.orderId ?? 0,
+                            'summary': e.value,
+                          }));
                 }).toList(),
               ],
             )

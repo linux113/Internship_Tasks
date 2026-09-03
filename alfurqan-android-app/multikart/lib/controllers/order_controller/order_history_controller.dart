@@ -51,6 +51,23 @@ class OrderHistoryController extends GetxController {
     super.onReady();
   }
 
+  /// Issue#10: backend date formats mix ho sakte hai — ISO (2026-07-21),
+  /// dd-MM-yyyy, dd/MM/yyyy sab try karo. Na mile to null (filter use skip).
+  static DateTime? _parseOrderDate(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return null;
+    final iso = DateTime.tryParse(s);
+    if (iso != null) return iso;
+    final m = RegExp(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$').firstMatch(s);
+    if (m != null) {
+      final d = int.tryParse(m.group(1)!) ?? 1;
+      final mo = int.tryParse(m.group(2)!) ?? 1;
+      final y = int.tryParse(m.group(3)!) ?? 2000;
+      return DateTime(y, mo, d);
+    }
+    return null;
+  }
+
   /// APPLY button — pending radio selection ko lagoo karo aur UI refresh.
   void applyFilters() {
     appliedOrderType = orderTypeValue;
@@ -86,15 +103,22 @@ class OrderHistoryController extends GetxController {
         final s = (first?.status ?? first?.deliveryStatus ?? '')
             .toString()
             .toLowerCase();
+        // Issue#10: backend status words vary karte hai (delivered/completed/
+        // cancel/refund/return...) — saare variants cover karo.
+        final isClosed = s.contains('deliver') ||
+            s.contains('complet') ||
+            s.contains('success') ||
+            s.contains('cancel') ||
+            s.contains('reject') ||
+            s.contains('return') ||
+            s.contains('refund');
         switch (appliedOrderType) {
-          case 1: // Open — delivered/cancelled/returned NAHI
-            return !(s.contains('deliver') ||
-                s.contains('cancel') ||
-                s.contains('return'));
+          case 1: // Open — kisi bhi "closed" category me nahi
+            return !isClosed;
           case 2:
-            return s.contains('return');
+            return s.contains('return') || s.contains('refund');
           case 3:
-            return s.contains('cancel');
+            return s.contains('cancel') || s.contains('reject');
           default:
             return true;
         }
@@ -106,10 +130,11 @@ class OrderHistoryController extends GetxController {
       final cutoff = DateTime.now()
           .subtract(Duration(days: appliedTimeFilter == 1 ? 30 : 182));
       list = list.where((o) {
-        final d = DateTime.tryParse(o.orderDay ?? '');
-        // date parse na ho to time-filter me mat ghusedo (wrong hide na ho —
-        // "All Time" me ye hamesha dikhte hai)
-        return d != null && !d.isBefore(cutoff);
+        final d = _parseOrderDate(o.orderDay ?? '');
+        // Issue#10: date parse na ho to order CHIPAHO mat (user ko laga
+        // "filter sab gayab kar deta hai") — unknown date waale hamesha dikhte hai.
+        if (d == null) return true;
+        return !d.isBefore(cutoff);
       }).toList();
     }
     return list;
