@@ -664,3 +664,18 @@ Taaki aisa kabhi na ho: mere static audit (deep_check) me ab IMPORT-AWARENESS ch
    - Ye backend team ko bhi report karna chahiye: GetAllProductsFront me field/sort/sortBy/price params implement kare.
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN; audit3 clean (4 known false positives pichle round me manually verify ho chuke).
+
+## 03/09/2026 (v1.6.3+32) CART REMOVE — 16-stage chain (neg-qty + pure-replace + ClearCart) + SCREEN VERSION LABEL
+
+**Device report:** v1.6.2 ke 8 attempts bhi server accept nahi kar paye (honest toast dobara). Do NAYE mechanisms add:
+   - **NEGATIVE quantity**: AddToCart increment-style ho sakta hai — qty -1 bhejne par qty-1 ki line 0 ho jati hai (classic multikart remove trick) — 3 shapes.
+   - **PURE-REPLACE bina dead-line**: ho sakta hai qty-0 line validation fail karke POORI request reject karti thi — ab remaining-only bodies PEHLE try hote hai UpdateCart aur AddToCart dono par.
+   - **ClearCart GUARDED**: cart me sirf EK hi live item ho to (user ke screenshot jaisa case) ClearCart hi uska valid remove hai — sirf tabhi chalta hai jab remove-target ke alawa koi live line NA ho (doosre items kabhi touch nahi hote).
+   - Har body me `created_by_id` (login user id) bhi jata hai.
+   - TOTAL ab 16 verified stages — har stage ke baad GetCart confirm. Is chain me WO shape pakka aa jayega jo backend accept karta hai.
+
+**SCREEN VERSION LABEL:** Profile page ke bottom me "Al Furqan Book Shop  v1.6.3 (32)" — ab screenshot se TURANT pata chalega kaunsa build chal raha hai (purane test runs me confusion tha ki naya zip chala ya purana cached zip — download URL same rehne se browser purana zip serve kar sakta hai; isliye is baar version-tagged zip file bhi di hai).
+
+**Filter (v1.6.2+31 client-side fix) isme included hai** — Price High→Low / Low→High ko NAYE build me REAL order change dikhna chahiye. Agar na dikhe to screenshot me version label check karo.
+
+**Verify:** 545 files 0 bracket problems; audit2 ALL CLEAN; audit3 clean.

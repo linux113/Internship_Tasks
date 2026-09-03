@@ -42,7 +42,18 @@ class ProfileSetting extends StatelessWidget {
                     const Space(0, 30),
                     //security layout
                     const SecurityLayout(),
-                    const Space(0, 50),
+                    const Space(0, 30),
+                    // Build version — testing ke waqt screenshot se TURANT
+                    // pata chale ki kaunsa build chal raha hai.
+                    Center(
+                      child: LatoFontStyle(
+                        text: "Al Furqan Book Shop  v1.6.3 (32)",
+                        fontSize: FontSizes.f12,
+                        color: profileCtrl.appCtrl.appTheme.contentColor,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const Space(0, 20),
                   ],
                 )
                     .width(MediaQuery.of(context).size.width)

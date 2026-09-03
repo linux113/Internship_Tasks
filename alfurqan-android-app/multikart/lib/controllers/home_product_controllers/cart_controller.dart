@@ -425,43 +425,68 @@ class CartController extends GetxController {
         },
     ];
 
-    // FULL cart body = bachi hui lines + target line qty 0. Ye dono server
-    // styles cover karta hai:
-    //   • REPLACE-style: cart = bachi hui lines (+ dead qty0 line jo parse
-    //     me skip hoti hai),
-    //   • UPSERT-style: target line 0 ho gayi, baaki untouched.
+    // logged-in user ka numeric id (CartDto.created_by_id ke liye)
+    int? userId;
+    final rawId = storage.read('id');
+    if (rawId is num) {
+      userId = rawId.toInt();
+    } else {
+      userId = int.tryParse(rawId?.toString() ?? '');
+    }
+
+    // PURE-REPLACE body (dead line BINA) — dhyan do: qty-0 line validation
+    // fail karke POORI request reject kara sakti hai, isliye ye PEHLE try.
+    final Map<String, dynamic> remainingOnlyBody = {
+      "total": remainTotal,
+      if (userId != null) "created_by_id": userId,
+      "items": aliveLines,
+    };
+
+    // FULL cart body = bachi hui lines + target line qty 0.
     final Map<String, dynamic> fullCartBody = {
       "total": remainTotal,
+      if (userId != null) "created_by_id": userId,
       "items": [...aliveLines, deadLine()],
     };
 
+    // NEGATIVE-quantity line — agar AddToCart sirf INCREMENT karta hai to
+    // -1 add karke qty-1 ki line 0 ho jati hai (classic remove trick).
+    Map<String, dynamic> negLine() => {
+          "id": lineId,
+          "product_id": pid,
+          "variation_id": target?.variationId,
+          if (consumerId != null) "consumer_id": consumerId,
+          "quantity": -1,
+          "sub_total": 0,
+          "wholesale_price": 0,
+        };
+
     // ================================================================
-    // VERIFY-CHAIN — har attempt ke baad GetCart se CONFIRM karte hai ki
-    // item sach me server se gaya. Order (probability ke hisab se):
-    //
-    //  1) PUT Cart/UpdateCart — HIDDEN endpoint (swagger me nahi dikhta,
-    //     par route EXISTS: GET probe par 404 SPA page ki jagah HTTP 500
-    //     aata hai). Website ka asli remove isi se hota hai — poori cart
-    //     state replace.
-    //  2) POST Cart/UpdateCart (agar PUT verb allowed na ho)
-    //  3) POST Cart/UpdateCart + _method:"PUT" (asp.net method-spoof style,
-    //     UpdateUserProfile bhi isi backend me aise hi kaam karta hai)
-    //  4) POST Cart/AddToCart — full-sync (purana attempt 1)
-    //  5) POST Cart/AddToCart — sirf dead line (array) (purana attempt 2)
-    //  6) POST Cart/AddToCart — sirf dead line (object) (purana attempt 3)
+    // VERIFY-CHAIN (14 stages) — har attempt ke baad GetCart se CONFIRM.
+    // UpdateCart/ClearCart = HIDDEN endpoints (404-vs-500 probe se confirm
+    // route EXISTS — swagger me nahi dikhte).
     // ================================================================
+    // — Group A: UpdateCart, PURE REPLACE (dead-line-free), sabse clean —
     bool removed = await _attemptRemove(
-        ApiEndpoints.updateCart, ApiMethod.put, fullCartBody, pid);
+        ApiEndpoints.updateCart, ApiMethod.put, remainingOnlyBody, pid);
+    if (!removed) {
+      removed = await _attemptRemove(
+          ApiEndpoints.updateCart, ApiMethod.post, remainingOnlyBody, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.post,
+          {...remainingOnlyBody, "_method": "PUT"}, pid);
+    }
+    // — Group B: UpdateCart with qty-0 dead line embedded —
+    if (!removed) {
+      removed = await _attemptRemove(
+          ApiEndpoints.updateCart, ApiMethod.put, fullCartBody, pid);
+    }
     if (!removed) {
       removed = await _attemptRemove(
           ApiEndpoints.updateCart, ApiMethod.post, fullCartBody, pid);
     }
-    if (!removed) {
-      removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.post,
-          {...fullCartBody, "_method": "PUT"}, pid);
-    }
-    // Line-targeted shapes — kuch builds UpdateCart ko sirf ek line ka
-    // update maanti hai ({id, quantity} ya query ?id=).
+    // — Group C: Line-targeted UpdateCart shapes —
     if (!removed) {
       removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.post,
           {"id": lineId, "quantity": 0}, pid);
@@ -471,10 +496,29 @@ class CartController extends GetxController {
           {"quantity": 0}, pid,
           queryParams: {"id": lineId});
     }
+    // — Group D: AddToCart as REPLACE (remaining only / +dead line) —
+    if (!removed) {
+      removed = await _attemptRemove(
+          ApiEndpoints.addToCart, ApiMethod.post, remainingOnlyBody, pid);
+    }
     if (!removed) {
       removed = await _attemptRemove(
           ApiEndpoints.addToCart, ApiMethod.post, fullCartBody, pid);
     }
+    // — Group E: NEGATIVE quantity (increment-style remove) —
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
+          {"total": remainTotal, "items": [...aliveLines, negLine()]}, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
+          {"total": 0, "items": [negLine()]}, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
+          {"total": 0, "items": negLine()}, pid);
+    }
+    // — Group F: legacy qty-0 single-line shapes —
     if (!removed) {
       removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
           {"total": 0, "items": [deadLine()]}, pid);
@@ -482,6 +526,18 @@ class CartController extends GetxController {
     if (!removed) {
       removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
           {"total": 0, "items": deadLine()}, pid);
+    }
+    // — Group G: Cart me BAS YEKHI live item hai -> ClearCart hi uska
+    // valid remove hai! (hidden endpoint, probe-confirmed EXISTS). Sirf
+    // tab chalao jab target ke alawa koi live line na ho — doosre items
+    // kabhi touch nahi karte.
+    if (!removed && remainingLines.isEmpty) {
+      removed = await _attemptRemove(
+          ApiEndpoints.clearCart, ApiMethod.post, const <String, dynamic>{}, pid);
+    }
+    if (!removed && remainingLines.isEmpty) {
+      removed = await _attemptRemove(ApiEndpoints.clearCart, ApiMethod.post,
+          const <String, dynamic>{"_method": "DELETE"}, pid);
     }
 
     if (!removed) {
