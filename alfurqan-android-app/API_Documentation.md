@@ -645,3 +645,22 @@ User ka build error: "profile_widget.dart:36:12 — Type 'TextInputFormatter' no
 Cause: v1.6.0 me phone digits-only feature ke liye ProfileWidget.securityTextBox me `List<TextInputFormatter>?` param add kiya tha — par us file me `import 'package:flutter/services.dart'` add karna REH GAYA tha. Dart me type dusri file se pass-through karte waqt bhi us type ka import apni file me chahiye hota hai. (CustomTextFormField aur saare formatter-use karne wali files (phone/pincode/security_layout) me import pehle se sahi tha — error sirf is ek file ka tha.)
 Fix: profile_widget.dart me services import add.
 Taaki aisa kabhi na ho: mere static audit (deep_check) me ab IMPORT-AWARENESS check add kar diya — jo file flutter/services/share_plus/dio ke types use kare par import na kare, wo build se PEHLE hi pakda jayega. Re-run: 543 files, 0 problems, 0 missing imports.
+
+## 04/09/2026 (v1.6.2+31) CART REMOVE ka ROOT-CAUSE mila (hidden UpdateCart endpoint) + FILTER backend-broken proof + client-side fix
+
+**1. Cart remove — ROOT CAUSE PAKRA GAYA:**
+   - Device test dikhaya: mera verify-chain sahi tha (honest toast aaya) par server ne AddToCart ke TEENO qty-0 shapes REJECT kar diye — matlab backend AddToCart se remove hi nahi karta.
+   - Naya discovery (endpoint probing): `GET /api/Cart/UpdateCart` aur `/api/Cart/ClearCart` par SPA-404 ki jagah **HTTP 500** aata hai = YE ROUTES EXIST KARTE HAI (swagger me chhupe hue)! Website ka asli remove isi `UpdateCart` se hota hai (AddToCart sirf ADD karta hai — isliye dead qty-0 lines kabhi remove nahi hoti thi).
+   - Naya 8-STAGE verified chain (har stage ke baad GetCart se CONFIRM): (1) PUT UpdateCart full-cart(replace) → (2) POST UpdateCart → (3) POST UpdateCart + _method:"PUT" (asp.net spoof) → (4) POST UpdateCart {id,qty:0} → (5) PUT UpdateCart ?id=lineId {qty:0} → (6-8) purane AddToCart variants. Jo kaam kare, wahi use ho jayega — aur verify-chain ke saath risk ZERO (fail ho to honest sync+toast).
+   - total kabhi blind 0 nahi — sach me bache items ka real sub_total.
+   - ClearCart bhi probe-confirm hua (afterOrder use ke liye future me).
+
+**2. Filter section — BACKEND HI BROKEN hai (LIVE PROOF ke saath), app me CLIENT-SIDE fix:**
+   - LIVE A/B test: `field=price&sort=desc` bhejne par bhi ASC order; `price=0,41` filter bhejne par bhi 45-AED wala product AA RAHA THA; `sortBy=price` bhi ignore. Matlab backend GetAllProductsFront ke sort/price params poore DEAD hain — isliye filter kuch nahi karta tha.
+   - Ab ShopController: ek call me 500 products (category filter server-side jo kaam karta hai) → price filter + sort (price asc/desc, What's New=created_at desc) CLIENT-SIDE REAL karta hai → 12-12 ke local pages.
+   - ProductApiModel me `createdAt` field add (created_at parse) — date-sort ke liye.
+   - "Recommended" = natural newest-first order (pehle jaisa hi dikhta tha — koi UX regression nahi).
+   - Load More ab local slice = instant, extra network call nahi.
+   - Ye backend team ko bhi report karna chahiye: GetAllProductsFront me field/sort/sortBy/price params implement kare.
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN; audit3 clean (4 known false positives pichle round me manually verify ho chuke).

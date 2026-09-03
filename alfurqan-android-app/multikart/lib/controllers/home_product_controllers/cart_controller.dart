@@ -393,7 +393,7 @@ class CartController extends GetxController {
       return;
     }
 
-    // Baaki (remaining) live lines — full-sync attempt me bhejenge
+    // Baaki (remaining) live lines — full-sync attempts me bhejenge
     final remainingLines = prevLines
         .where((l) => (l.productId ?? -1) != pid && (l.quantity ?? 0) > 0)
         .toList();
@@ -412,13 +412,7 @@ class CartController extends GetxController {
           "wholesale_price": 0,
         };
 
-    // ATTEMPT 1 — FULL-SYNC (swagger CartDto schema ke EXACT mutabik):
-    // `items` ARRAY me saari live lines unki current qty ke saath + target
-    // line qty 0. Ye dono server styles cover karta hai:
-    //   • REPLACE-style: cart = bachi hui lines (+ dead qty0 line jo parse
-    //     me skip hoti hai),
-    //   • UPSERT-style: target line 0 ho gayi, baaki untouched.
-    var items = <Map<String, dynamic>>[
+    final List<Map<String, dynamic>> aliveLines = [
       for (final l in remainingLines)
         {
           "id": l.id ?? 0,
@@ -429,20 +423,64 @@ class CartController extends GetxController {
           "sub_total": l.subTotal ?? 0,
           "wholesale_price": l.wholesalePrice ?? 0,
         },
-      deadLine(),
     ];
-    bool removed = await _tryRemoveAndVerify(
-        {"total": remainTotal, "items": items}, pid);
 
-    // ATTEMPT 2 — sirf target line qty 0 (array shape, purana behaviour)
+    // FULL cart body = bachi hui lines + target line qty 0. Ye dono server
+    // styles cover karta hai:
+    //   • REPLACE-style: cart = bachi hui lines (+ dead qty0 line jo parse
+    //     me skip hoti hai),
+    //   • UPSERT-style: target line 0 ho gayi, baaki untouched.
+    final Map<String, dynamic> fullCartBody = {
+      "total": remainTotal,
+      "items": [...aliveLines, deadLine()],
+    };
+
+    // ================================================================
+    // VERIFY-CHAIN — har attempt ke baad GetCart se CONFIRM karte hai ki
+    // item sach me server se gaya. Order (probability ke hisab se):
+    //
+    //  1) PUT Cart/UpdateCart — HIDDEN endpoint (swagger me nahi dikhta,
+    //     par route EXISTS: GET probe par 404 SPA page ki jagah HTTP 500
+    //     aata hai). Website ka asli remove isi se hota hai — poori cart
+    //     state replace.
+    //  2) POST Cart/UpdateCart (agar PUT verb allowed na ho)
+    //  3) POST Cart/UpdateCart + _method:"PUT" (asp.net method-spoof style,
+    //     UpdateUserProfile bhi isi backend me aise hi kaam karta hai)
+    //  4) POST Cart/AddToCart — full-sync (purana attempt 1)
+    //  5) POST Cart/AddToCart — sirf dead line (array) (purana attempt 2)
+    //  6) POST Cart/AddToCart — sirf dead line (object) (purana attempt 3)
+    // ================================================================
+    bool removed = await _attemptRemove(
+        ApiEndpoints.updateCart, ApiMethod.put, fullCartBody, pid);
     if (!removed) {
-      removed = await _tryRemoveAndVerify(
+      removed = await _attemptRemove(
+          ApiEndpoints.updateCart, ApiMethod.post, fullCartBody, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.post,
+          {...fullCartBody, "_method": "PUT"}, pid);
+    }
+    // Line-targeted shapes — kuch builds UpdateCart ko sirf ek line ka
+    // update maanti hai ({id, quantity} ya query ?id=).
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.post,
+          {"id": lineId, "quantity": 0}, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.updateCart, ApiMethod.put,
+          {"quantity": 0}, pid,
+          queryParams: {"id": lineId});
+    }
+    if (!removed) {
+      removed = await _attemptRemove(
+          ApiEndpoints.addToCart, ApiMethod.post, fullCartBody, pid);
+    }
+    if (!removed) {
+      removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
           {"total": 0, "items": [deadLine()]}, pid);
     }
-
-    // ATTEMPT 3 — single OBJECT shape (kuch backend builds aisa maangti hai)
     if (!removed) {
-      removed = await _tryRemoveAndVerify(
+      removed = await _attemptRemove(ApiEndpoints.addToCart, ApiMethod.post,
           {"total": 0, "items": deadLine()}, pid);
     }
 
@@ -457,15 +495,19 @@ class CartController extends GetxController {
     }
   }
 
-  /// Ek remove attempt bhejo + FRESH GetCart se VERIFY karo ki product
-  /// (pid) server se sach me hat gaya (koi bhi live qty wali line nahi).
-  /// Verify ke response se local state bhi refresh ho jati hai.
-  Future<bool> _tryRemoveAndVerify(Map<String, dynamic> body, int pid) async {
+  /// Ek remove attempt bhejo (kisi bhi cart endpoint/verb se) + FRESH
+  /// GetCart se VERIFY karo ki product (pid) server se sach me hat gaya
+  /// (koi bhi live qty wali line nahi). Verify response se local state bhi
+  /// refresh ho jati hai.
+  Future<bool> _attemptRemove(String endpoint, ApiMethod method,
+      Map<String, dynamic> body, int pid,
+      {Map<String, dynamic>? queryParams}) async {
     try {
       await ApiService().request<CartApiModel>(
-        endpoint: ApiEndpoints.addToCart,
-        method: ApiMethod.post,
+        endpoint: endpoint,
+        method: method,
         data: body,
+        queryParams: queryParams,
         fromJson: (json) => CartApiModel.fromJson(json),
       );
     } catch (_) {}

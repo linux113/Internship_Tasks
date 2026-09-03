@@ -65,7 +65,11 @@ class FilterController extends GetxController {
             "${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}";
       }
 
-      // sort mapping — sirf backend ke known-safe fields use karo
+      // sort mapping — backend ke sort params IGNORE hote hain (live
+      // verify), isliye ShopController ye CLIENT-SIDE apply karta hai:
+      //   Recommended   = "" (backend ka natural order — naye pehle)
+      //   What's New    = created_at desc
+      //   Price         = price asc/desc (REAL finalPrice = sale ya price)
       switch (dropDownVal) {
         case "Price: Low to High":
           shop.sortField = "price";
@@ -80,7 +84,7 @@ class FilterController extends GetxController {
           shop.sortDirection = "desc";
           break;
         default: // Recommended
-          shop.sortField = "created_at";
+          shop.sortField = "";
           shop.sortDirection = "asc";
       }
       shop.getProducts(reset: true);
@@ -102,7 +106,7 @@ class FilterController extends GetxController {
       shop.priceRange = "";
       shop.rating = "";
       shop.attribute = "";
-      shop.sortField = "created_at";
+      shop.sortField = ""; // Recommended = natural order
       shop.sortDirection = "asc";
       shop.getProducts(reset: true);
     }

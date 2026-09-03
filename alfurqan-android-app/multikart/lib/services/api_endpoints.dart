@@ -35,6 +35,11 @@ class ApiEndpoints {
   // ---------------- Cart ----------------
   static const String addToCart = 'Cart/AddToCart';
   static const String getCart = 'Cart/GetCart';
+  // HIDDEN endpoints — swagger me list nahi hai, par endpoint-probe (GET par
+  // 404 SPA page ki jagah HTTP 500 = route EXISTS) se confirm: backend ne
+  // inhe chhupa rakha hai. UpdateCart = poora cart replace/remove ke liye.
+  static const String updateCart = 'Cart/UpdateCart';
+  static const String clearCart = 'Cart/ClearCart';
 
   // ---------------- Notifications ----------------
   // Swagger me Setting/GetUserNotifications mila — user ki real notifications.

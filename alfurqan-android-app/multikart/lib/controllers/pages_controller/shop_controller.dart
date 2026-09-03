@@ -30,7 +30,11 @@ class ShopController extends GetxController {
   // filters (filter page se update hote hai — applyToShop/resetFilter)
   String priceRange = ""; // e.g. "100,500"
   String sortDirection = "asc"; // asc | desc
-  String sortField = "created_at"; // backend ke known-safe: created_at | price
+  // "" (Recommended = natural/newest order) | "created_at" (What's New) | "price"
+  // NOTE: sort+price CLIENT-SIDE hota hai — backend ye params IGNORE karta
+  // hai (live verify: sort=desc par bhi asc order; price=0,41 par bhi 45
+  // wala product aa raha tha).
+  String sortField = "";
   String rating = "";
   String attribute = "";
 
@@ -61,6 +65,69 @@ class ShopController extends GetxController {
     super.onReady();
   }
 
+  // ---------------- Client-side filter/sort ----------------
+  /// LIVE VERIFY (04/09/2026): backend GetAllProductsFront `field`, `sort`,
+  /// `sortBy` aur `price` — SAB params poore IGNORE karta hai (sort=desc bhejne
+  /// par bhi asc order aata tha; price=0,41 filter bhejne par bhi 45 wala
+  /// product AA RAHA THA). Isliye ab filter+sort CLIENT-SIDE karte hai:
+  /// ek baar me bada page (500) la kar locally sort/filter/slice karte hai.
+  List<ProductApiModel> _fullList = []; // server se aayi poori (category tak)
+  List<ProductApiModel> _filtered = []; // price+sort apply ke baad
+  static const int _pageSize = 12;
+
+  /// price filter + sort apply karke _filtered set karo.
+  void _applyFiltersAndSort() {
+    List<ProductApiModel> list = List<ProductApiModel>.from(_fullList);
+
+    // ---- price range ("min,max") — REAL finalPrice (sale_price>0 ? sale : price)
+    if (priceRange.isNotEmpty) {
+      final parts = priceRange.split(',');
+      double min = 0, max = double.infinity;
+      if (parts.isNotEmpty) {
+        min = double.tryParse(parts[0].trim()) ?? 0;
+      }
+      if (parts.length > 1) {
+        max = double.tryParse(parts[1].trim()) ?? double.infinity;
+      }
+      if (min > 0 || max < double.infinity) {
+        list = list
+            .where((p) => p.finalPrice >= min && p.finalPrice <= max)
+            .toList();
+      }
+    }
+
+    // ---- sort
+    int byIdDesc(ProductApiModel a, ProductApiModel b) =>
+        (b.id ?? 0).compareTo(a.id ?? 0);
+    int byCreated(ProductApiModel a, ProductApiModel b) {
+      final ad = DateTime.tryParse(a.createdAt ?? '');
+      final bd = DateTime.tryParse(b.createdAt ?? '');
+      if (ad == null && bd == null) return byIdDesc(a, b);
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    }
+
+    switch (sortField) {
+      case "price":
+        list.sort((a, b) => sortDirection == "desc"
+            ? b.finalPrice.compareTo(a.finalPrice)
+            : a.finalPrice.compareTo(b.finalPrice));
+        break;
+      case "created_at":
+        list.sort((a, b) => sortDirection == "desc"
+            ? -byCreated(a, b)
+            : byCreated(a, b));
+        break;
+      default:
+        // "Recommended" = backend ka NATURAL order (naye products pehle)
+        // — pehle bhi users yahi order dekhte the, isliye kuch sort nahi.
+        break;
+    }
+
+    _filtered = list;
+  }
+
   /// GetAllProductsFront api call.
   /// [reset] = true -> page 1 se fresh list, false -> agla page (pagination / load more)
   getProducts({bool reset = false}) async {
@@ -68,6 +135,8 @@ class ShopController extends GetxController {
       currentPage = 1;
       hasMore = true;
       productList = [];
+      _fullList = [];
+      _filtered = [];
       isLoadingProducts = true;
     } else {
       if (!hasMore || isLoadingMore) return;
@@ -91,17 +160,20 @@ class ShopController extends GetxController {
       endpoint: ApiEndpoints.productList,
       method: ApiMethod.get,
       queryParams: {
-        "page": currentPage,
-        "paginate": 12,
+        "page": 1,
+        // Ek hi baar me poora catalog — sort/price CLIENT-SIDE karne ke
+        // liye poori list chahiye (backend ke sort/price params kaam hi
+        // nahi karte — live verify).
+        "paginate": 500,
         "status": 1,
-        "field": sortField,
-        "price": priceRange,
+        "field": "",
+        "price": "",
         "category": categoryFilter,
         "tag": "",
-        "sort": sortDirection,
-        "sortBy": sortDirection,
-        "rating": rating,
-        "attribute": attribute,
+        "sort": "",
+        "sortBy": "",
+        "rating": "",
+        "attribute": "",
       },
       fromJson: (json) => ProductListResponseModel.fromJson(json),
     );
@@ -110,21 +182,35 @@ class ShopController extends GetxController {
     isLoadingMore = false;
 
     if (res.isSuccess && res.data != null) {
-      productList.addAll(res.data!.data);
-      // NOTE: live api ka last_page hamesha 1 aata hai (backend bug), isliye
-      // hasMore us par bharosa nahi karte — poora page (12) aaya to agla
-      // page bhi assume karo.
-      hasMore = res.data!.hasMore || res.data!.data.length >= 12;
+      // duplicate ids hata do (backend kabhi repeated rows bhej deta hai)
+      final seen = <int>{};
+      _fullList = [
+        for (final p in res.data!.data)
+          if (p.id == null || seen.add(p.id!)) p
+      ];
+      _applyFiltersAndSort();
+      hasMore = _filtered.length > _pageSize;
+      productList = _filtered.take(_pageSize).toList();
+    } else {
+      hasMore = false;
     }
 
     update();
   }
 
-  /// Pagination / infinite scroll - list ke end tak pahochte hi agla page load karo.
+  /// Pagination / infinite scroll — ab LOCAL (poori list pehle se aa chuki
+  /// hai; agla slice turant milta hai, network call nahi).
   loadMoreProducts() {
     if (!hasMore || isLoadingMore) return;
-    currentPage += 1;
-    getProducts();
+    isLoadingMore = true;
+    update();
+    final next = currentPage + 1;
+    final end = next * _pageSize;
+    productList = _filtered.take(end).toList();
+    currentPage = next;
+    hasMore = _filtered.length > productList.length;
+    isLoadingMore = false;
+    update();
   }
 
   //filter page route

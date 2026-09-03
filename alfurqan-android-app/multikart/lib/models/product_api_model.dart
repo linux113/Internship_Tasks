@@ -28,6 +28,10 @@ class ProductApiModel {
   final bool? isWishlist;
   final AssetImageModel? thumbnail;
   final List<CategoryApiModel> categories;
+  /// created_at raw string — shop filter ka "What's New / Recommended" sort
+  /// CLIENT-SIDE hota hai (backend sort params IGNORE karta hai — live
+  /// verify), isliye date chahiye hoti hai.
+  final String? createdAt;
 
   ProductApiModel({
     this.id,
@@ -51,6 +55,7 @@ class ProductApiModel {
     this.isWishlist,
     this.thumbnail,
     this.categories = const [],
+    this.createdAt,
   });
 
   factory ProductApiModel.fromJson(Map<String, dynamic> json) {
@@ -77,6 +82,7 @@ class ProductApiModel {
       ratingCount: jsonToInt(json['rating_count']),
       reviewsCount: jsonToInt(json['reviews_count']),
       isWishlist: jsonToBool(json['is_wishlist']),
+      createdAt: jsonToString(json['created_at']),
       thumbnail: json['product_thumbnail'] is Map<String, dynamic>
           ? AssetImageModel.fromJson(json['product_thumbnail'] as Map<String, dynamic>)
           : (json['product_thumbnail'] is Map
