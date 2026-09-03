@@ -622,4 +622,6 @@ final dynamic en = {
   "yes": "yes",
   "no": "no",
 
+  "itemNotRemoved": "Item could not be removed. Please try again.",
+  "couponRemoved": "Coupon removed",
 };

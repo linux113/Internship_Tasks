@@ -614,3 +614,27 @@ User ka build error: "card_balance.dart:35:50 — CardBalanceController can't be
 12. **Similar product naam** — 2 lines wrap + ellipsis, image ke barabar width (white space khatam).
 13. **Share icon** — dead tha; ab native share sheet product ke website link ke saath (share_plus dependency add hui — pubspec).
 14. Karein verify: 543 files 0 bracket problems; lang maps clean.
+
+## 03/09/2026 (v1.6.1+29) CART REMOVE permanent fix + Ruflo/ChatDev strict audit
+
+**1. Cart item remove — "again and again wapas aa jata tha" (device report) — PERMANENT fix:**
+Pehle remove flow: UI se turant hatao -> ek hi payload bhejo -> response ka koi VERIFY nahi -> GetCart item wapas la deta tha (server-side remove fail hone par). Ab BULLETPROOF:
+   - Swagger v2 verify: CartDto schema dekha — `items` ek ARRAY honi chahiye (pehle app OBJECT pehle bhejta tha), aur DeleteCart/RemoveFromCart naam ka koi endpoint EXIST hi nahi karta (3 hidden URLs bhi probe kiye — sab 404). Remove sirf AddToCart qty-0 se hota hai.
+   - Naya flow: fresh GetCart se REAL line-id lo -> ATTEMPT 1 FULL-SYNC (saari bachi lines + target qty 0, dono REPLACE/UPSERT server styles cover) -> har attempt ke baad GetCart VERIFY ("item sach me gaya?") -> fail ho to ATTEMPT 2 (single line array) -> ATTEMPT 3 (object shape).
+   - `total` ab blind 0 nahi — remaining sub_total ka REAL sum bhejte hai (pehle server par cart total 0 hone ka risk tha!).
+   - consumer_id bhi CartItemDto ke mutabik parse+send karta hai (line user se match zaroori).
+   - Teen attempts bhi fail ho jaye to FAKE success ka illusion nahi: UI server se sync + HONEST toast "Item could not be removed. Please try again." (4 languages me).
+   - AddToCart ab schema-sahi ARRAY shape pehle bhejta hai (object sirf fallback; 401 par seedha login).
+
+**2. Ruflo (ruvnet/ruflo) + ChatDev dono ko review-lens ki tarah use karke FULL strict audit:**
+   - Ruflo ke reviewer/tester/security-auditor checklists + ChatDev Design->Code->Review->Test pipeline ke hisab se sweep: 543 dart files, 0 bracket problems, lang-maps 0 orphans, 0 missing .tr keys, 0 missing assets, 0 firstWhere-without-orElse crash points, 0 suspicious null-asserts, saare Get.find registrations verified.
+
+**3. Sort dropdown crash-risk fix (audit se pakra):**
+   - Filter ke sort value par ".tr" laga tha — agar kabhi "Recommended" key translate hoti to DropdownButton CRASH hota (value items me nahi milta). Internal value ab HAMESHA constant English (display text pehle se translated hai).
+
+**4. Template ke static demo ke IMANDAAR safaya:**
+   - Cart "Coupon Discount" row me template ka STATIC "-AED 20.0" fake discount code tha — HATA DIYA (ab sirf REAL value/"Apply Coupon").
+   - Dead noInternet route + missing asset file ka broken reference — HATA DIYA (koi screen use nahi karti thi).
+   - Language maps 100% parity: dead demo keys (Punjab/Gujarat/Australia/India/New Zealand/Save $20.00) teeno maps se saaf; "couponRemoved"/"itemNotRemoved" naye translated keys; coupon toast ab translated.
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity + routes + assets); audit3 GetX graph clean (4 warnings manually verify — false positives, registrations main.dart/page-level me confirmed); fashion/demo words sirf comments me bache (koi live UI static nahi).

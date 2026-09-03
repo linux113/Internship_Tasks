@@ -30,5 +30,6 @@ class RouteName {
   final String pageList = '/pageList';
   final String emptyCart = '/emptyCart';
   final String emptyHistory = '/emptyHistory';
-  final noInternet = '/noInternet';
+  // NOTE: noInternet route hata diya — koi page/routeMethod wiring ya
+  // usage exist hi nahi karta tha (totally dead + missing asset file).
 }

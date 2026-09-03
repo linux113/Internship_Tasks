@@ -318,7 +318,6 @@ final dynamic kr = {
   "apply": "적용하다",
   "couponTitle": "쿠폰",
   "couponText": "환영하다 코드를 사용하여 최소 주문 \$200.00에서 10% 할인을 받으세요. 처음 사용자에게만 유효한 제안",
-  "Save \$20.00": "\$20.00 절약",
 
   //delivery detail font
   "deliveryDetails": "배송 세부 정보",
@@ -357,12 +356,6 @@ final dynamic kr = {
   "Office": "사무실",
   "Others": "기타",
   "savedAddress": "저장된 주소",
-  "Select state": "상태 선택",
-  "Gujarat": "구자라트",
-  "Punjab": "펀자브어",
-  "New Zealand": "뉴질랜드",
-  "Australia": "호주",
-  "India": "인도",
 
   //payment font
   "paymentDetails": "지불 세부 사항",
@@ -612,4 +605,7 @@ final dynamic kr = {
   "on": "켜짐",
   "yes": "예",
   "no": "아니요",
+  "Men Blue Denim Jacket": "남성 블루 데님 재킷",
+  "itemNotRemoved": "항목을 삭제할 수 없습니다. 다시 시도해 주세요.",
+  "couponRemoved": "쿠폰이 제거되었습니다",
 };

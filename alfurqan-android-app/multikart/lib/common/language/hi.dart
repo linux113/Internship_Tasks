@@ -325,7 +325,6 @@ final dynamic hi = {
   "couponTitle": "कूपन",
   "couponText":
       "\$200.00 के न्यूनतम आदेश पर 10% की छूट प्राप्त करने के लिए WELCOME कोड का उपयोग करें। ऑफ़र केवल पहली बार उपयोगकर्ताओं के लिए मान्य है",
-  "Save \$20.00": "\$20.00 बचाएं",
 
   //delivery detail font
   "deliveryDetails": "वितरण विवरण",
@@ -364,12 +363,6 @@ final dynamic hi = {
   "Office": "कार्यालय",
   "Others": "अन्य",
   "savedAddress": "सहेजा गया पता",
-  "Select state": "राज्य चुनें",
-  "Gujarat": "गुजरात",
-  "Punjab": "पंजाब",
-  "New Zealand": "न्यूजीलैंड",
-  "Australia": "ऑस्ट्रेलिया",
-  "India": "भारत",
 
   //payment font
   "paymentDetails": "भुगतान विवरण",
@@ -632,4 +625,6 @@ final dynamic hi = {
   "on": "पर",
   "yes": "हां",
   "no": "नहीं",
+  "itemNotRemoved": "आइटम हटाया नहीं जा सका। कृपया पुनः प्रयास करें।",
+  "couponRemoved": "कूपन हटा दिया गया",
 };

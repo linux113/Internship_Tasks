@@ -122,26 +122,26 @@ class CartController extends GetxController {
       "wholesale_price": wholesalePrice,
     };
 
-    // Pehle doc ke mutabik `items` OBJECT bhejo. Backend agar `items` ko
-    // ARRAY maange to validation error (400) deta hai — us case me array
-    // shape ke sath ek baar phir try karo. Dono shapes cover ho gaye.
+    // Swagger ke CartDto schema ke mutabik `items` ek ARRAY honi chahiye —
+    // pehle wahi bhejo. Kuch backend builds single OBJECT bhi accept karti
+    // hai, isliye fail hone par object shape ek baar fallback retry karo.
     var res = await ApiService().request<CartApiModel>(
       endpoint: ApiEndpoints.addToCart,
       method: ApiMethod.post,
       data: {
         "total": subTotal,
-        "items": itemBody,
+        "items": [itemBody],
       },
       fromJson: (json) => CartApiModel.fromJson(json),
     );
 
-    if (!res.isSuccess && res.code == 400) {
+    if (!res.isSuccess && res.code != 401) {
       res = await ApiService().request<CartApiModel>(
         endpoint: ApiEndpoints.addToCart,
         method: ApiMethod.post,
         data: {
           "total": subTotal,
-          "items": [itemBody],
+          "items": itemBody,
         },
         fromJson: (json) => CartApiModel.fromJson(json),
       );
@@ -183,7 +183,7 @@ class CartController extends GetxController {
   Future<void> clearCoupon() async {
     await storage.write('coupon_code', '');
     update();
-    snackBar('Coupon removed');
+    snackBar("couponRemoved".tr);
   }
 
   /// [silent] = true -> loading shimmer NAHI dikhta (background refresh).
@@ -312,11 +312,16 @@ class CartController extends GetxController {
   ProductApiModel? productFor(int productId) => _lookupKnownProduct(productId);
 
   /// Item REMOVE — pehle sirf ek demo bottom sheet khulta tha aur item
-  /// remove hi nahi hota tha. Ab:
+  /// remove hi nahi hota tha. Ab BULLETPROOF 3-step:
   ///  1) UI/list se TURANT hatao + totals dobara ginho,
-  ///  2) server par quantity 0 wala AddToCart bhejo (is backend me alag
-  ///     DeleteCart api nahi hai — qty 0 se item replace/remove hota hai),
-  ///  3) GetCart se fresh state la kar confirm karo.
+  ///  2) server par remove karo — is backend me DeleteCart api HAI HI NAHI
+  ///     (swagger verify), remove sirf AddToCart (qty 0) se hota hai. Ek hi
+  ///     payload par bharosa karne ke bajaye TEEN shapes try karte hai AUR
+  ///     har attempt ke baad GetCart se VERIFY karte hai ki item sach me
+  ///     gaya — pehle verify nahi hota tha, isliye server-side fail hone par
+  ///     item "again and again" wapas aa jata tha (user complaint),
+  ///  3) teeno attempts fail ho jaye to UI ko server ke saath sync karke
+  ///     HONEST toast dikhate hai (fake removal ka illusion nahi).
   Future<void> removeFromCart(HomeDealOfTheDayModel item) async {
     final pid = item.id;
     cartModelList?.cartList?.removeWhere((e) => e.id == pid);
@@ -346,49 +351,144 @@ class CartController extends GetxController {
     appCtrl.update();
 
     // server sync (logged-in ho to)
-    if ((storage.read(Session.isLogin) ?? false) == true) {
+    if ((storage.read(Session.isLogin) ?? false) != true) return;
+
+    // Remove se pehle ka server snapshot — isi se line id + baaki lines
+    // milti hai. cartApiModel stale ho sakta hai, isliye pehle ek baar
+    // FRESH GetCart kar lete hai (taaki line ids 100% sahi ho).
+    List<CartItemModel> prevLines = const <CartItemModel>[];
+    try {
+      final fresh = await ApiService().request<CartApiModel>(
+        endpoint: ApiEndpoints.getCart,
+        method: ApiMethod.get,
+        fromJson: (json) => CartApiModel.fromJson(json),
+      );
+      if (fresh.isSuccess && fresh.data != null) {
+        cartApiModel = fresh.data;
+        prevLines = fresh.data!.items;
+      }
+    } catch (_) {}
+    if (prevLines.isEmpty) {
+      prevLines = List<CartItemModel>.from(
+          cartApiModel?.items ?? const <CartItemModel>[]);
+    }
+
+    // Target line (jo hatani hai) aur USKA REAL line id
+    CartItemModel? target;
+    for (final l in prevLines) {
+      if ((l.productId ?? -1) == pid) {
+        target = l;
+        break;
+      }
+    }
+    final int lineId = target?.id ?? 0;
+    final int? consumerId = target?.consumerId;
+
+    // Server par item already nahi hai (sirf local ghost tha) -> kuch bhejne
+    // ki zaroorat hi nahi; bas fresh state se UI settle kar do.
+    if (target == null) {
       try {
-        // REAL cart-line id dhundo — pehle hamesha "id": 0 bheja jata tha,
-        // isliye backend line match hi nahi kar pata tha aur remove server
-        // par stick NAHI hota tha (GetCart wahi item wapas la deta tha).
-        int lineId = 0;
-        for (final l in (cartApiModel?.items ?? const <CartItemModel>[])) {
-          if ((l.productId ?? -1) == pid) {
-            lineId = l.id ?? 0;
-            break;
-          }
-        }
-        final Map<String, dynamic> itemBody = {
+        await getCart(silent: true);
+      } catch (_) {}
+      return;
+    }
+
+    // Baaki (remaining) live lines — full-sync attempt me bhejenge
+    final remainingLines = prevLines
+        .where((l) => (l.productId ?? -1) != pid && (l.quantity ?? 0) > 0)
+        .toList();
+    double remainTotal = 0;
+    for (final l in remainingLines) {
+      remainTotal += (l.subTotal ?? 0);
+    }
+
+    Map<String, dynamic> deadLine() => {
           "id": lineId,
           "product_id": pid,
-          "variation_id": null,
+          "variation_id": target?.variationId,
+          if (consumerId != null) "consumer_id": consumerId,
           "quantity": 0,
           "sub_total": 0,
           "wholesale_price": 0,
         };
-        // list form PRIMARY (GetCart jaisa shape backend ko natural lagta
-        // hai); kuch builds single-object maangti hain — wo fallback.
-        var res = await ApiService().request<CartApiModel>(
-          endpoint: ApiEndpoints.addToCart,
-          method: ApiMethod.post,
-          data: {"total": 0, "items": [itemBody]},
-          fromJson: (json) => CartApiModel.fromJson(json),
-        );
-        if (!res.isSuccess) {
-          await ApiService().request<CartApiModel>(
-            endpoint: ApiEndpoints.addToCart,
-            method: ApiMethod.post,
-            data: {"total": 0, "items": itemBody},
-            fromJson: (json) => CartApiModel.fromJson(json),
-          );
-        }
-      } catch (_) {}
-      // fresh server state se list final confirm karo — SILENT (shimmer/
-      // reload nahi dikhega; pehle yahi poora screen reload lagta tha)
+
+    // ATTEMPT 1 — FULL-SYNC (swagger CartDto schema ke EXACT mutabik):
+    // `items` ARRAY me saari live lines unki current qty ke saath + target
+    // line qty 0. Ye dono server styles cover karta hai:
+    //   • REPLACE-style: cart = bachi hui lines (+ dead qty0 line jo parse
+    //     me skip hoti hai),
+    //   • UPSERT-style: target line 0 ho gayi, baaki untouched.
+    var items = <Map<String, dynamic>>[
+      for (final l in remainingLines)
+        {
+          "id": l.id ?? 0,
+          "product_id": l.productId,
+          "variation_id": l.variationId,
+          if (l.consumerId != null) "consumer_id": l.consumerId,
+          "quantity": l.quantity ?? 1,
+          "sub_total": l.subTotal ?? 0,
+          "wholesale_price": l.wholesalePrice ?? 0,
+        },
+      deadLine(),
+    ];
+    bool removed = await _tryRemoveAndVerify(
+        {"total": remainTotal, "items": items}, pid);
+
+    // ATTEMPT 2 — sirf target line qty 0 (array shape, purana behaviour)
+    if (!removed) {
+      removed = await _tryRemoveAndVerify(
+          {"total": 0, "items": [deadLine()]}, pid);
+    }
+
+    // ATTEMPT 3 — single OBJECT shape (kuch backend builds aisa maangti hai)
+    if (!removed) {
+      removed = await _tryRemoveAndVerify(
+          {"total": 0, "items": deadLine()}, pid);
+    }
+
+    if (!removed) {
+      // Tino fail — UI ko server ke saath HONEST sync karo (item dikhega
+      // jaisa server par hai) aur user ko batao, taaki fake success ka
+      // illusion na rahe.
       try {
         await getCart(silent: true);
       } catch (_) {}
+      socialLoginToast("itemNotRemoved".tr);
     }
+  }
+
+  /// Ek remove attempt bhejo + FRESH GetCart se VERIFY karo ki product
+  /// (pid) server se sach me hat gaya (koi bhi live qty wali line nahi).
+  /// Verify ke response se local state bhi refresh ho jati hai.
+  Future<bool> _tryRemoveAndVerify(Map<String, dynamic> body, int pid) async {
+    try {
+      await ApiService().request<CartApiModel>(
+        endpoint: ApiEndpoints.addToCart,
+        method: ApiMethod.post,
+        data: body,
+        fromJson: (json) => CartApiModel.fromJson(json),
+      );
+    } catch (_) {}
+    try {
+      final res = await ApiService().request<CartApiModel>(
+        endpoint: ApiEndpoints.getCart,
+        method: ApiMethod.get,
+        fromJson: (json) => CartApiModel.fromJson(json),
+      );
+      if (res.isSuccess && res.data != null) {
+        // fresh server state local me rakho — next attempt/verify isi par
+        cartApiModel = res.data;
+        final stillThere = res.data!.items.any(
+            (l) => (l.productId ?? -1) == pid && (l.quantity ?? 0) > 0);
+        if (!stillThere) {
+          cartModelList = _mapApiCartToViewModel(res.data!);
+          update();
+          appCtrl.update();
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 
   /// chhota helper - taaki SocialLoginController import na karna pade sirf toast ke liye

@@ -7,6 +7,10 @@ class CartItemModel {
   final int? id;
   final int? productId;
   final int? variationId;
+
+  /// Backend CartItemDto me optional `consumer_id` hota hai — remove/update
+  /// requests me wapas bhejne se server line ko sahi user se match karta hai.
+  final int? consumerId;
   final int? quantity;
   final double? subTotal;
   final double? wholesalePrice;
@@ -19,6 +23,7 @@ class CartItemModel {
     this.id,
     this.productId,
     this.variationId,
+    this.consumerId,
     this.quantity,
     this.subTotal,
     this.wholesalePrice,
@@ -31,6 +36,7 @@ class CartItemModel {
       id: jsonToInt(json['id']),
       productId: jsonToInt(json['product_id']),
       variationId: jsonToInt(json['variation_id']),
+      consumerId: jsonToInt(json['consumer_id']),
       quantity: jsonToInt(json['quantity']),
       subTotal: jsonToDouble(json['sub_total']),
       wholesalePrice: jsonToDouble(json['wholesale_price']),
@@ -45,6 +51,7 @@ class CartItemModel {
         "id": id ?? 0,
         "product_id": productId,
         "variation_id": variationId,
+        if (consumerId != null) "consumer_id": consumerId,
         "quantity": quantity,
         "sub_total": subTotal,
         "wholesale_price": wholesalePrice,

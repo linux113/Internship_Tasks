@@ -18,7 +18,10 @@ class CartDetail extends StatelessWidget {
                 fontSize: FontSizes.f14,
                 color: appCtrl.appTheme.contentColor),
             LatoFontStyle(
-                text:orderDetail!.title == "Coupon Discount"  || orderDetail!.title == "خصم القسيمة"|| orderDetail!.title == "कूपन छूट"|| orderDetail!.title == "쿠폰 할인"? isApplyText!? val : "-${appCtrl.priceSymbol}20.0" :val,
+                // NOTE: pehle yaha STATIC "-AED 20.0" text tha (template ka
+                // demo coupon) — koi bhi fake number NAHI dikhayenge, sirf
+                // REAL value ("Apply Coupon" ya actual value).
+                text: val,
                 fontSize: FontSizes.f14,
                 color: orderDetail!.title == "Bag savings"
                     ? appCtrl.appTheme.greenColor

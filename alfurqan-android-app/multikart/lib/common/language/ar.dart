@@ -326,7 +326,6 @@ final dynamic ar = {
   "couponTitle": "كوبونات",
   "couponText":
       "استخدم الكود WELCOME للحصول على خصم ثابت 10٪ على الحد الأدنى للطلب \$ 200.00. العرض صالح للمستخدمين لأول مرة فقط",
-  "Save \$20.00": "وفر \$20.00",
 
   //delivery detail font
   "deliveryDetails": "تفاصيل التسليم",
@@ -365,12 +364,6 @@ final dynamic ar = {
   "Office": "مكتب",
   "Others": "آحرون",
   "savedAddress": "العنوان المحفوظ",
-  "Select state": "اختر ولايه",
-  "Gujarat": "ولاية غوجارات",
-  "Punjab": "البنجاب",
-  "New Zealand": "نيوزيلاندا",
-  "Australia": "أستراليا",
-  "India": "الهند",
 
   //payment font
   "paymentDetails": "بيانات الدفع",
@@ -629,4 +622,6 @@ final dynamic ar = {
   "on": "على",
   "yes": "yes",
   "no": "رقم",
+  "itemNotRemoved": "تعذر إزالة العنصر. حاول مرة اخرى.",
+  "couponRemoved": "تمت إزالة القسيمة",
 };

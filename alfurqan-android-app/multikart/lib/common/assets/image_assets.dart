@@ -2,7 +2,8 @@ class ImageAssets {
   final String noImageBanner = 'assets/logo/m_logo.png';
   final String logo = 'assets/logo/logo.png';
   final String design = 'assets/image/design.png';
-  final String noInternet = 'assets/images/nointernet.png';
+  // NOTE: noInternet asset declaration hata di — file disk par exist hi nahi
+  // karti thi aur koi bhi screen use nahi karti thi (dead + broken reference).
   final String offerCornerBG = 'assets/image/offerCornerBG.png';
   final String chip = 'assets/image/chip.png';
   final String user = 'assets/image/user.png';

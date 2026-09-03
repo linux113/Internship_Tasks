@@ -18,7 +18,11 @@ class FilterController extends GetxController {
   List occasionFilterList = [];
   List sizeList = [];
   List colorList = [];
-  String dropDownVal = "Recommended".tr;
+  // NOTE: internal sort VALUE kabhi translate nahi hota (DropdownButton ka
+  // value HAMESHA items me se ek hona chahiye — warna crash). Sirf dikhne
+  // wala TEXT translate hota hai (SortByDropDown me). Pehle yaha value par
+  // translation laga tha — language change par crash risk tha.
+  String dropDownVal = "Recommended";
   int selectedBrand = 0;
   int selectedOccasion = 0;
   int selectedColor = 0;
@@ -86,7 +90,7 @@ class FilterController extends GetxController {
 
   //reset — selections + shop ke applied filters dono clear karke fresh list
   resetFilter() {
-    dropDownVal = "Recommended".tr;
+    dropDownVal = "Recommended"; // internal value — translate NAHI karna
     selectedBrand = 0;
     selectedOccasion = 0;
     selectedColor = 0;
