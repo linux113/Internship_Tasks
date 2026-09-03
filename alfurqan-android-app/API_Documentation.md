@@ -593,3 +593,7 @@ Is round me ChatDev workflow (Design->Code->Review->Test) use kiya. TESTER phase
 Currency API ka response har request me ADMIN USER OBJECT leak kar raha hai — userName "dzab_admin", email "info@alfurqan.ae", phoneNumber aur BASE64 PASSWORD ("KyimQTia9hEli09WiFW4gQ==") sab kisi ko bhi bina login dikh raha hai (kholo: https://alfurqan.ae/web/CoreFront/GetAllCurrenciesFront). Backend se `core_Users` object response se hatwana zaroori hai — ye admin panel takeover ka rasta hai.
 
 **Deep-verify clean:** .first/.last sab guarded; json force-unwrap 0; image URL pipeline sahi; coupons loading/empty/error states sahi; .tr parity 517 keys 4 languages (sirf dead-demo keys ka delta); 542 files 0 bracket problems.
+
+## 03/09/2026 (v1.5.5+27) Release build error (card_balance context) — PURANA ZIP tha, kuch fix ki zaroorat nahi thi
+
+User ka build error: "card_balance.dart:35:50 — CardBalanceController can't be assigned to BuildContext" — ye bug v1.2.2+15 (commit da09cf0) me pehle hi fix ho chuka tha (GetBuilder param ka naam `context` se `cardBalanceCtrl` kiya gaya tha, MediaQuery shadowing issue). Verify kiya: repo code + ZIP dono me FIXED file hai. Project-wide sweep me yahi shadowing pattern aur kisi file me NAHI mila. Error isliye aaya kyunki (a) Downloads me pada PURANA zip use ho gaya, ya (b) purane build artifacts cache ho gaye. Action: fresh zip download + flutter clean mandatory.
