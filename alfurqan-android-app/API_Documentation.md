@@ -638,3 +638,10 @@ Pehle remove flow: UI se turant hatao -> ek hi payload bhejo -> response ka koi 
    - Language maps 100% parity: dead demo keys (Punjab/Gujarat/Australia/India/New Zealand/Save $20.00) teeno maps se saaf; "couponRemoved"/"itemNotRemoved" naye translated keys; coupon toast ab translated.
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity + routes + assets); audit3 GetX graph clean (4 warnings manually verify — false positives, registrations main.dart/page-level me confirmed); fashion/demo words sirf comments me bache (koi live UI static nahi).
+
+## 03/09/2026 (v1.6.1+30) Release build error fix — missing import (meri miss, sach bata raha hoon)
+
+User ka build error: "profile_widget.dart:36:12 — Type 'TextInputFormatter' not found".
+Cause: v1.6.0 me phone digits-only feature ke liye ProfileWidget.securityTextBox me `List<TextInputFormatter>?` param add kiya tha — par us file me `import 'package:flutter/services.dart'` add karna REH GAYA tha. Dart me type dusri file se pass-through karte waqt bhi us type ka import apni file me chahiye hota hai. (CustomTextFormField aur saare formatter-use karne wali files (phone/pincode/security_layout) me import pehle se sahi tha — error sirf is ek file ka tha.)
+Fix: profile_widget.dart me services import add.
+Taaki aisa kabhi na ho: mere static audit (deep_check) me ab IMPORT-AWARENESS check add kar diya — jo file flutter/services/share_plus/dio ke types use kare par import na kare, wo build se PEHLE hi pakda jayega. Re-run: 543 files, 0 problems, 0 missing imports.

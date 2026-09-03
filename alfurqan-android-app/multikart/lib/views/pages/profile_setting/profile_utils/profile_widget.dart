@@ -1,4 +1,5 @@
 import 'package:multikart/config.dart';
+import 'package:flutter/services.dart'; // TextInputFormatter type (inputFormatters param)
 
 class ProfileWidget {
   final appCtrl = Get.isRegistered<AppController>()
