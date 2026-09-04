@@ -413,7 +413,7 @@ final dynamic hi = {
   "orderPlaced": "आदेश रखा",
   "orderSuccess": "आदेश सफलतापूर्वक!",
   "orderDesc": "भुगतान सफलतापूर्वक संसाधित हो गया है और आपका आदेश जारी है।",
-  "yourOrder": "आपका आदेश # है: 64484032",
+  "yourOrder": "ऑर्डर नंबर",
   "orderInfo":
       "आपके आदेश के विवरण सहित एक ईमेल रसीद आपकी ईमेल आईडी पर भेज दी गई है।",
   "orderShipped": "यह आदेश यहां भेज दिया जाएगा:",
@@ -627,4 +627,9 @@ final dynamic hi = {
   "no": "नहीं",
   "itemNotRemoved": "आइटम हटाया नहीं जा सका। कृपया पुनः प्रयास करें।",
   "couponRemoved": "कूपन हटा दिया गया",
+  "pleaseLoginFirst": "कृपया पहले लॉगिन करें",
+  "cartEmptyToast": "आपकी कार्ट खाली है",
+  "saveDeliveryAddressFirst": "कृपया पहले डिलीवरी पता सहेजें",
+  "orderPlacedSuccess": "ऑर्डर सफलतापूर्वक हो गया!",
+  "orderFailedTryAgain": "ऑर्डर नहीं हो पाया। कृपया पुनः प्रयास करें",
 };

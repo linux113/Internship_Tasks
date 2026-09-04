@@ -15,7 +15,10 @@ class CartOrderDetailLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(builder: (appCtrl) {
-      return cartModelList!.orderDetail != null ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // NULL-SAFE: cartModelList null ho sakta hai (payment page par agar
+      // cart state refresh ho rahi ho) — pehle `cartModelList!` BANG tha,
+      // jisse crash hota. Kisi bhi haal me STATIC demo cartList mat dikhao.
+      return cartModelList?.orderDetail != null ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         ...cartModelList!.orderDetail!.map((e) {
 
           String val;

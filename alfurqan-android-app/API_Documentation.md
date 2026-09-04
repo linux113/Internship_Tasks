@@ -679,3 +679,17 @@ Taaki aisa kabhi na ho: mere static audit (deep_check) me ab IMPORT-AWARENESS ch
 **Filter (v1.6.2+31 client-side fix) isme included hai** — Price High→Low / Low→High ko NAYE build me REAL order change dikhna chahiye. Agar na dikhe to screenshot me version label check karo.
 
 **Verify:** 545 files 0 bracket problems; audit2 ALL CLEAN; audit3 clean.
+
+## 03/09/2026 (v1.6.4+33) ORDER FLOW end-to-end deep fix — real address, back-behavior, server-cart clear, demo fallbacks killed, multi-lang toasts
+
+User report: "order placing par cart khali dikhata + order ke baad back = directly bahar" + "proper order, proper price, multi-language, sab loop hole fix karo". Full order-flow ko server ke saath re-audit karke ye fixes:
+
+1. **"Cart khaali" guard smarter**: placeOrder ab empty products par PEHLE server se GetCart refresh karke dobara padhta hai — stale local state par galat "cart khaali" toast kabhi nahi. Saath hi ab products ORDER ke liye cartApiModel.items (REAL product_id + REAL qty) se bante hai — line-id ka product_id banne ka khatra khatam.
+2. **Order ke baad SERVER cart bhi saaf**: probe-confirmed hidden endpoint Cart/ClearCart call + silent GetCart settle — warna agle app-open par purane items wapas aa jate ("again and again" wali feel order ke baad bhi aati).
+3. **Success page back-behavior**: offAll se aaye page par phone-back APP BAND kar deta tha (stack me wahi ek page) — ab PopScope se back = HOME (dashboard).
+4. **FAKE New York address hata diya**: success page par "3501 Maloy Court, NY" STATIC template address aata tha — ab user ka SELECTED REAL delivery address dikhta hai (na ho to section hide — koi fake line nahi).
+5. **Fake order number hata diya**: "Your order # is: 64484032" static — ab label neutral "Order Number" (4 languages) + REAL server order-id.
+6. **Payment page demo fallback killed (PROPER PRICE/DATA)**: CartOrderDetailLayout ko pehle cart null hone par STATIC demo `cartList` (fashion) milta tha — HATA DIYA + layout null-safe (crash-proof).
+7. **Saare checkout toasts ab translated**: pleaseLoginFirst / cartEmptyToast / saveDeliveryAddressFirst / orderPlacedSuccess / orderFailedTryAgain — en/ar/hi/kr me (Hinglish hardcode hataya — multi-language demand).
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere crashes).

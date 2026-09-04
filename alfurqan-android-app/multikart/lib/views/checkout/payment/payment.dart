@@ -46,13 +46,15 @@ class Payment extends StatelessWidget {
                   const CheckoutPaymentSelector(),
                   const Space(0, 30),
 
-                  //cart order detail(price) — REAL cart ka model (pehle
-                  // static demo cartList tha)
+                  //cart order detail(price) — SIRF REAL cart ka model.
+                  // CRITICAL FIX: pehle fallback me STATIC demo `cartList`
+                  // (fashion items) pass hota tha — cart transiently null
+                  // hote hi FAKE data dikhne lagta tha. Ab koi bhi demo
+                  // fallback NAHI.
                   CartOrderDetailLayout(
-                      cartModelList: Get.isRegistered<CartController>() &&
-                              Get.find<CartController>().cartModelList != null
-                          ? Get.find<CartController>().cartModelList!
-                          : cartList,
+                      cartModelList: Get.isRegistered<CartController>()
+                          ? Get.find<CartController>().cartModelList
+                          : null,
                       isDeliveryShow: false),
                   const Space(0, 100)
                 ],

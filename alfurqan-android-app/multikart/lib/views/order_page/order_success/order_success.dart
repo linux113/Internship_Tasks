@@ -13,11 +13,23 @@ class OrderSuccess extends StatelessWidget {
                 orderSuccessCtrl.appCtrl.languageVal == "ar"
             ? TextDirection.rtl
             : TextDirection.ltr,
-        child: Scaffold(
-          appBar: AppBar(
-              centerTitle: false,
-              elevation: 0,
-              automaticallyImplyLeading: false,
+        child: PopScope(
+          // FIX: success page offAllNamed se aata hai (stack me YEKHI page
+          // hota hai) — phone back dabane par APP HI BAND ho jati thi
+          // (user complaint: "order ke baad back = directly bahar"). Ab
+          // back HOME (dashboard) kholta hai.
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (didPop) return;
+            orderSuccessCtrl.appCtrl.selectedIndex = 0;
+            orderSuccessCtrl.appCtrl.update();
+            Get.offAllNamed(routeName.dashboard);
+          },
+          child: Scaffold(
+            appBar: AppBar(
+                centerTitle: false,
+                elevation: 0,
+                automaticallyImplyLeading: false,
               // FIX: success page root hota hai — back arrow dabane par kuch
               // nahi hota tha (dead button). Hata diya.
               leading: const SizedBox.shrink(),
@@ -62,6 +74,7 @@ class OrderSuccess extends StatelessWidget {
             ).width(MediaQuery.of(context).size.width)),
             const OrderSuccessBottom()
           ]),
+          ),
         ),
       );
     });

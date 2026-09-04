@@ -1,4 +1,5 @@
 import '../../config.dart';
+import '../../models/cart_api_model.dart';
 import '../../models/location_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
@@ -53,12 +54,32 @@ class CheckoutController extends GetxController {
       Get.isRegistered<CartController>() ? Get.find<CartController>() : null;
 
   /// Server ko bhejne wala products list.
+  /// PRIMARY source = cartApiModel.items (REAL product_id + REAL quantity —
+  /// seedha GetCart response se). Pehle sirf view-model ("Qty: N" text ko
+  /// regex se parse karke) banta tha — agar server line me product_id na
+  /// ho to galat LINE-ID product_id ban jaati thi aur order fail/wrong
+  /// product ho sakta tha. View-model ab sirf FALLBACK hai.
   List<Map<String, dynamic>> _orderProducts() {
     final c = _cartCtrl;
     if (c == null) return [];
     final items = <Map<String, dynamic>>[];
+
+    // PRIMARY: api cart lines
+    for (final l in (c.cartApiModel?.items ?? const <CartItemModel>[])) {
+      final pid = l.productId ?? 0;
+      final qty = l.quantity ?? 0;
+      if (pid > 0 && qty > 0) {
+        items.add({
+          'product_id': pid,
+          'variation_id': l.variationId,
+          'quantity': qty,
+        });
+      }
+    }
+    if (items.isNotEmpty) return items;
+
+    // FALLBACK: view-model (puraana tarika)
     for (final e in (c.cartModelList?.cartList ?? [])) {
-      // view-model me quantity byWhom="Qty: N" me hoti hai — wapas nikaalo
       int qty = 1;
       final m = RegExp(r'(\d+)').firstMatch(e.byWhom ?? '');
       if (m != null) qty = int.tryParse(m.group(1)!) ?? 1;
@@ -98,21 +119,75 @@ class CheckoutController extends GetxController {
     return t == null ? '0' : t.toString();
   }
 
+  /// Selected delivery address ka formatted text — success page par
+  /// "This order will be shipped to:" ke neeche REAL address dikhane ke
+  /// liye (pehle STATIC New York ka fake address aata tha!).
+  String _selectedAddressText() {
+    try {
+      final list = AddressStore.load();
+      final selRaw = storage.read('selected_address_id');
+      final sel = int.tryParse(selRaw?.toString() ?? '') ?? -1;
+      AddressModel? found;
+      for (final a in list) {
+        if (a.id == sel) {
+          found = a;
+          break;
+        }
+      }
+      found ??= list.isNotEmpty ? list.first : null;
+      if (found == null) return '';
+      final parts = <String>[
+        if ((found.fullName ?? '').trim().isNotEmpty) found.fullName!.trim(),
+        if ((found.street ?? '').trim().isNotEmpty) found.street!.trim(),
+        if ((found.landmark ?? '').trim().isNotEmpty) found.landmark!.trim(),
+        if ((found.city ?? '').trim().isNotEmpty) found.city!.trim(),
+        if ((found.pincode ?? '').trim().isNotEmpty) found.pincode!.trim(),
+      ];
+      return parts.join(', ');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Order success ke baad SERVER ka cart bhi saaf karo (probe-confirmed
+  /// hidden endpoint Cart/ClearCart) + GetCart se settle. Best-effort:
+  /// fail ho to kuch nahi toot-ta (next GetCart state le aayega).
+  Future<void> _clearServerCart() async {
+    try {
+      await ApiService().request(
+        endpoint: ApiEndpoints.clearCart,
+        method: ApiMethod.post,
+        data: const <String, dynamic>{},
+        fromJson: (json) => json,
+      );
+    } catch (_) {}
+  }
+
   /// MAIN ACTION — "Place Order" button yahi call karta hai.
   Future<void> placeOrder() async {
     if (isPlacing) return;
 
     // 1) login zaroori
     if (!isLoggedIn) {
-      _toast('Please login first');
+      _toast('pleaseLoginFirst'.tr);
       Get.toNamed(routeName.login);
       return;
     }
 
-    // 2) cart khaali nahi honi chahiye
-    final products = _orderProducts();
+    // 2) cart khaali nahi honi chahiye — LEKIN pehle ek baar server se
+    // REFRESH karke dekho: kabhi-kabhi local cart state stale/null ho jati
+    // hai jabki server par items MOJOOD hote hai. Aise me galat "cart
+    // khaali" toast aa jata tha (user report). Refresh ke baad bhi khaali
+    // ho tabhi toast do.
+    var products = _orderProducts();
     if (products.isEmpty) {
-      _toast('Aapki cart khaali hai');
+      try {
+        await _cartCtrl?.getCart(silent: true);
+      } catch (_) {}
+      products = _orderProducts();
+    }
+    if (products.isEmpty) {
+      _toast('cartEmptyToast'.tr);
       Get.offAllNamed(routeName.dashboard);
       return;
     }
@@ -120,7 +195,7 @@ class CheckoutController extends GetxController {
     // 3) server address chahiye
     final addressId = _serverAddressId();
     if (addressId <= 0) {
-      _toast('Pehle delivery address save karein');
+      _toast('saveDeliveryAddressFirst'.tr);
       Get.toNamed(routeName.addAddress);
       return;
     }
@@ -203,6 +278,8 @@ class CheckoutController extends GetxController {
           'total': _currentTotal(),
           'orderId': orderId,
           'payment': paymentMethod == 'cod' ? 'Cash on Delivery' : paymentMethod,
+          // REAL delivery address (success page STATIC New York ke bajaye)
+          'address': _selectedAddressText(),
         };
 
         // local cart saaf + coupon reset
@@ -213,6 +290,13 @@ class CheckoutController extends GetxController {
           c.update();
         }
         await storage.write('coupon_code', '');
+        // SERVER cart bhi saaf karo — warna agle app-open par purane items
+        // GetCart se WAPAS aa jate (order place hone ke baad cart ka
+        // sach me khali hona chahiye).
+        await _clearServerCart();
+        try {
+          await _cartCtrl?.getCart(silent: true);
+        } catch (_) {}
         // FIX: navigation ke BAAD update() mat karo — offAll se ye page pop
         // hota hai aur controller delete ho sakta hai (update-after-dispose
         // race). Pehle state theek karo, phir navigate karke RETURN.
@@ -220,16 +304,16 @@ class CheckoutController extends GetxController {
         update();
         _toast(res.message.isNotEmpty
             ? res.message
-            : 'Order placed successfully!');
+            : 'orderPlacedSuccess'.tr);
         Get.offAllNamed(routeName.orderSuccess, arguments: totalText);
         return;
       } else {
         _toast(res.message.isNotEmpty
             ? res.message
-            : 'Order place nahi ho paya — dobara try karein');
+            : 'orderFailedTryAgain'.tr);
       }
     } catch (_) {
-      _toast('Order place nahi ho paya — internet/servers check karke dobara try karein');
+      _toast('orderFailedTryAgain'.tr);
     }
 
     isPlacing = false;

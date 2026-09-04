@@ -405,7 +405,7 @@ final dynamic kr = {
   "orderPlaced": "주문 완료",
   "orderSuccess": "주문 성공!",
   "orderDesc": "결제가 성공적으로 처리되었으며 주문이 진행 중입니다.",
-  "yourOrder": "주문 번호: 64484032",
+  "yourOrder": "주문 번호",
   "orderInfo": "주문에 대한 세부 정보가 포함된 이메일 영수증이 귀하의 이메일 ID로 전송되었습니다.",
   "orderShipped": "이 주문은 다음으로 배송됩니다:",
   "orderShippedAddress": "3501 말로이 코트,\n이스트 엘름허스트, 뉴욕\n뉴욕 11369",
@@ -608,4 +608,9 @@ final dynamic kr = {
   "Men Blue Denim Jacket": "남성 블루 데님 재킷",
   "itemNotRemoved": "항목을 삭제할 수 없습니다. 다시 시도해 주세요.",
   "couponRemoved": "쿠폰이 제거되었습니다",
+  "pleaseLoginFirst": "먼저 로그인해 주세요",
+  "cartEmptyToast": "장바구니가 비어 있습니다",
+  "saveDeliveryAddressFirst": "먼저 배송 주소를 저장해 주세요",
+  "orderPlacedSuccess": "주문이 완료되었습니다!",
+  "orderFailedTryAgain": "주문할 수 없습니다. 다시 시도해 주세요",
 };

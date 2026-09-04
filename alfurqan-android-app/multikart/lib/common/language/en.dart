@@ -413,7 +413,7 @@ final dynamic en = {
   "orderSuccess": "Order Successfully!",
   "orderDesc":
       "Payment is successfully processsed and your Order is on the way.",
-  "yourOrder": "Your order # is: 64484032",
+  "yourOrder": "Order Number",
   "orderInfo":
       "An email receipt including the details about your order has been sent to your email ID.",
   "orderShipped": "This order will be shipped to:",
@@ -624,4 +624,9 @@ final dynamic en = {
 
   "itemNotRemoved": "Item could not be removed. Please try again.",
   "couponRemoved": "Coupon removed",
+  "pleaseLoginFirst": "Please login first",
+  "cartEmptyToast": "Your cart is empty",
+  "saveDeliveryAddressFirst": "Please save a delivery address first",
+  "orderPlacedSuccess": "Order placed successfully!",
+  "orderFailedTryAgain": "Order could not be placed. Please try again",
 };

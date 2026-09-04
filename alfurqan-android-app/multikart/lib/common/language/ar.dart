@@ -414,7 +414,7 @@ final dynamic ar = {
   "orderPlaced": "تم الطلب",
   "orderSuccess": "اطلب بنجاح!",
   "orderDesc": "تمت معالجة الدفع بنجاح وطلبك في الطريق.",
-  "yourOrder": "طلبك رقم: 64484032",
+  "yourOrder": "رقم الطلب",
   "orderInfo":
       "تم إرسال إيصال عبر البريد الإلكتروني يتضمن تفاصيل حول طلبك إلى معرف البريد الإلكتروني الخاص بك.",
   "orderShipped": "سيتم شحن هذا الطلب إلى:",
@@ -624,4 +624,9 @@ final dynamic ar = {
   "no": "رقم",
   "itemNotRemoved": "تعذر إزالة العنصر. حاول مرة اخرى.",
   "couponRemoved": "تمت إزالة القسيمة",
+  "pleaseLoginFirst": "الرجاء تسجيل الدخول أولاً",
+  "cartEmptyToast": "سلة التسوق فارغة",
+  "saveDeliveryAddressFirst": "الرجاء حفظ عنوان التوصيل أولاً",
+  "orderPlacedSuccess": "تم تقديم الطلب بنجاح!",
+  "orderFailedTryAgain": "تعذر تقديم الطلب. حاول مرة اخرى",
 };
