@@ -186,9 +186,10 @@ class OrderHistoryController extends GetxController {
             '')
         .toString();
     String status = '';
-    final st = j['order_status'] ?? j['Order_Status'];
+    final st = j['order_status'] ?? j['Order_Status'] ?? j['orderStatus'];
     if (st is Map) {
-      status = (st['name'] ?? st['Name'] ?? st['title'] ?? '').toString();
+      status = (st['name'] ?? st['Name'] ?? st['title'] ?? st['slug'] ?? '')
+          .toString();
     } else {
       status = (j['status_name'] ??
               j['Status_Name'] ??
@@ -197,25 +198,49 @@ class OrderHistoryController extends GetxController {
               '')
           .toString();
     }
+    // entity rows me 'status' boolean hota hai — "true"/"false" mat dikhao
+    if (status == 'true' || status == 'false') status = '';
     final total = jsonToDouble(
         j['total'] ?? j['Total'] ?? j['grand_total'] ?? j['Grand_Total'] ?? j['amount']);
+    // SERVER TRUTH (swagger): GetUserOrders rows ke items `products` key me
+    // aate hai (OrderProductDto/OrderProducts) — hamara parser sirf
+    // items/order_items dekhta tha, isliye REAL item names/images kabhi
+    // nahi dikhte the. products ko TOP priority do.
     List items = const [];
-    if (j['items'] is List) items = j['items'] as List;
+    if (j['products'] is List) items = j['products'] as List;
+    if (items.isEmpty && j['Products'] is List) items = j['Products'] as List;
+    if (items.isEmpty && j['items'] is List) items = j['items'] as List;
     if (items.isEmpty && j['order_items'] is List) items = j['order_items'] as List;
     if (items.isEmpty && j['Order_Items'] is List) items = j['Order_Items'] as List;
 
-    // pehle item ki image (ho to) card me lagao
-    String image = '';
-    if (items.isNotEmpty && items.first is Map) {
-      final it = Map<String, dynamic>.from(items.first as Map);
-      image = jsonToString(it['image'] ??
-              it['Image'] ??
-              it['image_url'] ??
-              it['ImageUrl'] ??
-              (it['product'] is Map
-                  ? (it['product']['image'] ?? it['product']['ImageUrl'])
-                  : null)) ??
-          '';
+    // item i ki image: product_thumbnail{asset_url/original_url}
+    // (MediaFiles me 'url' key hoti hi nahi) / product.product_thumbnail /
+    // plain image string — sab try karo.
+    String itemImage(int i) {
+      if (items.isEmpty || items[i] is! Map) return '';
+      final it = Map<String, dynamic>.from(items[i] as Map);
+      dynamic th = it['product_thumbnail'];
+      if (th is Map) {
+        final tm = Map<String, dynamic>.from(th);
+        final u = jsonToString(tm['asset_url'] ?? tm['original_url'] ?? tm['url']);
+        if (u != null && u.isNotEmpty) return u;
+      }
+      final direct = jsonToString(it['image'] ??
+          it['Image'] ??
+          it['image_url'] ??
+          it['ImageUrl']);
+      if (direct != null && direct.isNotEmpty) return direct;
+      if (it['product'] is Map) {
+        final p = Map<String, dynamic>.from(it['product'] as Map);
+        final pd = jsonToString(p['image'] ?? p['ImageUrl']);
+        if (pd != null && pd.isNotEmpty) return pd;
+        if (p['product_thumbnail'] is Map) {
+          final tm = Map<String, dynamic>.from(p['product_thumbnail'] as Map);
+          final u = jsonToString(tm['asset_url'] ?? tm['original_url'] ?? tm['url']);
+          if (u != null && u.isNotEmpty) return u;
+        }
+      }
+      return '';
     }
 
     return OrderHistoryModel(
@@ -225,6 +250,7 @@ class OrderHistoryController extends GetxController {
         for (var i = 0; i < (items.isEmpty ? 1 : items.length); i++)
           () {
             String itemName = 'Order #$orderNo';
+            int itemQty = 1;
             if (items.isNotEmpty && items[i] is Map) {
               final it = Map<String, dynamic>.from(items[i] as Map);
               itemName = jsonToString(it['name'] ??
@@ -234,16 +260,22 @@ class OrderHistoryController extends GetxController {
                           ? (it['product']['name'] ?? it['product']['Name'])
                           : null)) ??
                   itemName;
+              // SERVER TRUTH: DTO me asli qty pivot.quantity me hoti hai;
+              // entity me top-level quantity.
+              final pivot = it['pivot'] is Map
+                  ? Map<String, dynamic>.from(it['pivot'] as Map)
+                  : <String, dynamic>{};
+              itemQty = jsonToInt(pivot['quantity'] ??
+                      it['quantity'] ??
+                      it['qty'] ??
+                      it['Quantity']) ??
+                  1;
             }
             return DaysWiseList(
-              image: i == 0 ? buildMediaUrl(image) : '',
+              image: buildMediaUrl(itemImage(i)),
               name: itemName,
               size: total != null && i == 0 ? 'AED ${total.toStringAsFixed(2)}' : '',
-              qty: items.isNotEmpty && items[i] is Map
-                  ? (jsonToInt(Map<String, dynamic>.from(items[i] as Map)['quantity'] ??
-                          Map<String, dynamic>.from(items[i] as Map)['qty']) ??
-                      1)
-                  : 1,
+              qty: itemQty,
               date: date,
               deliveryStatus: status,
               status: status,

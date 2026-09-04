@@ -693,3 +693,23 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 7. **Saare checkout toasts ab translated**: pleaseLoginFirst / cartEmptyToast / saveDeliveryAddressFirst / orderPlacedSuccess / orderFailedTryAgain — en/ar/hi/kr me (Hinglish hardcode hataya — multi-language demand).
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere crashes).
+
+## 04/09/2026 (v1.6.5+34) ORDER DETAIL page "kuch nahi dikh raha" — SERVER-SCHEMA se full fix (swagger verify)
+
+**Complaint:** Order History me order tap karne par Order Detail page KHAALI / galat (items nahi, price 0, address nahi) aa raha tha.
+
+**Server se dekha kaise kaam karta hai (LIVE swagger v2 — /swagger/v2/swagger.json ke Orders section + schemas padh kar):**
+1. **Items `products[]` me aate hai** (na ki `items[]`) — har item OrderProductDto hai jisme asli order data `pivot` object me hota hai: `pivot.quantity` (asli qty!), `pivot.single_price` (asli unit price!), `pivot.subtotal` (asli line total!). Hamara purana parser sirf `quantity/price/sub_total` top-level dekhta tha → **qty=1, price=AED 0.00 sab galat**.
+2. **Image `product_thumbnail.asset_url` (MediaFiles) me hoti hai** — MediaFiles me `url` naam ki key hoti hi NAHI (swagger MediaFiles schema: asset_url/original_url) → **images hamesha khaali**.
+3. **Totals ke server keys**: `amount` (subtotal), `total` (grand), `shipping_total`, `tax_total`, `coupon_total_discount`, `wallet_balance`, `points_amount`, `payment_method`, `payment_status` — purana parser inme se adhe miss karta tha → breakup khaali.
+4. **Address AddressDto hai**: `{title, street, city, stateName|state{name}, country{name}, pincode, phone(int64!), country_code}` — purana parser `address/line1` dhundhta tha jo hai hi nahi, aur `state`/`country` OBJECTS the (string nahi) → address card khaali. Recipient naam order ke `consumer_name`/`consumer.name` se aata hai (address par naam field hoti hi nahi!).
+5. **Timeline**: `order_status_activities[]` — DTO me `status` STRING, entity me `orderStatus{name}`; date `changed_At|changed_at|created_at` — ab date-sort bhi hoti hai.
+6. DTO (snake_case) vs Entity (camelCase: orderStatus, subTotal, shippingAddress, orderStatusActivities...) — **dono shapes ek sath parse** (server kuch bhi bheje).
+7. **Navigation bug (REAL ROOT CAUSE of "khaali page")**: Order History card ke andar ka InkWell sirf `{'id':...}` bhejta tha — `summary` nahi (outer .gestures wala summary gesture-arena me haar jata tha). Isliye detail page ka instant prefill KABHI chalta hi nahi tha aur api fail/slow par user ko khaali page dikhta tha. Ab inner InkWell bhi `{'id', 'summary'}` bhejta hai → page TURANT real data se khulta hai, api background me refresh karta hai.
+8. **Order History cards bhi sudhar**: rows ke items ab `products[]` se (pehle "Order #N" generic naam aata tha) — REAL item names + REAL images (product_thumbnail.asset_url) + REAL qty (pivot.quantity) har row me.
+9. **Multi-language (demand)**: detail page ke saare labels ab .tr — Order Tracking, Shipping Details, Price Details, Subtotal/Shipping/Discount/Tax/Total, Wallet Used, Points Used, Payment Method (cod → "Cash On Delivery"), Retry, error message — 4 languages (en/ar/hi/kr) 11 naye keys. Pehle Hinglish error "Order detail load nahi ho paya" hardcoded tha — HATA DIYA.
+10. **Safety**: server slim/khaali response de to prefilled REAL summary items/total/status restore rehte hai (khaali page kabhi nahi). sub_orders (multi-store) fallback bhi hai.
+
+**Note for Lalit:** GetOrder/GetUserOrders ka protected (login) JSON ab bhi nahi mila — agar ab bhi koi field mismatch dikhe to browser me login karke `https://alfurqan.ae/api/Orders/GetOrder?id=<order-id>` ka JSON bhej do, exact key mapping 100% kar dunga.
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%, 11 naye keys ×4 languages); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).

@@ -1,10 +1,16 @@
 import '../../../../config.dart';
 
-/// ORDER DETAIL BODY — pehle pura STATIC tha (fake items, fake timeline,
-/// demo address, cartList price). Ab OrderDetailController ke REAL
-/// GetOrder data se render hota hai.
+/// ORDER DETAIL BODY — REAL GetOrder data (OrderDetailController) se.
+/// Saare labels MULTI-LANGUAGE (.tr) — pehle hardcoded English/Hinglish
+/// the (multi-lang app me galat tha).
 class OrderDetailBody extends StatelessWidget {
   const OrderDetailBody({Key? key}) : super(key: key);
+
+  String _payText(OrderDetailController ctrl) {
+    final pm = ctrl.paymentMethod.trim();
+    if (pm.toLowerCase() == 'cod') return "cashOnDelivery".tr;
+    return pm.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +32,12 @@ class OrderDetailBody extends StatelessWidget {
         return Column(children: [
           const Space(0, 60),
           LatoFontStyle(
-              text: "Order detail load nahi ho paya",
+              text: "orderLoadFailed".tr,
               color: appCtrl.appTheme.contentColor,
               fontSize: FontSizes.f14),
           const Space(0, 15),
           LatoFontStyle(
-                  text: "Retry",
+                  text: "retryLabel".tr,
                   color: appCtrl.appTheme.primary,
                   fontWeight: FontWeight.w700,
                   fontSize: FontSizes.f14)
@@ -98,12 +104,13 @@ class OrderDetailBody extends StatelessWidget {
                         LatoFontStyle(
                             text: (it['name'] ?? '').toString(),
                             fontSize: FontSizes.f13,
+                            overflow: TextOverflow.clip,
                             fontWeight: FontWeight.w600,
                             color: appCtrl.appTheme.blackColor),
                         const Space(0, 4),
                         LatoFontStyle(
                             text:
-                                "Qty ${it['qty']} × ${appCtrl.priceSymbol}${((it['price'] as num) * appCtrl.rateValue).toStringAsFixed(2)}",
+                                "${"qty".tr} ${it['qty']} × ${appCtrl.priceSymbol}${((it['price'] as num) * appCtrl.rateValue).toStringAsFixed(2)}",
                             fontSize: FontSizes.f12,
                             color: appCtrl.appTheme.contentColor),
                       ]),
@@ -126,7 +133,7 @@ class OrderDetailBody extends StatelessWidget {
           // ================= timeline =================
           if (ctrl.timeline.isNotEmpty) ...[
             LatoFontStyle(
-                text: "Order Tracking",
+                text: "orderTracking".tr,
                 fontSize: FontSizes.f15,
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.blackColor),
@@ -184,16 +191,21 @@ class OrderDetailBody extends StatelessWidget {
           // ================= address =================
           if (ctrl.address.isNotEmpty) ...[
             LatoFontStyle(
-                text: "Shipping Details",
+                text: "shippingDetail".tr,
                 fontSize: FontSizes.f15,
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.blackColor),
             const Space(0, 10),
             LatoFontStyle(
                 text: [
+                  ctrl.address['title'],
                   ctrl.address['name'],
                   ctrl.address['line1'],
-                  [ctrl.address['city'], ctrl.address['state']]
+                  [
+                    ctrl.address['city'],
+                    ctrl.address['state'],
+                    ctrl.address['pincode']
+                  ]
                       .where((e) => (e ?? '').toString().isNotEmpty)
                       .join(', '),
                   ctrl.address['country'],
@@ -206,7 +218,8 @@ class OrderDetailBody extends StatelessWidget {
             if ((ctrl.address['phone'] ?? '').toString().isNotEmpty) ...[
               const Space(0, 5),
               LatoFontStyle(
-                  text: "Phone: ${ctrl.address['phone']}",
+                  text:
+                      "${"mobileNumber".tr}: ${ctrl.address['phone']}",
                   fontSize: FontSizes.f13,
                   color: appCtrl.appTheme.contentColor),
             ],
@@ -217,20 +230,25 @@ class OrderDetailBody extends StatelessWidget {
 
           // ================= price details =================
           LatoFontStyle(
-              text: "Price Details",
+              text: "priceDetails".tr,
               fontSize: FontSizes.f15,
               fontWeight: FontWeight.w700,
               color: appCtrl.appTheme.blackColor),
           const Space(0, 12),
-          _priceRow(appCtrl, "Subtotal", ctrl.subtotal),
-          if (ctrl.shipping > 0) _priceRow(appCtrl, "Shipping", ctrl.shipping),
+          _priceRow(appCtrl, "subtotalLabel".tr, ctrl.subtotal),
+          if (ctrl.shipping > 0)
+            _priceRow(appCtrl, "shippingLabel".tr, ctrl.shipping),
           if (ctrl.discount > 0)
-            _priceRow(appCtrl, "Discount", -ctrl.discount),
-          if (ctrl.tax > 0) _priceRow(appCtrl, "Tax", ctrl.tax),
+            _priceRow(appCtrl, "discountLabel".tr, -ctrl.discount),
+          if (ctrl.tax > 0) _priceRow(appCtrl, "taxLabel".tr, ctrl.tax),
+          if (ctrl.walletUsed > 0)
+            _priceRow(appCtrl, "walletUsed".tr, -ctrl.walletUsed),
+          if (ctrl.pointsUsed > 0)
+            _priceRow(appCtrl, "pointsUsed".tr, -ctrl.pointsUsed),
           const Space(0, 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             LatoFontStyle(
-                text: "Total",
+                text: "totalLabel".tr,
                 fontSize: FontSizes.f15,
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.blackColor),
@@ -240,6 +258,25 @@ class OrderDetailBody extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: appCtrl.appTheme.primary),
           ]),
+
+          // ================= payment method =================
+          if (ctrl.paymentMethod.isNotEmpty) ...[
+            const Space(0, 20),
+            const BorderLineLayout(),
+            const Space(0, 20),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              LatoFontStyle(
+                  text: "paymentMethod".tr,
+                  fontSize: FontSizes.f13,
+                  fontWeight: FontWeight.w600,
+                  color: appCtrl.appTheme.blackColor),
+              LatoFontStyle(
+                  text: _payText(ctrl),
+                  fontSize: FontSizes.f13,
+                  fontWeight: FontWeight.w600,
+                  color: appCtrl.appTheme.primary),
+            ]),
+          ],
           const Space(0, 40),
         ],
       ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15));

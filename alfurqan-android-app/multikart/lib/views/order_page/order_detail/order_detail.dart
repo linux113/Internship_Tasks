@@ -31,7 +31,7 @@ class _OrderDetailState extends State<OrderDetail> {
             title: LatoFontStyle(
               text: ctrl.orderNumber.isNotEmpty
                   ? "Order #${ctrl.orderNumber}"
-                  : "Order Detail",
+                  : "orderDetail".tr,
               fontSize: FontSizes.f15,
               fontWeight: FontWeight.w700,
               color: ctrl.appCtrl.appTheme.blackColor,

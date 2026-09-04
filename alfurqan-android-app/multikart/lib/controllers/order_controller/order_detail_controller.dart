@@ -29,6 +29,12 @@ class OrderDetailController extends GetxController {
   double discount = 0;
   double tax = 0;
   double total = 0;
+  // OrdersDto ke extra money/payment fields (server verify: wallet_balance,
+  // points_amount, payment_method, payment_status / entity camelCase)
+  double walletUsed = 0;
+  double pointsUsed = 0;
+  String paymentMethod = '';
+  String paymentStatus = '';
 
   /// items: {name, image, qty, price, lineTotal}
   List<Map<String, dynamic>> items = [];
@@ -44,6 +50,11 @@ class OrderDetailController extends GetxController {
   // Issue#9: order history se aaya summary (api fail hone par bhi detail
   // khaali/white screen na dikhe — isi se turant prefill hota hai).
   bool _prefilledFromSummary = false;
+  // Prefill ka backup — api response agar KHAALI products/total de (server
+  // kabhi slim shape deta hai) to REAL summary wale items hi dikhate rahe.
+  List<Map<String, dynamic>> _prefillItems = [];
+  double _prefillTotal = 0;
+  String _prefillStatus = '';
 
   @override
   void onReady() {
@@ -107,6 +118,9 @@ class OrderDetailController extends GetxController {
         total = t;
       }
     }
+    _prefillItems = List<Map<String, dynamic>>.from(items);
+    _prefillTotal = total;
+    _prefillStatus = status;
   }
 
   Future<void> fetchOrderDetail() async {
@@ -156,55 +170,119 @@ class OrderDetailController extends GetxController {
     update();
   }
 
+  /// MediaFiles {asset_url, original_url} (swagger verify) — 'url' key hoti
+  /// hi nahi, isliye pehle order items ki image HAMESHA khaali aati thi.
+  static String _mediaUrl(dynamic m) {
+    if (m is Map) {
+      final mm = Map<String, dynamic>.from(m);
+      return jsonToString(mm['asset_url'] ??
+              mm['original_url'] ??
+              mm['url'] ??
+              mm['image_Url'] ??
+              mm['ImageUrl']) ??
+          '';
+    }
+    return jsonToString(m) ?? '';
+  }
+
+  /// SERVER-SCHEMA parse — alfurqan.ae swagger v2 (/swagger/v2/swagger.json)
+  /// se VERIFY kiya hua. GetOrder 2 shapes me aa sakta hai:
+  ///  • OrdersDto (snake_case): products[] = {name, sale_price, price,
+  ///    pivot:{quantity, single_price, subtotal}, product_thumbnail{..}}
+  ///  • OrderMst entity (camelCase): products[] = {product:{name,
+  ///    product_thumbnail{..}}, quantity, price, subTotal}
+  /// Pehle parser pivot/entity/camelCase in sabko MISS karta tha — isliye
+  /// detail page par "kuch nahi" (empty items / AED 0.00) dikh raha tha.
   void _parse(Map<String, dynamic> j) {
+    // ---- order number / date ----
     orderNumber = jsonToString(j['order_number'] ??
             j['Order_Number'] ??
+            j['orderNumber'] ??
             j['order_no'] ??
             j['orderNo'] ??
+            j['orderid'] ??
             j['id']) ??
         '';
     orderDate = jsonToString(j['created_at'] ??
             j['Created_at'] ??
+            j['createdAt'] ??
             j['order_date'] ??
             j['date']) ??
         '';
+    if (orderDate.length >= 10) orderDate = orderDate.substring(0, 10);
 
-    // ---- status ----
-    final st = j['order_status'] ?? j['Order_Status'];
+    // ---- status (order_status{name} / orderStatus{name} / status text) ----
+    final st = j['order_status'] ?? j['Order_Status'] ?? j['orderStatus'];
     if (st is Map) {
-      status = jsonToString(st['name'] ?? st['Name'] ?? st['title']) ?? '';
+      status = jsonToString(st['name'] ?? st['Name'] ?? st['title'] ?? st['slug']) ?? '';
     } else {
       status = jsonToString(
               j['status_name'] ?? j['Status_Name'] ?? j['status'] ?? st) ??
           '';
     }
+    // entity me 'status' boolean hota hai — numeric/bool status mat dikhao
+    if (status == 'true' || status == 'false') status = '';
 
-    // ---- totals ----
-    subtotal = jsonToDouble(j['sub_total'] ??
+    // ---- totals (OrdersDto: amount=subtotal, total=grand) ----
+    subtotal = jsonToDouble(j['amount'] ??
+            j['Amount'] ??
+            j['sub_total'] ??
             j['Sub_Total'] ??
-            j['subtotal'] ??
-            j['amount'] ??
-            j['total']) ??
+            j['subtotal']) ??
         0;
-    shipping = jsonToDouble(
-            j['shipping_cost'] ?? j['Shipping_Cost'] ?? j['shipping']) ??
+    shipping = jsonToDouble(j['shipping_total'] ??
+            j['shippingTotal'] ??
+            j['Shipping_Total'] ??
+            j['shipping_cost'] ??
+            j['Shipping_Cost'] ??
+            j['shipping']) ??
         0;
-    discount = jsonToDouble(
-            j['discount'] ?? j['Discount'] ?? j['coupon_amount']) ??
+    discount = jsonToDouble(j['coupon_total_discount'] ??
+            j['couponTotalDiscount'] ??
+            j['Coupon_Total_Discount'] ??
+            j['discount'] ??
+            j['Discount'] ??
+            j['coupon_amount']) ??
         0;
-    tax = jsonToDouble(j['tax'] ?? j['Tax']) ?? 0;
+    tax = jsonToDouble(
+            j['tax_total'] ?? j['taxTotal'] ?? j['Tax_Total'] ?? j['tax'] ?? j['Tax']) ??
+        0;
     total = jsonToDouble(j['total'] ??
             j['Total'] ??
             j['grand_total'] ??
             j['Grand_Total']) ??
         (subtotal + shipping + tax - discount);
+    walletUsed = jsonToDouble(j['wallet_balance'] ??
+            j['walletBalance'] ??
+            j['wallet_amount']) ??
+        0;
+    pointsUsed = jsonToDouble(j['points_amount'] ??
+            j['pointsAmount'] ??
+            j['points']) ??
+        0;
+    paymentMethod = jsonToString(j['payment_method'] ??
+            j['paymentMethod'] ??
+            j['Payment_Method']) ??
+        '';
+    paymentStatus = jsonToString(j['payment_status'] ??
+            j['paymentStatus'] ??
+            j['Payment_Status']) ??
+        '';
 
-    // ---- items ----
-    dynamic rawItems = j['items'] ??
+    // ---- items: products[] (server) — pivot se REAL qty/price ----
+    dynamic rawItems = j['products'] ??
+        j['Products'] ??
+        j['items'] ??
         j['order_items'] ??
-        j['Order_Items'] ??
-        j['products'] ??
-        j['Products'];
+        j['Order_Items'];
+    // multi-store: items parent me na ho to pehle sub_order se lo
+    if (rawItems is! List || rawItems.isEmpty) {
+      final subs = j['sub_orders'] ?? j['subOrders'];
+      if (subs is List && subs.isNotEmpty && subs.first is Map) {
+        final s0 = Map<String, dynamic>.from(subs.first as Map);
+        rawItems = s0['products'] ?? s0['Products'] ?? s0['items'];
+      }
+    }
     items = [];
     if (rawItems is List) {
       double sum = 0;
@@ -216,22 +294,45 @@ class OrderDetailController extends GetxController {
             : (it['Product'] is Map
                 ? Map<String, dynamic>.from(it['Product'] as Map)
                 : <String, dynamic>{});
-        final qty = jsonToInt(it['quantity'] ?? it['qty'] ?? it['Quantity']) ?? 1;
-        final price = jsonToDouble(it['price'] ?? it['Price'] ?? prod['price']) ?? 0;
-        final line = jsonToDouble(it['sub_total'] ?? it['subTotal'] ?? it['Sub_Total']) ??
+        final pivot = it['pivot'] is Map
+            ? Map<String, dynamic>.from(it['pivot'] as Map)
+            : (it['Pivot'] is Map
+                ? Map<String, dynamic>.from(it['Pivot'] as Map)
+                : <String, dynamic>{});
+        final qty = jsonToInt(pivot['quantity'] ??
+                it['quantity'] ??
+                it['qty'] ??
+                it['Quantity']) ??
+            1;
+        final price = jsonToDouble(pivot['single_price'] ??
+                pivot['singlePrice'] ??
+                it['single_price'] ??
+                it['price'] ??
+                it['Price'] ??
+                prod['price'] ??
+                it['sale_price']) ??
+            0;
+        final line = jsonToDouble(pivot['subtotal'] ??
+                pivot['subTotal'] ??
+                it['subtotal'] ??
+                it['subTotal'] ??
+                it['sub_total'] ??
+                it['Sub_Total']) ??
             (price * qty);
         sum += line;
-        String img = jsonToString(it['image'] ??
-                it['Image'] ??
-                prod['image'] ??
-                prod['ImageUrl'] ??
-                prod['thumbnail']) ??
-            '';
-        if (img.isEmpty && prod['product_thumbnail'] is Map) {
-          img = jsonToString(
-                  Map<String, dynamic>.from(prod['product_thumbnail'] as Map)['url']) ??
+        String img = _mediaUrl(it['product_thumbnail']);
+        if (img.isEmpty) img = _mediaUrl(it['variation_image']);
+        if (img.isEmpty) {
+          img = jsonToString(it['image'] ??
+                  it['Image'] ??
+                  it['image_url'] ??
+                  it['ImageUrl'] ??
+                  prod['image'] ??
+                  prod['ImageUrl'] ??
+                  prod['thumbnail']) ??
               '';
         }
+        if (img.isEmpty) img = _mediaUrl(prod['product_thumbnail']);
         items.add({
           'name': jsonToString(it['name'] ??
                   it['Name'] ??
@@ -248,11 +349,14 @@ class OrderDetailController extends GetxController {
       if (subtotal <= 0 && sum > 0) subtotal = sum;
     }
 
-    // ---- status timeline (OrderStatusActivities) ----
-    dynamic rawActs = j['status_activities'] ??
-        j['Status_Activities'] ??
-        j['order_status_activities'] ??
+    // ---- status timeline: order_status_activities (DTO: status string,
+    // changed_at) / orderStatusActivities (entity: orderStatus{name},
+    // changed_At) — dono. Date ke hisaab se sort (purana → naya). ----
+    dynamic rawActs = j['order_status_activities'] ??
         j['Order_Status_Activities'] ??
+        j['orderStatusActivities'] ??
+        j['status_activities'] ??
+        j['Status_Activities'] ??
         j['activities'];
     timeline = [];
     if (rawActs is List) {
@@ -268,43 +372,131 @@ class OrderDetailController extends GetxController {
                     Map<String, dynamic>.from(stMap)['Name']) ??
                 '')
             : (jsonToString(stMap) ?? '');
+        if (nm == 'true' || nm == 'false') nm = '';
         timeline.add({
           'name': nm.isNotEmpty ? nm : status,
           'date': jsonToString(a['changed_At'] ??
                   a['changed_at'] ??
+                  a['changedAt'] ??
                   a['created_at'] ??
+                  a['createdAt'] ??
                   a['date']) ??
               '',
           'note': jsonToString(a['note'] ?? a['Note']) ?? '',
         });
       }
+      timeline.sort((a, b) {
+        final da = DateTime.tryParse((a['date'] ?? '').toString()) ??
+            DateTime(2000);
+        final db = DateTime.tryParse((b['date'] ?? '').toString()) ??
+            DateTime(2000);
+        return da.compareTo(db);
+      });
     }
     // timeline khaali ho to kam se kam current status ki ek entry dikhao
     if (timeline.isEmpty && status.isNotEmpty) {
       timeline.add({'name': status, 'date': orderDate, 'note': ''});
     }
 
-    // ---- shipping address ----
+    // ---- shipping address (AddressDto: title/street/city/stateName/
+    // state{name}/country{name}/pincode/phone(int64!)/country_code;
+    // entity Addresses: street/city/state{}/country{}/pincode(int)/
+    // phone(string)) ----
     dynamic rawAddr = j['shipping_address'] ??
         j['Shipping_Address'] ??
         j['shippingAddress'] ??
         j['address'] ??
         j['Address'];
     if (rawAddr is List && rawAddr.isNotEmpty) rawAddr = rawAddr.first;
+    address = {};
     if (rawAddr is Map) {
       final m = Map<String, dynamic>.from(rawAddr);
+      String stateName =
+          jsonToString(m['stateName'] ?? m['state_name']) ?? '';
+      if (stateName.isEmpty && m['state'] is Map) {
+        final sm = Map<String, dynamic>.from(m['state'] as Map);
+        stateName = jsonToString(sm['name'] ?? sm['Name']) ?? '';
+      }
+      if (stateName.isEmpty && m['State'] is String) {
+        stateName = jsonToString(m['State']) ?? '';
+      }
+      String countryName = '';
+      if (m['country'] is Map) {
+        final cm = Map<String, dynamic>.from(m['country'] as Map);
+        countryName = jsonToString(cm['name'] ?? cm['Name']) ?? '';
+      } else if (m['Country'] is Map) {
+        final cm = Map<String, dynamic>.from(m['Country'] as Map);
+        countryName = jsonToString(cm['name'] ?? cm['Name']) ?? '';
+      } else {
+        countryName = jsonToString(m['country'] ?? m['Country']) ?? '';
+      }
+      // phone AddressDto me int64 hota hai, entity me string — dono safe
+      final cc = jsonToString(m['country_code'] ?? m['countryCode']) ?? '';
+      String ph = jsonToString(m['phone'] ?? m['Phone'] ?? m['mobile']) ?? '';
+      // double "971551234567.0" jaisa aa jaye to int part lo
+      if (ph.contains('.')) {
+        ph = ph.split('.').first;
+      }
+      String phone = ph;
+      if (ph.isNotEmpty &&
+          cc.isNotEmpty &&
+          !ph.startsWith(cc) &&
+          !ph.startsWith('+$cc') &&
+          !ph.startsWith('0$cc')) {
+        phone = '+$cc $ph';
+      }
+      // recipient naam: consumer_name / consumer{name} / address user/title
+      String recipient = jsonToString(
+              j['consumer_name'] ?? j['consumerName'] ?? j['customer_name']) ??
+          '';
+      if (recipient.isEmpty && j['consumer'] is Map) {
+        final cu = Map<String, dynamic>.from(j['consumer'] as Map);
+        recipient = jsonToString(
+                cu['name'] ?? cu['Name'] ?? cu['userName'] ?? cu['username']) ??
+            '';
+      }
+      if (recipient.isEmpty && j['user'] is Map) {
+        final cu = Map<String, dynamic>.from(j['user'] as Map);
+        recipient = jsonToString(cu['name'] ?? cu['Name']) ?? '';
+      }
+      if (recipient.isEmpty) {
+        recipient = jsonToString(
+                m['name'] ?? m['Name'] ?? m['full_name'] ?? m['fullName']) ??
+            '';
+      }
       address = {
-        'name': jsonToString(m['name'] ?? m['Name'] ?? m['full_name']) ?? '',
-        'line1': jsonToString(m['address'] ??
+        'name': recipient,
+        'title': jsonToString(m['title'] ?? m['Title']) ?? '',
+        'line1': jsonToString(m['street'] ??
+                m['address'] ??
                 m['Address'] ??
                 m['address_line_1'] ??
                 m['line1']) ??
             '',
         'city': jsonToString(m['city'] ?? m['City']) ?? '',
-        'state': jsonToString(m['state'] ?? m['State']) ?? '',
-        'country': jsonToString(m['country'] ?? m['Country']) ?? '',
-        'phone': jsonToString(m['phone'] ?? m['Phone'] ?? m['mobile']) ?? '',
+        'state': stateName,
+        'country': countryName,
+        'pincode': jsonToString(
+                m['pincode'] ?? m['Pincode'] ?? m['zip'] ?? m['zipcode']) ??
+            '',
+        'phone': phone,
       };
+      // poora khaali ho to section hi hide (khaali card na dikhe)
+      if (address.values.every((v) => (v ?? '').toString().isEmpty)) {
+        address = {};
+      }
+    }
+
+    // ---- server khaali/slim de to prefill (REAL summary) restore ----
+    if (items.isEmpty && _prefillItems.isNotEmpty) {
+      items = List<Map<String, dynamic>>.from(_prefillItems);
+    }
+    if (total <= 0 && _prefillTotal > 0) {
+      total = _prefillTotal;
+      if (subtotal <= 0) subtotal = _prefillTotal;
+    }
+    if (status.isEmpty && _prefillStatus.isNotEmpty) {
+      status = _prefillStatus;
     }
   }
 }

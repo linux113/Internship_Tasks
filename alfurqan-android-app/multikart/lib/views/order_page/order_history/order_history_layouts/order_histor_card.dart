@@ -12,10 +12,14 @@ final GestureTapCallback? onTap;
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(builder: (appCtrl) {
       return InkWell(
-        // REAL order id bhejo — detail page ab api/Orders/GetOrder se live
-        // data lane wala hai (pehle static demo page khulta tha)
-        onTap: () => Get.toNamed(routeName.orderDetail,
-            arguments: {'id': orderHistoryModel?.orderId ?? 0}),
+        // REAL order id + SUMMARY dono bhejo — pehle inner InkWell sirf id
+        // bhejta tha (outer .gestures wala summary gesture-arena me haar
+        // jata tha), jisse detail page ka prefill kabhi chalta hi nahi tha
+        // aur api fail par user ko KHAALI page dikhta tha.
+        onTap: () => Get.toNamed(routeName.orderDetail, arguments: {
+          'id': orderHistoryModel?.orderId ?? 0,
+          'summary': orderHistoryModel,
+        }),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
