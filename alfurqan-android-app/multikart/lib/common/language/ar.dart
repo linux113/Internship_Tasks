@@ -640,5 +640,10 @@ final dynamic ar = {
   "orderLoadFailed": "تعذر تحميل تفاصيل الطلب. حاول مرة اخرى.",
   "walletUsed": "رصيد المحفظة المستخدم",
   "pointsUsed": "النقاط المستخدمة",
+  "couponCode": "رمز القسيمة",
+  "couponHint": "أدخل رمز القسيمة (اختياري)",
+  "viewCoupons": "عرض القسائم",
+  "codSubtitle": "ادفع نقداً أو بالبطاقة عند وصول طلبك",
+  "onlineComingSoon": "الدفع الإلكتروني (بطاقة/محفظة) قريباً",
   "cashOnDelivery": "الدفع عند الاستلام",
 };

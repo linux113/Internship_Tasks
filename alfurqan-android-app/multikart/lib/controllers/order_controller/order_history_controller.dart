@@ -173,6 +173,16 @@ class OrderHistoryController extends GetxController {
     update();
   }
 
+  /// Server ka full ISO datetime ("2026-08-31T23:17:55.3435123") user ko
+  /// raw nahi dikhana (screenshot complaint) — "2026-08-31 23:17" format.
+  static String _fmtDateTime(String s) {
+    final t = s.trim();
+    if (t.length >= 16 && t.contains('T')) {
+      return '${t.substring(0, 10)}  ${t.substring(11, 16)}';
+    }
+    return t;
+  }
+
   /// Ek order row ko view-model me map karo (shape lenient).
   OrderHistoryModel _rowToModel(Map<String, dynamic> j) {
     final id = j['id'] ?? j['Id'] ?? j['order_id'] ?? j['Order_Id'];
@@ -274,9 +284,13 @@ class OrderHistoryController extends GetxController {
             return DaysWiseList(
               image: buildMediaUrl(itemImage(i)),
               name: itemName,
-              size: total != null && i == 0 ? 'AED ${total.toStringAsFixed(2)}' : '',
+              // PLAIN number (RAW AED) — currency symbol + rate conversion
+              // view karti hai (pehle hardcoded "AED 76.70" banta tha isliye
+              // INR select karne par bhi history AED me dikhti thi + label
+              // "Size:" tha, ab "Total:").
+              size: total != null && i == 0 ? total.toStringAsFixed(2) : '',
               qty: itemQty,
-              date: date,
+              date: _fmtDateTime(date),
               deliveryStatus: status,
               status: status,
             );

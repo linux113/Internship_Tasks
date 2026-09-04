@@ -67,7 +67,15 @@ class Payment extends StatelessWidget {
                   buttonName: checkoutCtrl.isPlacing
                       ? "Placing Order..."
                       : "Place Order",
-                  totalAmount: paymentCtrl.totalAmount.toString(),
+                  // LIVE cart total (RAW AED; widget convert karta hai) —
+                  // stale controller/arguments par "₹0" kabhi na dikhe.
+                  totalAmount: (Get.isRegistered<CartController>()
+                          ? (Get.find<CartController>()
+                                  .cartModelList
+                                  ?.totalAmount ??
+                              (double.tryParse(paymentCtrl.totalAmount) ?? 0))
+                          : (double.tryParse(paymentCtrl.totalAmount) ?? 0))
+                      .toStringAsFixed(2),
                   onTap: () {
                     if (!checkoutCtrl.isPlacing) checkoutCtrl.placeOrder();
                   })

@@ -643,5 +643,10 @@ final dynamic hi = {
   "orderLoadFailed": "ऑर्डर विवरण लोड नहीं हो सका। कृपया पुनः प्रयास करें।",
   "walletUsed": "वॉलेट उपयोग",
   "pointsUsed": "पॉइंट्स उपयोग",
+  "couponCode": "कूपन कोड",
+  "couponHint": "कूपन कोड डालें (वैकल्पिक)",
+  "viewCoupons": "कूपन देखें",
+  "codSubtitle": "ऑर्डर मिलने पर कैश/कार्ड से भुगतान करें",
+  "onlineComingSoon": "ऑनलाइन भुगतान (कार्ड/वॉलेट) जल्द आ रहा है",
   "cashOnDelivery": "कैश ऑन डिलीवरी",
 };

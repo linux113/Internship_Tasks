@@ -16,7 +16,7 @@ class CheckoutCouponBox extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           LatoFontStyle(
-              text: "Coupon Code",
+              text: "couponCode".tr,
               fontSize: FontSizes.f16,
               fontWeight: FontWeight.w700),
           const Space(0, 12),
@@ -33,7 +33,7 @@ class CheckoutCouponBox extends StatelessWidget {
                   controller: checkoutCtrl.txtCoupon,
                   textCapitalization: TextCapitalization.characters,
                   decoration: InputDecoration(
-                    hintText: "Coupon code likho (optional)",
+                    hintText: "couponHint".tr,
                     border: InputBorder.none,
                     hintStyle: TextStyle(
                         fontSize: FontSizes.f13,
@@ -45,7 +45,7 @@ class CheckoutCouponBox extends StatelessWidget {
                 ),
               ),
               LatoFontStyle(
-                      text: "View Coupons",
+                      text: "viewCoupons".tr,
                       color: appCtrl.appTheme.primary,
                       fontSize: FontSizes.f13,
                       fontWeight: FontWeight.w600)
@@ -69,7 +69,7 @@ class CheckoutPaymentSelector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           LatoFontStyle(
-              text: "Payment Method",
+              text: "paymentMethod".tr,
               fontSize: FontSizes.f16,
               fontWeight: FontWeight.w700),
           const Space(0, 12),
@@ -105,12 +105,12 @@ class CheckoutPaymentSelector extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         LatoFontStyle(
-                            text: "Cash on Delivery",
+                            text: "cashOnDelivery".tr,
                             fontSize: FontSizes.f14,
                             fontWeight: FontWeight.w600,
                             color: appCtrl.appTheme.blackColor),
                         LatoFontStyle(
-                            text: "Order milne par cash/card se pay karein",
+                            text: "codSubtitle".tr,
                             fontSize: FontSizes.f11,
                             color: appCtrl.appTheme.contentColor),
                       ]),
@@ -120,7 +120,7 @@ class CheckoutPaymentSelector extends StatelessWidget {
           ),
           const Space(0, 10),
           LatoFontStyle(
-              text: "Online payment (card/wallet) jald aa raha hai",
+              text: "onlineComingSoon".tr,
               fontSize: FontSizes.f11,
               color: appCtrl.appTheme.contentColor),
         ],

@@ -15,10 +15,16 @@ class OrderHistorySizeQty extends StatelessWidget {
             fontSize: FontSizes.f14,
             color: appCtrl.appTheme.blackColor),
         Row(children: [
-          OrderHistoryWidget().commonText(OrderHistoryFont().size),
-          const Space(5, 0),
-          OrderHistoryWidget().commonText(daysWiseList!.size),
-          const Space(10, 0),
+          // "Size:" demo label hata diya — yeh field ab order ka REAL TOTAL
+          // hai; currency symbol + rate conversion view par (server RAW AED
+          // deta hai, INR select karne par ₹ me convert hoga).
+          if ((daysWiseList!.size ?? '').isNotEmpty) ...[
+            OrderHistoryWidget().commonText("totalLabel".tr),
+            const Space(5, 0),
+            OrderHistoryWidget().commonText(
+                "${appCtrl.priceSymbol}${((double.tryParse(daysWiseList!.size ?? '') ?? 0) * appCtrl.rateValue).toStringAsFixed(2)}"),
+            const Space(10, 0),
+          ],
           OrderHistoryWidget().commonText(OrderHistoryFont().qty),
           const Space(5, 0),
           OrderHistoryWidget().commonText(daysWiseList!.qty.toString()),

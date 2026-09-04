@@ -260,19 +260,73 @@ class CheckoutController extends GetxController {
             'price': e.mrp ?? 0,
           });
         }
-        // response se order id — shape lenient (id / order_id / data.id...)
+        // response se order id — shape SUPER-lenient (id / orderId /
+        // order_number / root num / root string). User screenshot me Order
+        // Number BLANK aaya tha (server data:null ya alag key bhejta hai).
         int orderId = 0;
         try {
           dynamic d = res.data;
-          for (var i = 0; i < 3 && d is Map; i++) {
-            final v = d['id'] ?? d['Id'] ?? d['order_id'] ?? d['Order_Id'];
+          if (d is num) orderId = d.toInt();
+          if (orderId == 0 && d is String) {
+            orderId = int.tryParse(d) ?? 0;
+          }
+          for (var i = 0; i < 4 && d is Map && orderId == 0; i++) {
+            final m = Map<String, dynamic>.from(d as Map);
+            final v = m['id'] ??
+                m['Id'] ??
+                m['order_id'] ??
+                m['Order_Id'] ??
+                m['orderId'] ??
+                m['OrderId'] ??
+                m['order_number'] ??
+                m['Order_Number'] ??
+                m['number'] ??
+                m['Number'];
             if (v != null) {
               orderId = int.tryParse(v.toString()) ?? 0;
               break;
             }
-            d = d['data'] ?? d['Data'] ?? d['order'] ?? d['Order'];
+            d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
           }
         } catch (_) {}
+        // FALLBACK: response me id nahi mili to GetUserOrders ka SABSE NAYA
+        // order hi abhi placed order hoga — uski id dikhao (success page par
+        // "Order #1038" aana chahiye, BLANK nahi).
+        if (orderId == 0) {
+          try {
+            final r = await ApiService().request(
+              endpoint: ApiEndpoints.getUserOrders,
+              method: ApiMethod.get,
+              queryParams: {'page': '1', 'paginate': '5'},
+              fromJson: (json) {
+                dynamic raw = json;
+                for (var i = 0; i < 3 && raw is Map; i++) {
+                  raw = raw['data'] ??
+                      raw['Data'] ??
+                      raw['orders'] ??
+                      raw['Orders'] ??
+                      raw['items'];
+                }
+                return raw is List ? raw : const [];
+              },
+            );
+            if (r.isSuccess && r.data is List) {
+              int best = 0;
+              for (final e in (r.data as List)) {
+                if (e is! Map) continue;
+                final m = Map<String, dynamic>.from(e);
+                final v = m['id'] ??
+                    m['Id'] ??
+                    m['order_id'] ??
+                    m['Order_Id'] ??
+                    m['orderId'];
+                final n = int.tryParse(v?.toString() ?? '') ?? 0;
+                if (n > best) best = n;
+              }
+              if (best > 0) orderId = best;
+            }
+          } catch (_) {}
+        }
         lastPlacedOrder = {
           'items': snapItems,
           'total': _currentTotal(),

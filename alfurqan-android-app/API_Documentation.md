@@ -758,3 +758,20 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **Code-level extra guard added:** addToCart merged-replace bhejne se pehle EK aur verify — merge-world me flaky GetCart hiccup se naya item id:0 se DOBARA insert hokar DOUBLE na ho (double-add race condition permanently band).
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).
+
+## 04/09/2026 (v1.6.8+37) SCREENSHOT-PROOF fixes — order flow kaam kar raha hai CONFIRM (order #1037 server par bana!), ab 6 UI/price bugs fix
+
+**GOOD NEWS (screenshots se confirm):** Order place → server par bana (history me #1033, #1037 REAL orders) → REAL address + COD sahi gaya → currency conversion (₹2295 = 85 AED × 27) products/cart par sahi. Yeh fixes kaam kar rahe hain.
+
+**Uske BAAD screenshots me mile 6 bugs — sab fix:**
+
+1. **Delivery step total "₹85.0" (GALAT — ₹2295 hona tha) + Payment step total "₹0" (CRITICAL)** — ROOT: `CartBottomLayout` sirf symbol lagata tha, conversion (×rateValue) sirf CART page karti thi; delivery/payment RAW AED string dikhate the, aur payment ka arguments-chain kabhi-kabhi 0 pahunchata tha. FIX: conversion ab widget KE ANDAR (teeno pages unified) + payment/delivery LIVE cart total se (arguments sirf fallback — stale GetX instance se "₹0" kabhi nahi).
+2. **Order Number BLANK on success page** — server response me id alag key/null me aati hai; parse SUPER-lenient (id/Id/order_id/orderId/order_number/number + root num/string) + ultimate fallback: GetUserOrders ka SABSE NAYA order id (wohi abhi placed order hai). Ab "Order #1038" dikhega, blank nahi.
+3. **Address card me literal "null"** ("Hshs, sjsjnsj, ndb / null") + junk concat row ("dhxj494976979dhxj" = city+phone+city) — FIX: sirf non-null/non-empty parts, clean rows (street / locality+state / city+pincode / phone).
+4. **Order History card polish**: STATIC template MAP image (UNC Charlotte ka naksha — kisi cheez se connected nahi tha) HATA DIYA → plain card; khaali grey status pill hide; "Delivery Status:" label empty hone par hide; raw ISO date "2026-09-03T18:52:17.2243148" → "2026-09-03 18:52"; "Size: AED 76.70" label+ab hardcoded currency → "**Total: ₹2069**" jaisa (server RAW AED number + view par symbol/rate — ab INR me bhi history sahi).
+5. **Payment page ke Hinglish hardcode** ("Coupon code likho", "Order milne par cash/card se pay karein", "jald aa raha hai", "Coupon Code", "View Coupons", "Cash on Delivery", "Payment Method") → 7 strings ab .tr (5 naye keys ×4 languages: couponCode, couponHint, viewCoupons, codSubtitle, onlineComingSoon — multi-language demand).
+6. Cart page bhi ab widget-conversion use karti hai (double-conversion ka koi risk nahi — teeno pages RAW AED bhejti hain).
+
+**NOTE server-side (backend team):** GetUserOrders ki rows SLIM hain (products array NAHI bhejti) — isliye history card par item ka naam "Order #N" generic aata hai aur photo nahi; asli naam/photo tab aayengi jab backend rows me products bhejega (ya app har order ka GetOrder alag se kare — abhi nahi kiya, page speed ke liye). Order DETAIL page to v1.6.5 se pivot-parsing se sahi hai.
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%, 531 keys); audit3 clean (119 finds, 0 unguarded).

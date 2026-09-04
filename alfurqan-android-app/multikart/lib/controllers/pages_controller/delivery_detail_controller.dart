@@ -1,6 +1,7 @@
 import '../../config.dart';
 import '../../models/location_model.dart';
 import '../../utilities/address_store.dart';
+import '../home_product_controllers/cart_controller.dart';
 
 class DeliveryDetailController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -43,8 +44,15 @@ class DeliveryDetailController extends GetxController {
   @override
   void onReady() {
     refreshList();
-    // FIX: arguments null ho to "null" literal dikhta tha.
+    // FIX: arguments null/zero ho to LIVE cart ka total use karo — sirf
+    // arguments chain par bharosa karne se kabhi-kabhi galat/0 total pahunch
+    // jata tha (single source of truth = server cart).
     totalAmount = Get.arguments?.toString() ?? '0';
+    if ((double.tryParse(totalAmount) ?? 0) <= 0 &&
+        Get.isRegistered<CartController>()) {
+      final live = Get.find<CartController>().cartModelList?.totalAmount;
+      if ((live ?? 0) > 0) totalAmount = live!.toStringAsFixed(2);
+    }
     update();
     super.onReady();
   }

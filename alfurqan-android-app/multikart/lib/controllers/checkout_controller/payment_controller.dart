@@ -1,4 +1,5 @@
 import '../../config.dart';
+import '../home_product_controllers/cart_controller.dart';
 
 class PaymentController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -32,8 +33,14 @@ class PaymentController extends GetxController {
 
   @override
   void onReady() {
-    // FIX: arguments null ho to "null" literal dikhta tha.
+    // FIX (user screenshot "₹0" on Payment step): arguments chain fragile
+    // hai (stale GetX instance / re-entry par 0 aa jata tha). LIVE cart =
+    // single source of truth — pehle wahi, arguments sirf fallback.
     totalAmount = Get.arguments?.toString() ?? '0';
+    if (Get.isRegistered<CartController>()) {
+      final live = Get.find<CartController>().cartModelList?.totalAmount;
+      if ((live ?? 0) > 0) totalAmount = live!.toStringAsFixed(2);
+    }
     update();
     super.onReady();
   }

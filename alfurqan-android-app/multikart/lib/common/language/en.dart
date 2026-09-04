@@ -640,5 +640,10 @@ final dynamic en = {
   "orderLoadFailed": "Order details could not be loaded. Please retry.",
   "walletUsed": "Wallet Used",
   "pointsUsed": "Points Used",
+  "couponCode": "Coupon Code",
+  "couponHint": "Enter coupon code (optional)",
+  "viewCoupons": "View Coupons",
+  "codSubtitle": "Pay by cash or card when your order arrives",
+  "onlineComingSoon": "Online payment (card/wallet) is coming soon",
   "cashOnDelivery": "Cash On Delivery",
 };

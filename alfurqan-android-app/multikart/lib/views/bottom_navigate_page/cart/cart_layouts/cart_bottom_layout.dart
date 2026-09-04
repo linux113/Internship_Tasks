@@ -1,6 +1,11 @@
 import '../../../../config.dart';
 
 class CartBottomLayout extends StatelessWidget {
+  /// [totalAmount] = RAW AED (server currency) numeric string — conversion
+  /// (×rateValue + currency symbol) ye widget KHUD karta hai. Pehle cart page
+  /// convert karti thi par delivery/payment pages nahi karte the — isliye
+  /// INR select karne par Delivery par "₹85.0" aur Payment par "₹0" dikhta
+  /// tha (user screenshot). Ab teeno pages identical sahi amount dikhayengi.
   final String? totalAmount, buttonName, desc;
   final bool isPrimaryDesc;
   final GestureTapCallback? onTap;
@@ -43,7 +48,8 @@ class CartBottomLayout extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       LatoFontStyle(
-                              text: "${appCtrl.priceSymbol} $totalAmount",
+                              text:
+                                  "${appCtrl.priceSymbol} ${((double.tryParse(totalAmount ?? '') ?? 0) * appCtrl.rateValue).toStringAsFixed(2)}",
                               fontSize: FontSizes.f14,
                               textAlign: TextAlign.center)
                           .gestures(onTap: () => Get.back()),

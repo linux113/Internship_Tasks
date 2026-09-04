@@ -41,12 +41,14 @@ class _CartScreenState extends State<CartScreen> {
                           CartBottomLayout(
                               desc: CartFont().viewDetail,
                               buttonName: CartFont().placeOrder,
+                              // RAW AED (server currency) — conversion ab
+                              // CartBottomLayout KHUD karta hai (delivery/
+                              // payment ke saath unified; pehle sirf cart
+                              // convert karti thi isliye baaki pages galat
+                              // amount dikhate the).
                               totalAmount:
-                                  ((cartCtrl.cartModelList!
-                                                  .totalAmount ??
-                                              0) *
-                                          cartCtrl.appCtrl.rateValue)
-                                      .toStringAsFixed(2), // CRASH-FIX: null total safe
+                                  (cartCtrl.cartModelList!.totalAmount ?? 0)
+                                      .toStringAsFixed(2),
                               onTap: () {
                                 cartCtrl.appCtrl.isHeart = false;
                                 cartCtrl.update();

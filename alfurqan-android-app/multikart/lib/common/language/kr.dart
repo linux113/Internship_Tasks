@@ -624,5 +624,10 @@ final dynamic kr = {
   "orderLoadFailed": "주문 상세 정보를 불러오지 못했습니다. 다시 시도해 주세요.",
   "walletUsed": "지갑 사용",
   "pointsUsed": "포인트 사용",
+  "couponCode": "쿠폰 코드",
+  "couponHint": "쿠폰 코드 입력 (선택 사항)",
+  "viewCoupons": "쿠폰 보기",
+  "codSubtitle": "주문 도착 시 현금/카드로 결제하세요",
+  "onlineComingSoon": "온라인 결제(카드/지갑)가 곧 제공됩니다",
   "cashOnDelivery": "착불 결제",
 };
