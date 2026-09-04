@@ -31,15 +31,17 @@ class CartItemModel {
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
-    // lenient parse — string numbers bhi safe
+    // lenient parse — string numbers + camelCase/snake_case dono safe
+    // (server DTO snake_case deta hai, par entity-style camelCase bhi aa sakta hai)
     return CartItemModel(
-      id: jsonToInt(json['id']),
-      productId: jsonToInt(json['product_id']),
-      variationId: jsonToInt(json['variation_id']),
-      consumerId: jsonToInt(json['consumer_id']),
-      quantity: jsonToInt(json['quantity']),
-      subTotal: jsonToDouble(json['sub_total']),
-      wholesalePrice: jsonToDouble(json['wholesale_price']),
+      id: jsonToInt(json['id'] ?? json['Id']),
+      productId: jsonToInt(json['product_id'] ?? json['productId']),
+      variationId: jsonToInt(json['variation_id'] ?? json['variationId']),
+      consumerId: jsonToInt(json['consumer_id'] ?? json['consumerId']),
+      quantity: jsonToInt(json['quantity'] ?? json['Quantity']),
+      subTotal: jsonToDouble(json['sub_total'] ?? json['subTotal']),
+      wholesalePrice:
+          jsonToDouble(json['wholesale_price'] ?? json['wholesalePrice']),
       product: json['product'] is Map
           ? ProductApiModel.fromJson(
               Map<String, dynamic>.from(json['product'] as Map))
@@ -66,7 +68,7 @@ class CartApiModel {
   CartApiModel({this.total, this.items = const []});
 
   factory CartApiModel.fromJson(Map<String, dynamic> json) {
-    final rawItems = json['items'];
+    final rawItems = json['items'] ?? json['Items'];
     List<CartItemModel> parsedItems = [];
 
     if (rawItems is List) {
@@ -83,7 +85,7 @@ class CartApiModel {
     }
 
     return CartApiModel(
-      total: jsonToDouble(json['total']),
+      total: jsonToDouble(json['total'] ?? json['Total']),
       items: parsedItems,
     );
   }

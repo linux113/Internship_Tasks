@@ -713,3 +713,29 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **Note for Lalit:** GetOrder/GetUserOrders ka protected (login) JSON ab bhi nahi mila — agar ab bhi koi field mismatch dikhe to browser me login karke `https://alfurqan.ae/api/Orders/GetOrder?id=<order-id>` ka JSON bhej do, exact key mapping 100% kar dunga.
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%, 11 naye keys ×4 languages); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).
+
+## 04/09/2026 (v1.6.6+35) MULTI-ITEM CART fix — "ek se zyada add to cart nahi hote" ka ROOT CAUSE + permanent solution
+
+**Complaint (Lalit):** Order karte waqt ek se zyada products add to cart nahi hote the — doosra product add karte hi pehla GAYAB.
+
+**ROOT CAUSES (code + server behavior dono milakar):**
+1. **Har add par SIRF nayi line bheji jati thi** (`items:[newLine]`) — is backend (alfurqan.ae) ka AddToCart poora cart REPLACE kar deta hai, jisse pehla item server se hi mit jata tha. Cart me hamesha bas 1 item bachta tha.
+2. **`consumer_id` / `created_by_id` kabhi nahi bhejte the** — server ko yeh pata hi nahi chalta tha ki cart kis user ka hai (swagger CartItemDto/CartDto me yeh fields exist karte hai — isliye remove/update bhi kabhi-kabhi match nahi karte the).
+
+**FIX — DUAL-SEMANTIC safe flow (backend "replace" ho ya "merge", dono par sahi, bina duplicate ke):**
+1. **STEP A:** Har add se pehle FRESH `GetCart` — currently live server lines ka snapshot.
+2. **STEP B:** SIRF delta (nayi/badhi hui) line bhejo + `created_by_id` + line par `consumer_id` (merge-backend par purani lines dobara BHEJNE se qty DOUBLE ho sakti thi — isliye purani lines nahi bhejte).
+3. **STEP C (VERIFY):** `GetCart` dobara — naya product AAYA aur purane saare BACHE? → dono haan = SUCCESS (merge world me bas itna hi kaafi).
+4. **REPLACE world** (naya aaya par purane gayab — exactly Lalit ka bug): ab POORA merged array bhejo = purani ORIGINAL lines (unki ids ke saath) + nayi line FINAL qty par → dobara verify.
+5. **Sab fail** → HONEST toast `itemNotAdded` (4 languages) — fake success nahi.
+6. Same product dobara add → qty INCREMENT hoti hai (final qty server se verify).
+7. Guest (logged-out): pehle jaisa hi — login page par le jate hain with message.
+
+**Saath me safety nets:**
+- **Duplicate-line dedupe (UI):** server kabhi same product ki DO live lines bhej de to cart UI me wahi book do baar dikhti thi — ab `_mapApiCartToViewModel` (productId+variationId) se GROUP karke qty jod deta hai: ek product = ek row.
+- **CartApiModel lenient keys:** `product_id/productId`, `sub_total/subTotal`, `consumer_id/consumerId`, `items/Items`, `total/Total` — DTO/entity dono case.
+- Naya lang key ×4: `itemNotAdded`.
+
+**Note:** Is flow ke 2 extra GetCart calls hote hain (verify) — book store ke liye negligible; isse remove-chain ke saath cart ab BULLETPROOF hai (add + remove dono GetCart-verified).
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).

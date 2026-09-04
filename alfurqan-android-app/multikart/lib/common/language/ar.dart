@@ -622,6 +622,7 @@ final dynamic ar = {
   "on": "على",
   "yes": "yes",
   "no": "رقم",
+  "itemNotAdded": "تعذرت إضافة العنصر. حاول مرة اخرى.",
   "itemNotRemoved": "تعذر إزالة العنصر. حاول مرة اخرى.",
   "couponRemoved": "تمت إزالة القسيمة",
   "pleaseLoginFirst": "الرجاء تسجيل الدخول أولاً",

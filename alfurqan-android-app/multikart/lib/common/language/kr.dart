@@ -606,6 +606,7 @@ final dynamic kr = {
   "yes": "예",
   "no": "아니요",
   "Men Blue Denim Jacket": "남성 블루 데님 재킷",
+  "itemNotAdded": "항목을 추가할 수 없습니다. 다시 시도해 주세요.",
   "itemNotRemoved": "항목을 삭제할 수 없습니다. 다시 시도해 주세요.",
   "couponRemoved": "쿠폰이 제거되었습니다",
   "pleaseLoginFirst": "먼저 로그인해 주세요",
