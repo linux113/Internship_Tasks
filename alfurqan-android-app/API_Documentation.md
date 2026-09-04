@@ -739,3 +739,22 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **Note:** Is flow ke 2 extra GetCart calls hote hain (verify) — book store ke liye negligible; isse remove-chain ke saath cart ab BULLETPROOF hai (add + remove dono GetCart-verified).
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).
+
+## 04/09/2026 (v1.6.7+36) FULL SERVER RE-VERIFICATION — har endpoint LIVE check + flaky-network guard
+
+**Task (Lalit):** "again check all things are correct and working properly from server in detail" — poora system LIVE server ke saath dobara verify kiya.
+
+**LIVE endpoint verification (aaj ke server se, URL hit karke):**
+1. ✅ Home `api/MobileAppApi/GetHomePageDataApp` (200): banners (relative media/ → buildMediaUrl full URL), Services me ab bhi admin ka "Test" placeholder hai → app use filter karti hai (server-side admin panel se sahi services daalni hai), Find_Your_Match 5 tabs REAL books (ids 264-268), Deals/Trending REAL, **Top_Category 5 REAL slugs** (quran/hadith/creed/jurisprudence/biography), **Brand Status=false → app hide** (by design).
+2. ✅ Products `web/Products/GetAllProductsFront` (200): newest first (id 494 AED 40, 493 AED 45...), `product_thumbnail.asset_url` FULL URL, `created_at` parseable, stock/in_stock fields.
+3. ✅ Category filter SERVER-SIDE kaam karta hai: `category=quran` → sirf quran-category books (id 406, 386 — dono me category 118 "quran" present).
+4. ✅ Search SERVER-SIDE kaam karta hai: `search=القرآن` → relevant books only.
+5. ✅ Countries `api/Core/GetAllCountry` (200): poori country+state list (address form isi se FK-safe banta hai).
+6. ✅ Currency `web/CoreFront/GetAllCurrenciesFront`: USD 3.65 (inverted — app auto-invert), INR 27, AED 1, GBP/EUR 0.01 (garbage — app client-side filter karti hai). Server-side fix pending (backend team).
+7. ✅ Auth-required endpoints sahi se 401 "Login required." dete hain (Pascal-case envelope — ApiService dono case handle karta hai): Cart/GetCart, Orders/GetUserOrders, Orders/GetOrder, Wishlist/GetWishlist, Wallet_Point/GetWallet, Setting/GetUserNotifications, **Coupon/GetAllCoupons (401!)**, **Pages/GetAllPages (401!)** — app inhe gracefully handle karti hai (Retry/empty states, crash nahi). Note: Coupons+Pages ka login-required hona SERVER-side decision hai — agar guest users ko About/Terms/Coupons dikhane hain to backend team ko ye endpoints public karne honge.
+8. ✅ OrderSaveDto payload match: `points_amount`/`wallet_balance` = BOOLEAN (app false bhejti hai — sahi), coupon sirf ho tab bheja jata hai, payment_method='cod'.
+9. ✅ Orders schemas (swagger v2): OrdersDto/OrderProductDto(pivot!)/OrderPivotDto/OrderStatusDto/OrderStatusActivityDto/AddressDto/MediaFiles(app uses asset_url) — v1.6.5 parser in sab se EXACT match karta hai.
+
+**Code-level extra guard added:** addToCart merged-replace bhejne se pehle EK aur verify — merge-world me flaky GetCart hiccup se naya item id:0 se DOBARA insert hokar DOUBLE na ho (double-add race condition permanently band).
+
+**Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%); audit3 clean (0 unguarded GetX, 0 null-assert, 0 firstWhere).

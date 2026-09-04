@@ -233,6 +233,16 @@ class CartController extends GetxController {
 
     bool ok = loggedIn ? await verify() : false;
 
+    // FLAKY-NETWORK GUARD: merged-replace bhejne se PEHLE ek baar aur verify
+    // karo. Warna merge-world me ye scenario possible tha: delta send SUCCESS
+    // ho gaya par verify wala GetCart network-hiccup se fail ho gaya → hum
+    // poora merged array bhej dete → naya item id:0 se DOBARA insert hokar
+    // DOUBLE ho jata. Doosri verify pass ho gayi to replace bhejne ki
+    // zaroorat hi nahi.
+    if (!ok && loggedIn) {
+      ok = await verify();
+    }
+
     // ---- REPLACE world: purane gayab ho gaye (ya naya nahi aaya) ->
     // POORA merged array bhejo: purani ORIGINAL lines + nayi line FINAL
     // qty ke saath. Isse replace-backend me bhi poora multi-item cart
