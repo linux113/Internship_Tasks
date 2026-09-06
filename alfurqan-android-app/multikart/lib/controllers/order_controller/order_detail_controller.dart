@@ -311,6 +311,7 @@ class OrderDetailController extends GetxController {
     if (status.isEmpty) {
       status = OrderStatusService.nameFor(j['order_status_id'] ??
           j['Order_Status_Id'] ??
+          j['orderStatusId'] ??
           j['status_id'] ??
           j['statusId']);
     }
@@ -474,6 +475,7 @@ class OrderDetailController extends GetxController {
         if (nm.isEmpty) {
           nm = OrderStatusService.nameFor(a['order_status_id'] ??
               a['Order_Status_Id'] ??
+              a['orderStatusId'] ??
               a['status_id'] ??
               a['statusId']);
         }

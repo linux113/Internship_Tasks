@@ -820,3 +820,14 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 3. **Success page Order # display consistency:** ab `order_number` PEHLE (history card jaisa), PK id fallback — "#42 vs #1042" jaisa mismatch nahi.
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100% — 535 keys each; .tr 308 used, 0 undefined); audit3 CLEAN (119 finds, core guarded).
+
+## 06/09/2026 (v1.6.12+41) User-reported 2 GLITCHES fix — (1) item hone par bhi "cart empty" toast, (2) Track Order → detail → BACK = PHONE HOME
+
+**Screenshots 1:49-1:50 me sab sahi:** category collection, product detail (poora Arabic description), cart ₹2295, delivery/payment **khulte hi price** (payment-0 glitch FIXED confirm), order #1041 place ✓ (history se number match), detail page real data, tracking me "Order update" (ab "False" NAHI).
+
+**Reported glitches — ROOT + FIX:**
+1. **BACK dabate hi phone home (app band):** Order Success ka "Track Order" `Get.offAllNamed(orderHistory)` karta hai — stack SAaf → History/Detail ka BACK pop karta tha root se → app exit. FIX: `smartBack()` helper (BackArrowButton globally + OrderHistory + OrderDetail dono par PopScope for HARDWARE back) — stack me page ho to normal back, ROOT ho to app band hone ke bajaye **dashboard (home)** kholo. Ab kisi bhi order-page se back = app me hi rahega.
+2. **"Your cart is empty" toast jabki item dikh raha tha:** place-order ki empty-check ek transient refresh-hiccup par galat-empty maan leti thi + dashboard par DHAKA deti thi (isliye toast cart page ke upar tairta dikha). FIX: empty tabhi maano jab **2 refresh attempts** (700ms gap) ke baad bhi dono sources khaali hon; toast ke baad user **yahin** rahe (redirect hata diya), dobara PLACE ORDER dabate hi kaam — waise bhi 2nd tap par order banta tha.
+3. Tracking steps grey hi reh gaye the (#1041): server response me entity camelCase `orderStatusId` aa sakta hai — order + activity dono chains me add (pending step ab color hoga jab server id bhejega).
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100%; .tr 308, 0 undefined); audit3 CLEAN (core guarded).

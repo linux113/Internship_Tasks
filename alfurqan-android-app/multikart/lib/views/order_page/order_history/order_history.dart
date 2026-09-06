@@ -1,5 +1,6 @@
 import 'package:multikart/config.dart';
 import 'package:multikart/shimmer_layouts/order_history_shimmer/order_history_shimmer.dart';
+import 'package:multikart/widgets/common_icons/back_arrow_button.dart';
 
 class OrderHistory extends StatelessWidget {
   final orderHistoryCtrl = Get.put(OrderHistoryController());
@@ -9,7 +10,16 @@ class OrderHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<OrderHistoryController>(builder: (_) {
-      return Directionality(
+      // SMART BACK (user glitch: success → Track Order yaha aaya to stack
+      // root tha — BACK dabate hi phone home): hardware back intercept;
+      // root ho to dashboard kholo.
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          smartBack();
+        },
+        child: Directionality(
         textDirection: orderHistoryCtrl.appCtrl.isRTL ||
                 orderHistoryCtrl.appCtrl.languageVal == "ar"
             ? TextDirection.rtl
@@ -66,6 +76,7 @@ class OrderHistory extends StatelessWidget {
               ],
             ).width(MediaQuery.of(context).size.width),
           ),
+        ),
         ),
       );
     });

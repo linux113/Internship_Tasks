@@ -247,15 +247,23 @@ class CheckoutController extends GetxController {
     // khaali" toast aa jata tha (user report). Refresh ke baad bhi khaali
     // ho tabhi toast do.
     var products = _orderProducts();
-    if (products.isEmpty) {
+    // FALSE-EMPTY guard (06/09 user glitch: cart me item dikh raha tha,
+    // phir bhi "Your cart is empty" toast aa gaya): ek transient network
+    // hiccup par refresh shuru me khaali de sakta hai — 2 baar refresh
+    // karke tabhi empty maano (donon sources khaali hon tabhi).
+    for (var attempt = 0; attempt < 2 && products.isEmpty; attempt++) {
       try {
         await _cartCtrl?.getCart(silent: true);
       } catch (_) {}
       products = _orderProducts();
+      if (products.isEmpty && attempt == 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
     }
     if (products.isEmpty) {
       _toast('cartEmptyToast'.tr);
-      Get.offAllNamed(routeName.dashboard);
+      // FIX: galat-empty par dashboard par DHAKA mat do (stack bhi tootta
+      // tha) — user yahin rahe aur dobara try kar sake.
       return;
     }
 
