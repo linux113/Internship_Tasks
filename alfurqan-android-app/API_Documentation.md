@@ -795,3 +795,17 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **Pending (backend team):** GetUserOrders products[]; Coupons/Pages public; GBP/EUR 0.01; Services "Test" placeholder; GetAllProductsFront sort params dead; entwino.in par store data (agar wahan switch karwana hai).
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (lang parity 100% — en/ar/hi/kr 534 keys each; .tr used 307, 0 undefined; routes 30, 0 undefined) + template-era duplicate keys ('Open Orders'/'off' har file me DO baar the — ar/hi/kr me discount-badge 'off' ka matlab galat 'बंद' ban gaya tha) saaf kiye; audit3 clean (40 GetX controllers, 118 finds, core flows 0 unguarded).
+
+## 06/09/2026 (v1.6.10+39) User screenshots se 2 bade bugs — "Server error (400)" order place par + Order Detail "#34/#1033" mismatch
+
+**Screenshots (06/09, 12:51) ka report:** Home/Category/Product ✓, Cart total ₹1755 ✓, Delivery total sahi ✓, Payment Bag total ₹1755 + Delivery ₹0 ✓ (v1.6.8/1.6.9 fixes kaam kar rahe!), History cards clean (Total ₹, saaf date, no map) ✓ — LEKIN:
+
+1. **PLACE ORDER → "Server error (400). Please try again." (CRITICAL — naya order nahi ban raha):**
+   - FIX A (visibility): `_handleDioError` ab server ki ASLI wajah nikaalta hai — ASP.NET validation shape `{"errors":{"field":["msg"]}}` flatten karke toast me dikhata hai ("Server ne reject kiya (400): field: message" — Lalit ke agle screenshot me exact field dikh jayega) + title/Data/plain-text bhi. Dio onError log me ab poora error BODY print hota hai (console debugging).
+   - FIX B (self-heal): backend validation live badal rahi hai — placeOrder ab **3 payload variants** try karta hai: V1 as-is → V2 (null/khaali `variation_id` key + khaali delivery strings HATA do) → V3 (`variation_id:""`). 400 par agla variant, pehla success final.
+2. **Order Detail "#34" vs History "#1033" + status-flow/address gayab:** rows ka id aur GetOrder ka id milte nahi (34 PK vs 1033 order#). FIX: **ID DOUBLE-PROBE** — pehla id khaali/nakaam jawab de (na products na order_number) to summary card ke number se EK baar aur GetOrder try; 2nd probe ke sahi id par detail poori aayegi (status flow + address + real item). orderNumber parse ab khaali hone par prefill (card number) ko overwrite NAHI karta.
+3. OrderStatusService debug log: console me `[OrderStatusService] code=.. steps=N` — status list aayi ya nahi turant pata.
+
+**DEBUG NOTE (user ke liye):** ApiService console me ➡️ request body / ✅ full response / ❌ error+body print karti hai — agar order place/detail phir fail ho, terminal ka text copy karke bhejo to EXACT server wajah mil jayegi.
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100%, .tr 0 undefined); audit3 CLEAN (core flows guarded).

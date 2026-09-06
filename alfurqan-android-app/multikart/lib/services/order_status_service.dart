@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import '../models/json_parse_utils.dart';
 import 'api_endpoints.dart';
 import 'api_service.dart';
@@ -63,6 +65,9 @@ class OrderStatusService {
         statuses.sort((a, b) =>
             (a['sequence'] as int).compareTo(b['sequence'] as int));
       }
+      // Device-console visibility (remote debug): status list aayi ya nahi
+      log('[OrderStatusService] code=${res.code} success=${res.isSuccess} '
+          'steps=${statuses.length}');
       _tried = true;
     } catch (_) {
       _tried = true;

@@ -127,6 +127,35 @@ class OrderDetailController extends GetxController {
     _prefillStatus = status;
   }
 
+  /// Prefill summary me item ka naam "Order #1033" hota hai (card ka order
+  /// number) — wahi se digits nikaalo.
+  int _summaryOrderNo() {
+    for (final it in _prefillItems) {
+      final nm = (it['name'] ?? '').toString();
+      final m = RegExp(r'Order\s*#\s*(\d+)').firstMatch(nm);
+      if (m != null) return int.tryParse(m.group(1)!) ?? 0;
+    }
+    return 0;
+  }
+
+  /// Response me asli order hai ya khaali/nakaam? (na order_number, na
+  /// products — aise jawab ko "empty" maano).
+  bool _looksEmptyOrder(ApiResponse<Map<String, dynamic>> res) {
+    if (!res.isSuccess || res.data == null || res.data!.isEmpty) return true;
+    final d = res.data!;
+    final hasNum = (d['order_number'] ??
+            d['Order_Number'] ??
+            d['orderNumber'] ??
+            d['order_no']) !=
+        null;
+    final hasItems = d['products'] is List ||
+        d['Products'] is List ||
+        d['items'] is List ||
+        d['order_items'] is List ||
+        d['Order_Items'] is List;
+    return !hasNum && !hasItems;
+  }
+
   Future<void> fetchOrderDetail() async {
     // prefill ho chuka ho to data dikhte hue background me refresh karo —
     // poora spinner wali white screen NAHI (Issue #9).
@@ -137,7 +166,7 @@ class OrderDetailController extends GetxController {
     await OrderStatusService.load();
     update();
     try {
-      final res = await ApiService().request<Map<String, dynamic>>(
+      var res = await ApiService().request<Map<String, dynamic>>(
         endpoint: ApiEndpoints.getOrder,
         method: ApiMethod.get,
         queryParams: {'id': orderId.toString()},
@@ -163,6 +192,46 @@ class OrderDetailController extends GetxController {
               : <String, dynamic>{};
         },
       );
+      // ID DOUBLE-PROBE (06/09, "Order #34 vs #1033" screenshot): kuch
+      // backends me GetUserOrders row ka id aur GetOrder ka id MILTE NAHI
+      // (row PK = 34, customer order# = 1033 ya ulta). Pehla id KHAALI
+      // jawab de to summary card ke number se EK baar aur try karo.
+      if (_looksEmptyOrder(res)) {
+        final alt = _summaryOrderNo();
+        if (alt > 0 && alt != orderId) {
+          try {
+            final res2 = await ApiService().request<Map<String, dynamic>>(
+              endpoint: ApiEndpoints.getOrder,
+              method: ApiMethod.get,
+              queryParams: {'id': alt.toString()},
+              fromJson: (json) {
+                dynamic raw = json;
+                for (var i = 0; i < 3 && raw is Map; i++) {
+                  final m = Map<String, dynamic>.from(raw as Map);
+                  if (m.containsKey('items') ||
+                      m.containsKey('order_items') ||
+                      m.containsKey('Order_Items') ||
+                      m.containsKey('total') ||
+                      m.containsKey('Total') ||
+                      m.containsKey('order_number') ||
+                      m.containsKey('Order_Number')) {
+                    return m;
+                  }
+                  raw = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
+                  if (raw == null) return m;
+                }
+                return raw is Map
+                    ? Map<String, dynamic>.from(raw as Map)
+                    : <String, dynamic>{};
+              },
+            );
+            if (!_looksEmptyOrder(res2)) {
+              orderId = alt;
+              res = res2;
+            }
+          } catch (_) {}
+        }
+      }
       if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
         _parse(res.data!);
       } else if (!_prefilledFromSummary) {
@@ -202,14 +271,19 @@ class OrderDetailController extends GetxController {
   /// detail page par "kuch nahi" (empty items / AED 0.00) dikh raha tha.
   void _parse(Map<String, dynamic> j) {
     // ---- order number / date ----
-    orderNumber = jsonToString(j['order_number'] ??
+    // FIX (06/09, screenshot "Order #34" vs history "Order #1033"): server
+    // kabhi SLIM/sahi shape nahi deta — parsed value KHAALI ho to prefill
+    // (history card ka number) hi dikhte raho, pure blank/par overwrite NAHI.
+    final parsedNo = jsonToString(j['order_number'] ??
             j['Order_Number'] ??
             j['orderNumber'] ??
             j['order_no'] ??
             j['orderNo'] ??
+            j['Order_Id'] ??
             j['orderid'] ??
             j['id']) ??
         '';
+    if (parsedNo.isNotEmpty) orderNumber = parsedNo;
     orderDate = jsonToString(j['created_at'] ??
             j['Created_at'] ??
             j['createdAt'] ??

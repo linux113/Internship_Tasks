@@ -83,7 +83,11 @@ class ApiService {
           return handler.next(response);
         },
         onError: (DioException e, handler) {
-          log('❌ [${e.requestOptions.path}] => ${e.message}');
+          // FIX (06/09): error ka BODY bhi log karo — ASP.NET validation
+          // errors {"errors":{"field":["msg"]}} isi me dikhate hai. Remote
+          // device ke console se exact server-reason mil jata hai.
+          log('❌ [${e.requestOptions.path}] => ${e.message}'
+              '\n   errorBody: ${e.response?.data}');
           return handler.next(e);
         },
       ),
@@ -224,11 +228,47 @@ class ApiService {
   }
 
   String _handleDioError(DioException e) {
-    // Backend agar error ke sath bhi { message/Message: "..." } bhejta hai to wahi dikhao
-    if (e.response?.data is Map) {
-      final data = e.response?.data as Map;
+    // Backend error body se ASLI reason nikaalo — purana code sirf generic
+    // "Server error (400)" dikhata tha, jisse user ko kuch samajh nahi
+    // aata tha aur humein debug info nahi milti thi.
+    final code = e.response?.statusCode;
+    final raw = e.response?.data;
+    if (raw is Map) {
+      final data = raw as Map;
       final msg = data['message'] ?? data['Message'];
-      if (msg != null) return msg.toString();
+      if (msg != null && msg.toString().isNotEmpty) {
+        return msg.toString();
+      }
+      // ASP.NET validation shape: {"title":"One or more validation errors
+      // occurred.","errors":{"Order.Products":["The Products field is
+      // required."], ...}} — pehli field galti ko padh- layak text banao.
+      final errs = data['errors'] ?? data['Errors'];
+      if (errs is Map && errs.isNotEmpty) {
+        final parts = <String>[];
+        for (final entry in errs.entries) {
+          final v = entry.value;
+          if (v is List && v.isNotEmpty) {
+            parts.add('${entry.key}: ${v.first}');
+          } else if (v != null) {
+            parts.add('${entry.key}: $v');
+          }
+          if (parts.length >= 2) break;
+        }
+        if (parts.isNotEmpty) {
+          return 'Server ne reject kiya ($code): ${parts.join(' | ')}';
+        }
+      }
+      final title = data['title'] ?? data['Title'];
+      if (title != null && title.toString().isNotEmpty) {
+        return 'Server error ($code): $title';
+      }
+      final d = data['data'] ?? data['Data'];
+      if (d is String && d.isNotEmpty) {
+        return 'Server error ($code): $d';
+      }
+    } else if (raw is String && raw.trim().isNotEmpty && raw.length < 300) {
+      // Kabhi-kabhi plain text error aata hai
+      return 'Server error ($code): ${raw.trim()}';
     }
 
     switch (e.type) {
@@ -247,7 +287,7 @@ case DioExceptionType.cancel:
 return 'The request was cancelled.';
 
 case DioExceptionType.badResponse:
-return 'Server error (${e.response?.statusCode ?? 'Unknown'}). Please try again.';
+return 'Server error ($code). Please try again.';
 
 case DioExceptionType.unknown:
 if (e.error is SocketException) {

@@ -304,13 +304,52 @@ class CheckoutController extends GetxController {
         );
       } catch (_) {}
 
-      // STEP 2 — FINAL: order place
-      final res = await ApiService().request(
-        endpoint: ApiEndpoints.placeOrder,
-        method: ApiMethod.post,
-        data: payload,
-        fromJson: (json) => json,
-      );
+      // STEP 2 — FINAL: order place.
+      // PAYLOAD VARIANT RETRY (06/09 — user ko "Server error (400)" mila):
+      // backend ki validation live badal rahi hai — kuch servers NULL
+      // variation_id reject karte hai, kuch MISSING key ko, kuch khaali
+      // delivery_description ko. 3 shapes try karo; pehla success final.
+      final variants = <Map<String, dynamic>>[];
+      variants.add(payload); // V1: as-is (aaj tak yahi chalta tha)
+      // V2: null/khaali variation_id key HATAO + khaali strings hatao
+      final v2 = Map<String, dynamic>.from(payload);
+      v2['products'] = [
+        for (final p in products)
+          <String, dynamic>{
+            'product_id': p['product_id'],
+            if ((p['variation_id']?.toString() ?? '').isNotEmpty)
+              'variation_id': p['variation_id'],
+            'quantity': p['quantity'],
+          }
+      ];
+      v2.remove('delivery_description');
+      v2.remove('delivery_interval');
+      variants.add(v2);
+      // V3: variation_id "" (kuch validators ko empty-STRING chahiye)
+      final v3 = Map<String, dynamic>.from(v2);
+      v3['products'] = [
+        for (final p in products)
+          <String, dynamic>{
+            'product_id': p['product_id'],
+            'variation_id': (p['variation_id']?.toString() ?? ''),
+            'quantity': p['quantity'],
+          }
+      ];
+      variants.add(v3);
+
+      ApiResponse<dynamic>? lastRes;
+      for (final body in variants) {
+        lastRes = await ApiService().request(
+          endpoint: ApiEndpoints.placeOrder,
+          method: ApiMethod.post,
+          data: body,
+          fromJson: (json) => json,
+        );
+        if (lastRes.isSuccess) break;
+        // sirf validation-400 par agla variant try; 401/network par ruk jao
+        if (lastRes.code != null && lastRes.code != 400) break;
+      }
+      final res = lastRes!;
 
       if (res.isSuccess) {
         // ---- Issue#3: success page ke liye REAL order snapshot banao ----
