@@ -627,6 +627,8 @@ final dynamic en = {
   "itemNotAdded": "Item could not be added. Please try again.",
   "itemNotRemoved": "Item could not be removed. Please try again.",
   "couponRemoved": "Coupon removed",
+  "addressRemoved": "Address removed",
+  "addressNotRemoved": "Address could not be removed on the server. It may be linked to an order — otherwise please try again.",
   "pleaseLoginFirst": "Please login first",
   "cartEmptyToast": "Your cart is empty",
   "saveDeliveryAddressFirst": "Please save a delivery address first",

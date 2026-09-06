@@ -67,6 +67,8 @@ class ApiEndpoints {
   static const String getAllAddress = 'Location/GetAllAddress';
   static const String updateAddress = 'Location/UpdateAddress';
   static const String deleteAddress = 'Location/DeleteAddress';
+  // Bulk delete (swagger verify): DELETE ?ids=<csv> — single id bhi chalti hai
+  static const String deleteAllAddress = 'Location/DeleteAllAddress';
 
   // ---------------- Wishlist (login ke baad) ----------------
   static const String addToWishlist = 'Wishlist/AddToWishlist';

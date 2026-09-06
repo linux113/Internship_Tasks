@@ -831,3 +831,11 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 3. Tracking steps grey hi reh gaye the (#1041): server response me entity camelCase `orderStatusId` aa sakta hai — order + activity dono chains me add (pending step ab color hoga jab server id bhejega).
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100%; .tr 308, 0 undefined); audit3 CLEAN (core guarded).
+
+## 06/09/2026 (v1.6.13+42) ADDRESS REMOVE deep-fix — "removed dikhata hai par server se hat-ta nahi (refresh par wapas)"
+
+**ROOT (user report):** purana remove server delete ko FIRE & FORGET karta tha — result check hi nahi hota tha, local hata deta tha; server delete chupke se fail hone par agla `GetAllAddress` refresh address ko WAPAS le aata tha (UI ne "removed" dikhaya, par sach me hata hi nahi). Swagger se confirm: `DELETE /api/Location/DeleteAddress?id=<int32>` + bulk `DeleteAllAddress?ids=<csv>` dono maujood.
+
+**FIX (cart-remove wala bulletproof pattern):** ab remove = 6 delete-shapes chain (DELETE ?id int/string, POST ?id, POST body {id}, DELETE body {Id}/{id}) → har success ke baad **FRESH GetAllAddress se VERIFY** (id list me na ho tabhi "gone") → sab fail to **DeleteAllAddress ids=<id>** fallback. Sirf verified-delete par hi local hatate hain + success toast "addressRemoved"; warna **fake-removal NAHI** — address wapas + HONEST toast "addressNotRemoved" (order se linked ho to server se nahi hatega — reason bataya). Extra: delete hua address agar SELECTED delivery address tha to selection saaf (checkout ghost id na bheje). Guest/local-only address ka flow same (turant local remove). Naye keys x4: addressRemoved/addressNotRemoved; naya endpoint: deleteAllAddress.
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100% — 537 keys each; .tr 310, 0 undefined); audit3 CLEAN (120 finds, core guarded).

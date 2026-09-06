@@ -611,6 +611,8 @@ final dynamic kr = {
   "itemNotAdded": "항목을 추가할 수 없습니다. 다시 시도해 주세요.",
   "itemNotRemoved": "항목을 삭제할 수 없습니다. 다시 시도해 주세요.",
   "couponRemoved": "쿠폰이 제거되었습니다",
+  "addressRemoved": "주소가 삭제되었습니다",
+  "addressNotRemoved": "서버에서 주소를 삭제할 수 없습니다. 주문에 연결되어 있을 수 있습니다 — 그렇지 않으면 다시 시도해 주세요.",
   "pleaseLoginFirst": "먼저 로그인해 주세요",
   "cartEmptyToast": "장바구니가 비어 있습니다",
   "saveDeliveryAddressFirst": "먼저 배송 주소를 저장해 주세요",

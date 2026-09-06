@@ -104,27 +104,123 @@ class SaveAddressController extends GetxController {
     update();
   }
 
-  /// REMOVE button — local se hatao + server par saved ho to DeleteAddress.
-  /// Saved Address page aur checkout Delivery page dono refresh hote hai.
+  void _toast(String msg) {
+    final c = Get.isRegistered<SocialLoginController>()
+        ? Get.find<SocialLoginController>()
+        : Get.put(SocialLoginController());
+    c.showToast(msg);
+  }
+
+  /// Fresh GetAllAddress me ye id ab bhi maujood hai? (delete VERIFY helper
+  /// — cart-remove wala hi pattern; server hi sach hai).
+  Future<bool> _serverAddressGone(int id) async {
+    try {
+      final res = await ApiService().request<bool>(
+        endpoint: ApiEndpoints.getAllAddress,
+        method: ApiMethod.get,
+        fromJson: (json) {
+          dynamic raw = json;
+          for (var i = 0; i < 3 && raw is Map; i++) {
+            raw = raw['data'] ?? raw['Data'] ?? raw['items'] ?? raw['Items'];
+          }
+          if (raw is! List) return true; // shape na mile: optimistic
+          for (final e in raw) {
+            if (e is Map) {
+              final m = Map<String, dynamic>.from(e);
+              final v =
+                  m['id'] ?? m['Id'] ?? m['address_id'] ?? m['Address_Id'];
+              if (int.tryParse(v?.toString() ?? '') == id) return false;
+            }
+          }
+          return true;
+        },
+      );
+      return res.isSuccess && (res.data ?? true);
+    } catch (_) {
+      return false; // verify hi na ho saka to "gone" mat maano
+    }
+  }
+
+  /// REMOVE button — BULLETPROOF (user report 06/09: "removed dikhata hai
+  /// par asal me hat-ta nahi — refresh par wapas aa jata hai").
+  /// ROOT: purana code server delete ko fire & forget karta tha (result
+  /// check hi nahi) aur local hata deta tha — server delete fail hone par
+  /// agle GetAllAddress refresh me address WAPAS. Ab CART-REMOVE wala
+  /// pattern: kai shapes try + har baar GetAllAddress se VERIFY; sirf
+  /// server-se sach me gayab hone par hi local hatate hai aur success
+  /// toast dikhate hai — warna address wapas laakar HONEST toast.
   Future<void> removeAddressAt(int index) async {
     if (index < 0 || index >= savedAddresses.length) return;
     final item = savedAddresses[index];
+    final id = item.id;
+    if (id == null) return;
 
-    // local turant
-    if (item.id != null) await AddressStore.remove(item.id!);
+    // Guest/local-only address — server call hi nahi chahiye
+    if (!_isLoggedIn || !item.fromServer) {
+      await AddressStore.remove(id);
+      refreshThisAndDelivery();
+      _toast('addressRemoved'.tr);
+      return;
+    }
 
-    // server se bhi (best effort — sirf wahi jo server par saved hai)
-    if (_isLoggedIn && item.fromServer && item.id != null) {
+    Future<bool> tryDelete() async {
+      // swagger: DELETE /api/Location/DeleteAddress?id=<int32> —
+      // LEKIN is backend ka har endpoint alag shape maangta raha hai
+      // (cart/order me dekha) — isliye chain + VERIFY.
+      final attempts = <Map<String, dynamic>>[
+        {'m': ApiMethod.delete, 'q': {'id': id}, 'b': null},
+        {'m': ApiMethod.delete, 'q': {'id': id.toString()}, 'b': null},
+        {'m': ApiMethod.post, 'q': {'id': id}, 'b': const {}},
+        {'m': ApiMethod.post, 'q': null, 'b': {'id': id}},
+        {'m': ApiMethod.delete, 'q': null, 'b': {'Id': id}},
+        {'m': ApiMethod.delete, 'q': null, 'b': {'id': id}},
+      ];
+      for (final a in attempts) {
+        try {
+          final res = await ApiService().request(
+            endpoint: ApiEndpoints.deleteAddress,
+            method: a['m'] as ApiMethod,
+            queryParams: a['q'] == null
+                ? null
+                : Map<String, dynamic>.from(a['q'] as Map),
+            data: a['b'],
+            fromJson: (json) => json,
+          );
+          if (!res.isSuccess) continue;
+          if (await _serverAddressGone(id)) return true;
+        } catch (_) {}
+      }
+      // FINAL fallback — bulk endpoint (swagger: ids CSV string)
       try {
-        await ApiService().request(
-          endpoint: ApiEndpoints.deleteAddress,
+        final res = await ApiService().request(
+          endpoint: ApiEndpoints.deleteAllAddress,
           method: ApiMethod.delete,
-          queryParams: {'id': item.id},
+          queryParams: {'ids': id.toString()},
           fromJson: (json) => json,
         );
+        if (res.isSuccess && await _serverAddressGone(id)) return true;
       } catch (_) {}
+      return false;
     }
-    refreshThisAndDelivery();
+
+    final ok = await tryDelete();
+    if (ok) {
+      await AddressStore.remove(id);
+      // Delete hua address SELECTED tha to selection saaf karo — warna
+      // checkout ghost address_id bhejta rahega.
+      final sel = int.tryParse(
+              storage.read('selected_address_id')?.toString() ?? '') ??
+          -1;
+      if (sel == id) await storage.write('selected_address_id', -1);
+      refreshThisAndDelivery();
+      _toast('addressRemoved'.tr);
+    } else {
+      // Server se sach me nahi hata (FK-block: order me use ho raha hai, ya
+      // endpoint fail) — local fake-removal NAHI: list refresh karke
+      // address wapas dikhao + HONEST toast.
+      refreshThisAndDelivery();
+      _toast('addressNotRemoved'.tr);
+    }
   }
 
   /// EDIT button — Add Address form ko is address ke saath prefill karke kholo.

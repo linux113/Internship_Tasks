@@ -627,6 +627,8 @@ final dynamic ar = {
   "itemNotAdded": "تعذرت إضافة العنصر. حاول مرة اخرى.",
   "itemNotRemoved": "تعذر إزالة العنصر. حاول مرة اخرى.",
   "couponRemoved": "تمت إزالة القسيمة",
+  "addressRemoved": "تم حذف العنوان",
+  "addressNotRemoved": "تعذر حذف العنوان من الخادم. قد يكون مرتبطًا بطلب — وإلا حاول مرة أخرى.",
   "pleaseLoginFirst": "الرجاء تسجيل الدخول أولاً",
   "cartEmptyToast": "سلة التسوق فارغة",
   "saveDeliveryAddressFirst": "الرجاء حفظ عنوان التوصيل أولاً",

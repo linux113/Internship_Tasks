@@ -630,6 +630,8 @@ final dynamic hi = {
   "itemNotAdded": "आइटम जोड़ा नहीं जा सका। कृपया पुनः प्रयास करें।",
   "itemNotRemoved": "आइटम हटाया नहीं जा सका। कृपया पुनः प्रयास करें।",
   "couponRemoved": "कूपन हटा दिया गया",
+  "addressRemoved": "पता हटा दिया गया",
+  "addressNotRemoved": "सर्वर से पता नहीं हटाया जा सका। हो सकता है यह किसी ऑर्डर से जुड़ा हो — वरना पुनः प्रयास करें।",
   "pleaseLoginFirst": "कृपया पहले लॉगिन करें",
   "cartEmptyToast": "आपकी कार्ट खाली है",
   "saveDeliveryAddressFirst": "कृपया पहले डिलीवरी पता सहेजें",
