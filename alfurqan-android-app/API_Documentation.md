@@ -775,3 +775,23 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **NOTE server-side (backend team):** GetUserOrders ki rows SLIM hain (products array NAHI bhejti) — isliye history card par item ka naam "Order #N" generic aata hai aur photo nahi; asli naam/photo tab aayengi jab backend rows me products bhejega (ya app har order ka GetOrder alag se kare — abhi nahi kiya, page speed ke liye). Order DETAIL page to v1.6.5 se pivot-parsing se sahi hai.
 
 **Verify:** 543 files 0 bracket problems; audit2 ALL CLEAN (lang parity 100%, 531 keys); audit3 clean (119 finds, 0 unguarded).
+
+## 06/09/2026 (v1.6.9+38) Backend (Entwino) ke naye APIs integrate — dynamic Order Status + CheckOut preview + add-to-cart interface doc
+
+**Backend team ka message (06/09, entwino.in APIs):** GetOrder (order summary), GetOrderStatus (status ab DYNAMIC — table se aate hai), CheckOut + OrderPlace (curl diya), GetAllCoupons (params optional). Saath hi unhone hamara add-to-cart interface maanga.
+
+**LIVE PROBE (dono servers) se pakka kiya:**
+1. `Orders/GetOrderStatus` + `Orders/CheckOut` alfurqan.ae par BHI maujood hain (401 "Login required" = route EXISTS, 404 nahi) — app alfurqan.ae par hi naye endpoints use karti hai.
+2. **entwino.in = backend company ka ALAG demo store** (live verify): `GetHomePageDataApp` → `contentApp:{}` (khaali home), currencies sirf USD(95!)/INR(1) — **AED hai hi nahi**, products = computer parts (SMPS/HDD, brand "Entwino"). Book app wahan switch karti to kitabon ki jagah computer parts dikhte! Isliye base URL alfurqan.ae hi rakha; env.dart me switch ke liye 2-line comment ready (jab backend entwino par Al Furqan ka data daal de).
+3. `CheckOutPayloadDto` swagger se exact schema nikala: `consumer_id, products[{product_id, variation_id(string), quantity}], shipping_address_id, billing_address_id, points_amount(bool), wallet_balance(bool), coupon, delivery_description, delivery_interval, payment_method` — OrderSaveDto jaisa hi.
+
+**App changes:**
+1. **Dynamic Order Status (Orders/GetOrderStatus)** — naya `OrderStatusService` (cached, login-required par silent fail): (a) Order detail ka **status flow ab server ke asli steps** (sequence sorted: Pending → In Process → ...) — current/complete step primary dot, aane wale steps GREY (fake future date NAHI), activities se date/note merge, custom activities end me. Pehle sirf activities dikhti thi (poore flow ka hisaab nahi). (b) Order History **filter sheet me nayi "Status" section** — backend table ke asli status names se filter (All Status + har status). (c) Slim history rows me `order_status_id` se status-name decode (pill khaali na rahe).
+2. **CheckOut preview (Orders/CheckOut)** — payment screen khulte hi server-computed grand total (shipping/tax samet) laata hai; bottom bar priority: server preview → live cart → arguments ("₹0" impossible). Place-order flow pehle se CheckOut preview karta tha (v1.6.x) — ab display bhi server-verified.
+3. **Payment page ke 2 hardcoded English** ("Placing Order...", "Place Order") → `.tr` (3 naye keys ×4: placingOrder, statusLabel, allStatus — multi-language demand).
+4. **BACKEND_API_NOTES.md** (forwardable, English) — hamara current add-to-cart interface (full-replace semantics + JSON example), jo fields USE karte hai, aur requests: per-line append endpoint ya official replace-doc; UpdateCart/ClearCart swagger me lao; GetUserOrders rows me products[] do; Coupons/Pages guest ke liye public karo; GBP/EUR rates sahi karo; entwino.in readiness (khaali DB — switch tabhi).
+5. Version 1.6.9+38, profile label "v1.6.9 (38)".
+
+**Pending (backend team):** GetUserOrders products[]; Coupons/Pages public; GBP/EUR 0.01; Services "Test" placeholder; GetAllProductsFront sort params dead; entwino.in par store data (agar wahan switch karwana hai).
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (lang parity 100% — en/ar/hi/kr 534 keys each; .tr used 307, 0 undefined; routes 30, 0 undefined) + template-era duplicate keys ('Open Orders'/'off' har file me DO baar the — ar/hi/kr me discount-badge 'off' ka matlab galat 'बंद' ban gaya tha) saaf kiye; audit3 clean (40 GetX controllers, 118 finds, core flows 0 unguarded).

@@ -303,6 +303,9 @@ final dynamic en = {
   "edit": "Edit",
   "logOut": "LOG OUT",
   "placeOrder": "PLACE ORDER",
+  "placingOrder": "PLACING ORDER...",
+  "statusLabel": "STATUS",
+  "allStatus": "All Status",
   "moveToWishListDesc":
       "Are you sure you want to move this item to wishlist from the cart?",
   "removeDesc":
@@ -460,7 +463,6 @@ final dynamic en = {
   "On the way": "On the way",
   "Past Orders": "Past Orders",
   "26th May, 2021": "26th May, 2021",
-  "Open Orders": "Open Orders",
   "ordered": "Ordered:",
   "deliveryStatus": "Delivery Status:",
   "rateReview": "Rate & Review Product",
@@ -610,7 +612,6 @@ final dynamic en = {
   "Add your Products & Placed Order": "Add your Products & Placed Order",
   "Check Order History, tracking pages..": "Check Order History, tracking pages..",
   "deliveryBy": "Delivery By",
-  "off": "off",
   "ratings": "ratings",
   "selectSize": "Select Size:",
   "sizeChart": "Size Chart",

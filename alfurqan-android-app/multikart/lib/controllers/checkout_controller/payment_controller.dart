@@ -1,5 +1,6 @@
 import '../../config.dart';
 import '../home_product_controllers/cart_controller.dart';
+import 'checkout_controller.dart';
 
 class PaymentController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -42,6 +43,12 @@ class PaymentController extends GetxController {
       if ((live ?? 0) > 0) totalAmount = live!.toStringAsFixed(2);
     }
     update();
+    // Backend (06/09): "Orders/CheckOut — use this api for check out" —
+    // payment total SERVER se confirm karo (shipping/tax samet). Fail ho
+    // to upar ka live-cart total hi dikhta rahega (kuch tootta nahi).
+    if (Get.isRegistered<CheckoutController>()) {
+      Get.find<CheckoutController>().loadCheckoutPreview();
+    }
     super.onReady();
   }
 

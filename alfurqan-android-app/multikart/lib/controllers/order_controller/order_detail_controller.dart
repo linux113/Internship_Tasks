@@ -2,6 +2,7 @@ import '../../config.dart';
 import '../../models/json_parse_utils.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/order_status_service.dart';
 
 /// ORDER DETAIL — pehle yaha STATIC demo data tha (fake timeline, fake
 /// address, cartList demo products). Ab order history se aaye REAL order id
@@ -24,6 +25,9 @@ class OrderDetailController extends GetxController {
   String orderNumber = '';
   String orderDate = '';
   String status = '';
+  // Current status ka sequence (order_status{sequence}) — dynamic flow me
+  // "ab tak complete" steps nikalne ke liye.
+  int statusSequence = 0;
   double subtotal = 0;
   double shipping = 0;
   double discount = 0;
@@ -128,6 +132,9 @@ class OrderDetailController extends GetxController {
     // poora spinner wali white screen NAHI (Issue #9).
     isLoading = !_prefilledFromSummary;
     loadFailed = false;
+    // Dynamic status flow ke liye steps pehle le aao (cached — sirf pehli
+    // baar network lagta hai). Best-effort: 401 ho to flow merge skip.
+    await OrderStatusService.load();
     update();
     try {
       final res = await ApiService().request<Map<String, dynamic>>(
@@ -213,8 +220,10 @@ class OrderDetailController extends GetxController {
 
     // ---- status (order_status{name} / orderStatus{name} / status text) ----
     final st = j['order_status'] ?? j['Order_Status'] ?? j['orderStatus'];
+    statusSequence = 0;
     if (st is Map) {
       status = jsonToString(st['name'] ?? st['Name'] ?? st['title'] ?? st['slug']) ?? '';
+      statusSequence = jsonToInt(st['sequence'] ?? st['Sequence']) ?? 0;
     } else {
       status = jsonToString(
               j['status_name'] ?? j['Status_Name'] ?? j['status'] ?? st) ??
@@ -396,6 +405,59 @@ class OrderDetailController extends GetxController {
     // timeline khaali ho to kam se kam current status ki ek entry dikhao
     if (timeline.isEmpty && status.isNotEmpty) {
       timeline.add({'name': status, 'date': orderDate, 'note': ''});
+    }
+
+    // ---- DYNAMIC status flow (Orders/GetOrderStatus — backend 06/09) ----
+    // Status values ab server ki table se aate hai. POORA flow (Pending →
+    // In Process → Ready to ship → Shipped → ...Delivered) server ke hi
+    // steps se dikhao; activities/current se "done" mark karo. Steps na
+    // mile (401/fail) to upar wala activities-timeline hi rahega.
+    final steps = OrderStatusService.statuses;
+    if (steps.isNotEmpty) {
+      String low(String s) => s.trim().toLowerCase();
+      bool matches(String a, String b) {
+        if (a.isEmpty || b.isEmpty) return false;
+        return low(a) == low(b) ||
+            low(a).contains(low(b)) ||
+            low(b).contains(low(a));
+      }
+
+      final merged = <Map<String, dynamic>>[];
+      final used = <int>{};
+      for (final s in steps) {
+        final nm = (s['name'] ?? '').toString();
+        if (nm.isEmpty) continue;
+        Map<String, dynamic>? act;
+        for (var i = 0; i < timeline.length; i++) {
+          if (used.contains(i)) continue;
+          if (matches((timeline[i]['name'] ?? '').toString(), nm)) {
+            act = timeline[i];
+            used.add(i);
+            break;
+          }
+        }
+        final isCurrent = matches(status, nm);
+        final seq = s['sequence'] is num ? (s['sequence'] as num).toInt() : 0;
+        final isDone = act != null ||
+            isCurrent ||
+            (statusSequence > 0 && seq > 0 && seq < statusSequence);
+        merged.add({
+          'name': nm,
+          // Aane wale (pending) steps ka fake date mat dikhao
+          'date': isDone
+              ? (act?['date'] ?? (isCurrent ? orderDate : '')).toString()
+              : '',
+          'note': (act?['note'] ?? '').toString(),
+          'done': isDone,
+        });
+      }
+      // Server steps me shamil na hone wali custom activities end me jodo
+      for (var i = 0; i < timeline.length; i++) {
+        if (!used.contains(i)) {
+          merged.add({...timeline[i], 'done': true});
+        }
+      }
+      timeline = merged;
     }
 
     // ---- shipping address (AddressDto: title/street/city/stateName/

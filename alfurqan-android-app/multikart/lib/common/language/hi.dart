@@ -305,6 +305,9 @@ final dynamic hi = {
   "edit": "संपादन करना",
   "logOut": "लॉग आउट",
   "placeOrder": "आदेश देना",
+  "placingOrder": "ऑर्डर दिया जा रहा है...",
+  "statusLabel": "स्थिति",
+  "allStatus": "सभी स्थितियाँ",
   "moveToWishListDesc":
       "क्या आप वाकई इस आइटम को कार्ट से विशलिस्ट में ले जाना चाहते हैं?",
   "removeDesc":
@@ -460,7 +463,6 @@ final dynamic hi = {
   "On the way": "रास्ते में",
   "Past Orders": "पिछले आदेश",
   "26th May, 2021": "26 मई, 2021",
-  "Open Orders": "खुले आदेश",
   "ordered": "आदेश दिया:",
   "deliveryStatus": "वितरण की स्थिति:",
   "rateReview": "दर और समीक्षा उत्पाद",
@@ -614,7 +616,6 @@ final dynamic hi = {
   "Add your Products & Placed Order": "अपने उत्पाद जोड़ें और ऑर्डर दिया",
   "Check Order History, tracking pages..": "ऑर्डर हिस्ट्री, ट्रैकिंग पेज चेक करें।",
   "deliveryBy": "के द्वारा डिलिवरी",
-  "off": "बंद",
   "ratings": "रेटिंग्स",
   "selectSize": "चुनिंदा आकार:",
   "sizeChart": "आकार चार्ट",

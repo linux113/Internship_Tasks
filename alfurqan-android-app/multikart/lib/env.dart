@@ -1,5 +1,15 @@
 Map<String, dynamic> environment = {
   "serverConfig": {
+    // SERVER NOTE (06/09/2026): backend team ne entwino.in par APIs share
+    // kiye — LIVE probe se pata chala ki entwino.in unka ALAG demo store
+    // hai (computer parts: SMPS/HDD; home contentApp khaali; AED currency
+    // hi nahi). Book-shop app wahan point karegi to kitabon ki jagah
+    // computer parts dikhne lagenge! Naye endpoints (GetOrderStatus,
+    // CheckOut, GetAllCoupons...) alfurqan.ae par bhi MOJOOD hai (401 =
+    // route exists), isliye app alfurqan.ae hi rahega.
+    // Entwino switch — sirf jab backend wahan Al Furqan ka data daal de:
+    // 'apiUrl': 'https://entwino.in/api/',
+    // 'baseUrl': 'https://entwino.in',
     'apiUrl': 'https://alfurqan.ae/api/',
     'baseUrl': 'https://alfurqan.ae',
     'apiVersion': 'v1',

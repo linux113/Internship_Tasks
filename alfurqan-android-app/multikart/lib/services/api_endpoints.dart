@@ -14,6 +14,10 @@ class ApiEndpoints {
   // Checkout preview (totals) + FINAL order place — OrderSaveDto body
   static const String checkout = 'Orders/CheckOut';
   static const String placeOrder = 'Orders/OrderPlace';
+  // Order status ki DYNAMIC list — backend (Entwino, 06/09): status values
+  // (Pending/In Process/Ready to ship/Shipped...) ab static nahi, table se
+  // aate hai. Status dropdown/flow jaha bhi dikhta hai, isi api se le.
+  static const String orderStatus = 'Orders/GetOrderStatus';
   // Coupons list
   static const String getCoupons = 'Coupon/GetAllCoupons';
   // Change password — body: {current_password, new_password, confirm_password}

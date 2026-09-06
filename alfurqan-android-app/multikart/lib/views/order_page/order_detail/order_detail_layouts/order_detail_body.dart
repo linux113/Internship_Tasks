@@ -150,7 +150,11 @@ class OrderDetailBody extends StatelessWidget {
                           height: AppScreenUtil().size(10),
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: appCtrl.appTheme.primary)),
+                              // dynamic flow ka pending step = grey,
+                              // complete/current step = primary
+                              color: (t['done'] ?? true) == false
+                                  ? appCtrl.appTheme.gray
+                                  : appCtrl.appTheme.primary)),
                       if (!isLast)
                         Container(
                             width: 1,

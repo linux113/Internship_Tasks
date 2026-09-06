@@ -2,6 +2,7 @@ import '../../config.dart';
 import '../../models/json_parse_utils.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/order_status_service.dart';
 
 /// Order History — pehle STATIC demo orders dikhata tha (kapdon ke fake
 /// orders!). Ab api/Orders/GetUserOrders (login user ke real orders).
@@ -30,6 +31,12 @@ class OrderHistoryController extends GetxController {
   /// Search box ka live text (order number / item name / status se match).
   String searchQuery = '';
 
+  // DYNAMIC status filter (Orders/GetOrderStatus — backend 06/09: status
+  // ab static nahi, table se aate hai). Index 0 = "All Status".
+  List<Map<String, dynamic>> statusFilter = [];
+  int statusFilterValue = 0;
+  int appliedStatusFilter = 0;
+
   bool isLoadingOrders = false;
 
   /// Guest ho to true — view "Please login to see your orders" dikhayegi.
@@ -47,8 +54,25 @@ class OrderHistoryController extends GetxController {
       update();
     });
     update();
+    // Dynamic status list (backend table se) — filter sheet ki "Status"
+    // section isi se banti hai. Best-effort: 401/fail par section chhupi rahe.
+    OrderStatusService.load().then((_) {
+      _buildStatusFilter();
+      update();
+    });
     fetchOrders();
     super.onReady();
+  }
+
+  /// Server ke dynamic statuses se filter list banao (0 = All Status).
+  void _buildStatusFilter() {
+    statusFilter = [
+      {'title': 'allStatus'.tr},
+      for (final s in OrderStatusService.statuses)
+        {'title': (s['name'] ?? '').toString()},
+    ];
+    if (statusFilterValue >= statusFilter.length) statusFilterValue = 0;
+    if (appliedStatusFilter >= statusFilter.length) appliedStatusFilter = 0;
   }
 
   /// Issue#10: backend date formats mix ho sakte hai — ISO (2026-07-21),
@@ -72,6 +96,7 @@ class OrderHistoryController extends GetxController {
   void applyFilters() {
     appliedOrderType = orderTypeValue;
     appliedTimeFilter = timeFilterTypeValue;
+    appliedStatusFilter = statusFilterValue;
     update();
   }
 
@@ -122,6 +147,26 @@ class OrderHistoryController extends GetxController {
           default:
             return true;
         }
+      }).toList();
+    }
+
+    // Dynamic status filter (backend table ke asli status names — exact/
+    // partial match dono, case-insensitive).
+    if (appliedStatusFilter > 0 && appliedStatusFilter < statusFilter.length) {
+      final target = (statusFilter[appliedStatusFilter]['title'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      list = list.where((o) {
+        final first = (o.daysWiseList?.isNotEmpty == true)
+            ? o.daysWiseList!.first
+            : null;
+        final s = (first?.status ?? first?.deliveryStatus ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        if (s.isEmpty || target.isEmpty) return false;
+        return s == target || s.contains(target) || target.contains(s);
       }).toList();
     }
 
@@ -210,6 +255,14 @@ class OrderHistoryController extends GetxController {
     }
     // entity rows me 'status' boolean hota hai — "true"/"false" mat dikhao
     if (status == 'true' || status == 'false') status = '';
+    // SLIM rows me order_status embed nahi hota — dynamic status list se
+    // id decode karo (order_status_id/status_id).
+    if (status.isEmpty) {
+      status = OrderStatusService.nameFor(j['order_status_id'] ??
+          j['Order_Status_Id'] ??
+          j['status_id'] ??
+          j['statusId']);
+    }
     final total = jsonToDouble(
         j['total'] ?? j['Total'] ?? j['grand_total'] ?? j['Grand_Total'] ?? j['amount']);
     // SERVER TRUTH (swagger): GetUserOrders rows ke items `products` key me
@@ -317,6 +370,7 @@ class OrderHistoryController extends GetxController {
     // baar "All" reset dikhta, jabki list filtered rehti — mismatch bug).
     orderTypeValue = appliedOrderType;
     timeFilterTypeValue = appliedTimeFilter;
+    statusFilterValue = appliedStatusFilter;
     update();
     Get.bottomSheet(
       const OrderHistoryFilter(),

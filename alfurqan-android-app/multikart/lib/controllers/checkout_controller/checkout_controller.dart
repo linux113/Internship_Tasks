@@ -1,5 +1,6 @@
 import '../../config.dart';
 import '../../models/cart_api_model.dart';
+import '../../models/json_parse_utils.dart';
 import '../../models/location_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
@@ -26,6 +27,11 @@ class CheckoutController extends GetxController {
   bool isPlacing = false;
   String paymentMethod = 'cod'; // default: Cash on Delivery
   final TextEditingController txtCoupon = TextEditingController();
+
+  /// Orders/CheckOut ka server-computed grand total (RAW AED) — payment
+  /// page ka bottom bar isko sabse UPAR prefer karta hai (backend 06/09:
+  /// "Orders/CheckOut — use this api for check out"). null = preview na mila.
+  double? serverPreviewTotal;
 
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
@@ -160,6 +166,67 @@ class CheckoutController extends GetxController {
         data: const <String, dynamic>{},
         fromJson: (json) => json,
       );
+    } catch (_) {}
+  }
+
+  /// Payment screen khulne par Orders/CheckOut se server-computed grand
+  /// total laao (shipping/tax/coupon sab samet — OrderSaveDto/CheckOut
+  /// PayloadDto dono same shape ke hai, swagger se verify). Best-effort:
+  /// guest/khaali-cart/no-address/api-fail par serverPreviewTotal null hi
+  /// rahega aur UI apna live-cart fallback dikhta rahega.
+  Future<void> loadCheckoutPreview() async {
+    serverPreviewTotal = null;
+    if (!isLoggedIn) return;
+    try {
+      var products = _orderProducts();
+      if (products.isEmpty) {
+        try {
+          await _cartCtrl?.getCart(silent: true);
+        } catch (_) {}
+        products = _orderProducts();
+      }
+      if (products.isEmpty) return;
+      final addressId = _serverAddressId();
+      if (addressId <= 0) return;
+      var coupon = txtCoupon.text.trim();
+      if (coupon.isEmpty) {
+        coupon = storage.read('coupon_code')?.toString() ?? '';
+      }
+      final res = await ApiService().request<double?>(
+        endpoint: ApiEndpoints.checkout,
+        method: ApiMethod.post,
+        data: <String, dynamic>{
+          'consumer_id': _userId,
+          'products': products,
+          'shipping_address_id': addressId,
+          'billing_address_id': addressId,
+          'points_amount': false,
+          'wallet_balance': false,
+          if (coupon.isNotEmpty) 'coupon': coupon,
+          'delivery_description': '',
+          'delivery_interval': '',
+          'payment_method': paymentMethod,
+        },
+        fromJson: (json) {
+          // Lenient: {total} / {Total} / {grand_total} / {data:{...}} /
+          // {order:{...}} — pehla >0 total uthao.
+          dynamic d = json;
+          for (var i = 0; i < 4 && d is Map; i++) {
+            final m = Map<String, dynamic>.from(d as Map);
+            final v = jsonToDouble(m['total'] ??
+                m['Total'] ??
+                m['grand_total'] ??
+                m['Grand_Total']);
+            if ((v ?? 0) > 0) return v;
+            d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
+          }
+          return null;
+        },
+      );
+      if (res.isSuccess && (res.data ?? 0) > 0) {
+        serverPreviewTotal = res.data;
+        update();
+      }
     } catch (_) {}
   }
 

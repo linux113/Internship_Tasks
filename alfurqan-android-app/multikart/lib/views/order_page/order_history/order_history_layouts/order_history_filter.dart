@@ -27,6 +27,24 @@ class OrderHistoryFilter extends StatelessWidget {
                   ],
                 ),
                 const Space(0, 20),
+                // DYNAMIC Status section — Orders/GetOrderStatus (backend
+                // 06/09: status values ab table se aate hai, static nahi)
+                if (orderHistoryCtrl.statusFilter.isNotEmpty) ...[
+                  OrderHistoryWidget()
+                      .orderHistoryFilterTitle("statusLabel".tr),
+                  ...orderHistoryCtrl.statusFilter.asMap().entries.map((e) {
+                    return OrderHistoryFilterLayout(
+                      onTap: () {
+                        orderHistoryCtrl.statusFilterValue = e.key;
+                        orderHistoryCtrl.update();
+                      },
+                      text: e.value['title'],
+                      index: e.key,
+                      value: orderHistoryCtrl.statusFilterValue,
+                    );
+                  }).toList(),
+                  const Space(0, 20),
+                ],
                 OrderHistoryWidget().orderHistoryFilterTitle(FilterFont().timeFilters),
                 ...orderHistoryCtrl.timeFilterType.asMap().entries.map((e) {
                   return OrderHistoryFilterLayout(onTap: () {
