@@ -185,6 +185,14 @@ class CheckoutController extends GetxController {
         } catch (_) {}
         products = _orderProducts();
       }
+      if (products.isEmpty) {
+        // storage snapshot rescue (GetCart flake — preview total bhi sahi
+        // aana chahiye, NA ki 0/dikh hi na).
+        final snap = CartController.readCartSnapshot(_userId);
+        if (snap != null) {
+          products = List<Map<String, dynamic>>.from(snap['products'] as List);
+        }
+      }
       if (products.isEmpty) return;
       final addressId = _serverAddressId();
       if (addressId <= 0) return;
@@ -309,7 +317,7 @@ class CheckoutController extends GetxController {
     // se farak NAHI padta. Isliye refresh se PEHLE jo user ko dikh raha
     // tha wo snapshot rakho; refreshes empty aaye to wahi use karo.
     final preRefreshProducts = products;
-    final preRefreshTotal = _currentTotal();
+    var preRefreshTotal = _currentTotal();
     final cPre = _cartCtrl;
     final preSnapItems = <Map<String, dynamic>>[
       for (final e in (cPre?.cartModelList?.cartList ?? []))
@@ -342,10 +350,30 @@ class CheckoutController extends GetxController {
         // user ka dobara-do combo tap karna — bilkul khatam.
         products = preRefreshProducts;
       } else {
-        _toast('cartEmptyToast'.tr);
-        // FIX: galat-empty par dashboard par DHAKA mat do (stack bhi
-        // tootta tha) — user yahin rahe aur dobara try kar sake.
-        return;
+        // ⭐ PERSISTENT snapshot rescue (06/09 4pm — "pehli baar payment
+        // par empty, back karke aao to chalta hai"): payment-entry ke
+        // silent GetCart FLAKE ne in-memory models PEHLE HI null kar
+        // diye the — placeOrder tak memory me kuch bacha hi nahi. Ab
+        // last VERIFIED non-empty cart (storage, same user, <30min,
+        // intentionally-clear nahi) se order banao. Orders CheckOut/
+        // OrderPlace products[] payload se chalte hai — server cart ka
+        // is-moment-empty hona irrelevant hai.
+        final snap = CartController.readCartSnapshot(_userId);
+        if (snap != null) {
+          products = List<Map<String, dynamic>>.from(snap['products'] as List);
+          if (preRefreshTotal == '0') {
+            preRefreshTotal = (snap['total'] ?? '0').toString();
+          }
+          if (preSnapItems.isEmpty) {
+            preSnapItems
+                .addAll(List<Map<String, dynamic>>.from(snap['items'] as List));
+          }
+        } else {
+          _toast('cartEmptyToast'.tr);
+          // FIX: galat-empty par dashboard par DHAKA mat do (stack bhi
+          // tootta tha) — user yahin rahe aur dobara try kar sake.
+          return;
+        }
       }
     }
 
@@ -585,6 +613,9 @@ class CheckoutController extends GetxController {
         // GetCart se WAPAS aa jate (order place hone ke baad cart ka
         // sach me khali hona chahiye).
         await _clearServerCart();
+        // order SUCCESS ke baad snapshot CLEAR — warna agli baar place par
+        // yahi placed items ghost ban kar dobara order ho jayenge.
+        await CartController.clearCartSnapshot();
         try {
           await _cartCtrl?.getCart(silent: true);
         } catch (_) {}

@@ -20,6 +20,117 @@ class CartController extends GetxController {
   CartApiModel? cartApiModel;
   bool isCartLoading = false;
 
+  // ============ PERSISTENT CART SNAPSHOT (06/09 4pm glitch) ============
+  // ROOT: server ka GetCart kabhi-kabhi KHAALI deta hai jabki user cart
+  // me items dikh rahe hote hai (intermittent window — pichli versions
+  // me bhi isi flake ki wajah se double-verify banana pada tha). Aur
+  // getCart ka success-empty result in-memory models ko NULL kar deta
+  // hai — placeOrder tak kuch nahi bachta ("first time empty, back karke
+  // aao to chalta hai" glitch). Ab har VERIFIED non-empty cart ka
+  // timestamped snapshot storage me rakhte hai; placeOrder isi se rescue
+  // karta hai. Empty server response snapshot ko CLEAR NAHI karta (flake
+  // ho sakta hai) — sirf intentional clears: order success, verified
+  // remove-to-empty, 30min age, ya doosra user.
+  static const String _snapKey = 'cart_snapshot_v2';
+  static const String _snapClearedKey = 'cart_snapshot_v2_cleared';
+
+  static Future<void> saveCartSnapshot({
+    required int userId,
+    required String total,
+    required List<Map<String, dynamic>> products,
+    List<Map<String, dynamic>> items = const [],
+  }) async {
+    final s = LocalStorage();
+    await s.write(_snapKey, <String, dynamic>{
+      'u': userId,
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'total': total,
+      'products': products,
+      'items': items,
+    });
+    await s.write(_snapClearedKey, false);
+  }
+
+  static Future<void> clearCartSnapshot() async {
+    await LocalStorage().write(_snapClearedKey, true);
+  }
+
+  /// placeOrder ka rescue source — same user + 30min ke andar + cleared
+  /// nahi. null = rescue possible nahi (sach me cart khaali maano).
+  static Map<String, dynamic>? readCartSnapshot(int userId) {
+    final s = LocalStorage();
+    if ((s.read(_snapClearedKey) ?? true) == true) return null;
+    final raw = s.read(_snapKey);
+    if (raw is! Map) return null;
+    final m = Map<String, dynamic>.from(raw);
+    if ((int.tryParse(m['u']?.toString() ?? '-1') ?? -1) != userId) {
+      return null;
+    }
+    final ts = int.tryParse(m['ts']?.toString() ?? '0') ?? 0;
+    if (DateTime.now().millisecondsSinceEpoch - ts >
+        const Duration(minutes: 30).inMilliseconds) {
+      return null;
+    }
+    final prods = (m['products'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .where((p) =>
+                (int.tryParse(p['product_id']?.toString() ?? '0') ?? 0) >
+                    0 &&
+                (int.tryParse(p['quantity']?.toString() ?? '0') ?? 0) > 0)
+            .toList() ??
+        const <Map<String, dynamic>>[];
+    if (prods.isEmpty) return null;
+    final items = (m['items'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        const <Map<String, dynamic>>[];
+    return {
+      'products': prods,
+      'items': items,
+      'total': m['total']?.toString() ?? '0',
+    };
+  }
+
+  /// getCart ke VERIFIED non-empty result ko persist karo (user id storage
+  /// se). Empty par KUCH NAHI (flake-guard — clear sirf intentional).
+  Future<void> _persistIfNonEmpty(CartApiModel apiCart) async {
+    final liveLines = apiCart.items
+        .where((l) => (l.quantity ?? 0) > 0 && (l.productId ?? 0) > 0)
+        .toList();
+    if (liveLines.isEmpty) return;
+    final rawUid = storage.read('id');
+    final uid = rawUid is num
+        ? rawUid.toInt()
+        : (int.tryParse(rawUid?.toString() ?? '') ?? 0);
+    await CartController.saveCartSnapshot(
+      userId: uid,
+      total: cartModelList?.totalAmount?.toString() ?? '0',
+      products: [
+        for (final l in liveLines)
+          {
+            'product_id': l.productId ?? 0,
+            'variation_id': l.variationId,
+            'quantity': l.quantity ?? 1,
+          }
+      ],
+      items: [
+        for (final e in (cartModelList?.cartList ?? []))
+          {
+            'name': e.name ?? '',
+            'image': e.image ?? '',
+            'qty': int.tryParse(RegExp(r'(\d+)')
+                        .firstMatch(e.byWhom ?? '')
+                        ?.group(1) ??
+                    '') ??
+                1,
+            'price': e.mrp ?? 0,
+          }
+      ],
+    );
+  }
+
   @override
   void onReady() {
     // Pehle yaha static demo cartList dikhti thi — ab seedha real
@@ -346,6 +457,12 @@ class CartController extends GetxController {
     if (res.isSuccess && res.data != null) {
       cartApiModel = res.data;
       cartModelList = _mapApiCartToViewModel(res.data!);
+      // SNAPSHOT: verified non-empty cart persist karo (empty par chhoo
+      // mat — wo FLAKY ho sakta hai; placeOrder isi snapshot se bachta
+      // hai). 
+      try {
+        await _persistIfNonEmpty(res.data!);
+      } catch (_) {}
     }
 
     update();
@@ -740,6 +857,15 @@ class CartController extends GetxController {
             (l) => (l.productId ?? -1) == pid && (l.quantity ?? 0) > 0);
         if (!stillThere) {
           cartModelList = _mapApiCartToViewModel(res.data!);
+          // VERIFIED remove ke baad cart sach me khaali ho gaya ho to
+          // snapshot CLEAR karo — warna placeOrder ghost-items se rescue
+          // kar lega. (Khaali nahi hai to getCart/persist baaki items ka
+          // naya snapshot bana degi.)
+          final anyLive = res.data!.items
+              .any((l) => (l.quantity ?? 0) > 0 && (l.productId ?? 0) > 0);
+          if (!anyLive) {
+            await CartController.clearCartSnapshot();
+          }
           update();
           appCtrl.update();
           return true;

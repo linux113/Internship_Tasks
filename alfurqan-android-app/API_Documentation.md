@@ -864,3 +864,14 @@ Net: jab tak user ko items dikh rahe hai, "cart empty" toast **namumkin**; order
 **ADDRESS REMOVE — 2 aur shapes:** full-AddressDto body DELETE + POST (is backend company ka PUT/POST pattern poora DTO maangna hai) — total **17 shapes** × fresh-GetAllAddress VERIFY. Sab fail = server hi delete rok raha (order-linked FK ya cookie-auth) — website par test + BACKEND_API_NOTES #6 me cookie-auth sawaal bhi likha.
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (.tr 310, 0 undefined); audit3 CLEAN (core guarded).
+
+## 06/09/2026 (v1.6.16+45) — DEEP-fix: "pehli baar payment par 'cart empty', back karke dobara jao to order ho jata hai" (PERSISTENT cart snapshot)
+
+**BUG (3:59pm — payment total AED60 dikh raha, PLACE ORDER par "Your cart is empty"; back karke 2nd attempt (AED65) SUCCESS #1061):**
+ROOT (pehli baar asli chain pakdi): payment-entry par app ka silent `GetCart` refresh server se **FLAKY-EMPTY** milta hai (kabhi-kabhi window me lagatar empty) — aur us success-empty result ne in-memory cart models ko PEHLE hi NULL kar diya hota hai. v1.6.15 ka visible-truth snapshot bhi memory-based tha — jab tak placeOrder banta, "visible" kuch bacha hi nahi. 2 guard refreshes bhi same flaky-window me empty. Back+re-enter par window khatam → 2nd attempt chal jata.
+**FIX (PERSISTENT timestamped cart snapshot):** har VERIFIED non-empty `GetCart` result ka snapshot storage me save hota hai (products+total+items+userId+time). Rules: (1) server ka EMPTY jawab snapshot ko **kabhi CLEAR nahi** karta (flake ho sakta hai); (2) clear sirf intentional — order SUCCESS ke baad, verified remove se cart sach-me-khaali hone par, 30-minute age expire, ya doosre user ka login. placeOrder + checkout-preview dono: memory khaali + refreshes khaali → **storage snapshot se products uthakar order banao** (CheckOut/OrderPlace products[] payload se chalte hai — server cart ka us-pal empty dikhna irrelevant). Sirf snapshot bhi na ho tabhi "cart empty" bolo — yaani user ne sach me kuch add hi nahi kiya.
+Net: "pehle empty phir chalta hai" wala tribute swing KHATAM — pehli hi tap par order banta hai, ghost orders nahi (clear rules dekho).
+
+(Proof in same screenshots: #1061 success — naya order-number pipeline sahi; success page "Order Number #1061" NAYA tha purana nahi; detail page address/price/tax REAL.)
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (.tr 310, 0 undefined); audit3 CLEAN (core guarded).
