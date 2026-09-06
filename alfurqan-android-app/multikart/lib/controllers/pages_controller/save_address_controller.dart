@@ -169,9 +169,11 @@ class SaveAddressController extends GetxController {
       // (cart/order me dekha) — isliye chain + VERIFY.
       final attempts = <Map<String, dynamic>>[
         {'m': ApiMethod.delete, 'q': {'id': id}, 'b': null},
+        {'m': ApiMethod.delete, 'q': {'Id': id}, 'b': null},
         {'m': ApiMethod.delete, 'q': {'id': id.toString()}, 'b': null},
         {'m': ApiMethod.post, 'q': {'id': id}, 'b': const {}},
         {'m': ApiMethod.post, 'q': null, 'b': {'id': id}},
+        {'m': ApiMethod.put, 'q': {'id': id}, 'b': const {}},
         {'m': ApiMethod.delete, 'q': null, 'b': {'Id': id}},
         {'m': ApiMethod.delete, 'q': null, 'b': {'id': id}},
       ];
@@ -190,16 +192,63 @@ class SaveAddressController extends GetxController {
           if (await _serverAddressGone(id)) return true;
         } catch (_) {}
       }
-      // FINAL fallback — bulk endpoint (swagger: ids CSV string)
+      // RAW-int body variants — ASP.NET [FromBody] int hota hai to
+      // {id:12} bind NAHI hota, sirf raw 12 chalta hai (yeh shape hum pehle
+      // kabhi nahi bhej sakte the kyunki ApiService.request map-body leta
+      // hai — isliye dio direct).
+      for (final usePost in [false, true]) {
+        try {
+          final res = usePost
+              ? await ApiService()
+                  .dio
+                  .post(ApiEndpoints.deleteAddress, data: id)
+              : await ApiService()
+                  .dio
+                  .delete(ApiEndpoints.deleteAddress, data: id);
+          if (((res.statusCode ?? 0) ~/ 100) == 2 &&
+              await _serverAddressGone(id)) {
+            return true;
+          }
+        } catch (_) {}
+      }
+      // DEFAULT-ADDRESS guard — DB/server default (is_default=1) address
+      // ko delete rok sakta hai: pehle UpdateAddress se is_default=0 karo
+      // (PUT website se verified-chalta shape), phir swagger DELETE retry.
       try {
+        await ApiService().request(
+          endpoint: ApiEndpoints.updateAddress,
+          method: ApiMethod.put,
+          data: item.toPostJson(variant: 1, isDefault: 0, serverId: id),
+          fromJson: (json) => json,
+        );
         final res = await ApiService().request(
-          endpoint: ApiEndpoints.deleteAllAddress,
+          endpoint: ApiEndpoints.deleteAddress,
           method: ApiMethod.delete,
-          queryParams: {'ids': id.toString()},
+          queryParams: {'id': id},
           fromJson: (json) => json,
         );
         if (res.isSuccess && await _serverAddressGone(id)) return true;
       } catch (_) {}
+      // FINAL fallback — bulk endpoint (swagger: ids CSV string) — query +
+      // body dono shapes.
+      for (final a in <Map<String, dynamic>>[
+        {'m': ApiMethod.delete, 'q': {'ids': id.toString()}, 'b': null},
+        {'m': ApiMethod.delete, 'q': null, 'b': {'ids': id.toString()}},
+        {'m': ApiMethod.post, 'q': null, 'b': {'ids': id.toString()}},
+      ]) {
+        try {
+          final res = await ApiService().request(
+            endpoint: ApiEndpoints.deleteAllAddress,
+            method: a['m'] as ApiMethod,
+            queryParams: a['q'] == null
+                ? null
+                : Map<String, dynamic>.from(a['q'] as Map),
+            data: a['b'],
+            fromJson: (json) => json,
+          );
+          if (res.isSuccess && await _serverAddressGone(id)) return true;
+        } catch (_) {}
+      }
       return false;
     }
 

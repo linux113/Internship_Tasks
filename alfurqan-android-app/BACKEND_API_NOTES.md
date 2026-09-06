@@ -103,6 +103,27 @@ home content, AED currency, users/orders) migrate karna hoga — fir hum
 5. Home `Services` section me "Test" placeholder entry pada hai —
    admin se hata do.
 
+## 5) NAYA (06/09 shaam) — Address delete + order_number timing ⚠️
+
+6. **`Location/DeleteAddress` har shape par fail ho raha hai** user ke
+   account se (DELETE `?id=<int>` — swagger exact, + 14 aur shapes:
+   capital `Id`, POST/PUT/body `{id}`/`{Id}`, raw-int body,
+   `DeleteAllAddress` query/body). Har attempt ke baad fresh
+   `GetAllAddress` se verify kiya — address nahi hatta. Andhaaz:
+   **order-linked addresses par DB FK restrict** hai (saare test
+   addresses kisi-na-kisi order me use ho chuke hai). Options:
+   (a) soft-delete (`is_active=0`) implement kar do, ya
+   (b) DeleteAddress ko FK ke bawajood chalne do (orders me address
+   snapshot already pada hona chahiye), ya
+   (c) confirm karo delete order-linked par allowed hi nahi — to app
+   honest message dikhati rahegi (abhi bhi dikhati hai).
+7. **`GetUserOrders` rows me `order_number` TURANT assign nahi hota** —
+   OrderPlace ke turant baad latest row pehle number ke BINA aati hai,
+   number kuch der baad lagta hai. Isliye app ko snapshot-poll karke
+   nayi row identify karni padi. Best: OrderPlace RESPONSE me hi
+   `order_number` return kar do (abhi `data` null/only-id aata hai) —
+   phir app ko poll hi nahi karna padega.
+
 ---
 
-*App side contact: Lalit (project owner) — build v1.6.9+38 (06/09/2026).*
+*App side contact: Lalit (project owner) — build v1.6.14+43 (06/09/2026).*

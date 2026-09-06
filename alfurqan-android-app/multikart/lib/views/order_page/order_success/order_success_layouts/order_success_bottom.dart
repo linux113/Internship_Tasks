@@ -1,4 +1,5 @@
 import '../../../../config.dart';
+import '../../../../controllers/checkout_controller/checkout_controller.dart';
 
 class OrderSuccessBottom extends StatelessWidget {
   const OrderSuccessBottom({Key? key}) : super(key: key);
@@ -9,11 +10,26 @@ class OrderSuccessBottom extends StatelessWidget {
       builder: (appCtrl) {
         return BottomLayout(
             firstButtonText: OrderSuccessFont().trackOrder,
-            // FIX (Issue #4): pehle Track Order bina kisi order id ke
-            // orderDetail kholta tha — blank white screen + "load nahi ho
-            // paya" aata tha. Ab REAL Order History kholta hai (naya order
-            // wahi dikhta hai). offAll — stack clean.
-            firstTap: () => Get.offAllNamed(routeName.orderHistory),
+            // FIX (06/09 — "Track Order par order page khulta hai, woh
+            // SPECIFIC order nahi"): ab placed order ka REAL number ho to
+            // history page ke UPAR usi order ki DETAIL kholte hai — user
+            // seedha apne order ka tracking/status dekhta hai; back par
+            // list milti hai (natural flow). Number server ne abhi assign
+            // nahi kiya / sirf PK mila ho (GetOrder number se hi chalta
+            // hai) to sirf history (pehle jaisa).
+            firstTap: () {
+              final order = CheckoutController.lastPlacedOrder;
+              final no = int.tryParse(order?['orderId']?.toString() ?? '0') ?? 0;
+              final isRealNo = (order?['isOrderNumber'] ?? false) == true;
+              Get.offAllNamed(routeName.orderHistory);
+              if (no > 0 && isRealNo) {
+                // offAll ke route-swap ke BAAD push — warna do nav calls ek
+                // hi frame me race karti hai.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Get.toNamed(routeName.orderDetail, arguments: {'id': no});
+                });
+              }
+            },
             // FIX (Issue #6): pehle Continue Shopping PUSH karta tha —
             // success page root me pada rehta tha, phir back/touch karne
             // par user wapas success par aa jata tha (loop). Ab offAll

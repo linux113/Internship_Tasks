@@ -198,6 +198,10 @@ class OrderHistoryController extends GetxController {
       final res = await ApiService().request<List<OrderHistoryModel>>(
         endpoint: ApiEndpoints.getUserOrders,
         method: ApiMethod.get,
+        // ISSUE-FIX (06/09 — "order place hua par history me NAHI dikha"):
+        // default page-size (10) me purane/naye rows cut ho sakte the —
+        // paginate=100 se sab orders ek call me.
+        queryParams: const {'page': '1', 'paginate': '100'},
         fromJson: (json) {
           dynamic raw = json;
           for (var i = 0; i < 3 && raw is Map; i++) {
@@ -211,7 +215,20 @@ class OrderHistoryController extends GetxController {
         },
       );
       if (res.isSuccess && res.data != null) {
-        orderHistoryList = res.data!;
+        // ISSUE-FIX (06/09 — "bahut orders me SAME id dikhti hai"): server
+        // kabhi ek hi row do baar bhej deta hai (pagination overlap) —
+        // display-identity (number+date+total) se dedupe karo taaki ek
+        // order ki TWO cards na bane. orderId ab order_number-first hai
+        // (rows me PK kabhi 0/same fallback nahi), duplicates pakki.
+        final seen = <String>{};
+        orderHistoryList = res.data!.where((o) {
+          final first = (o.daysWiseList?.isNotEmpty == true)
+              ? o.daysWiseList!.first
+              : null;
+          final key =
+              '${o.orderId}|${o.orderDay}|${first?.size ?? ''}|${first?.qty ?? ''}';
+          return seen.add(key);
+        }).toList();
       }
     } catch (_) {}
     isLoadingOrders = false;
@@ -307,7 +324,11 @@ class OrderHistoryController extends GetxController {
     }
 
     return OrderHistoryModel(
-      orderId: jsonToInt(id),
+      // orderId = DISPLAY number (order_number PEHLE, PK fallback) —
+      // card ka title bhi yahi dikhata hai aur GetOrder?id= bhi order_
+      // number se hi asli detail deta hai (PK par slim/garbage aata tha),
+      // isliye detail ab FIRST try me sahi order kholta hai.
+      orderId: int.tryParse(orderNo) ?? jsonToInt(id) ?? 0,
       orderDay: date.length >= 10 ? date.substring(0, 10) : date,
       daysWiseList: [
         for (var i = 0; i < (items.isEmpty ? 1 : items.length); i++)

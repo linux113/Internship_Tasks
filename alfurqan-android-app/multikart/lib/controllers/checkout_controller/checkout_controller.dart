@@ -231,6 +231,58 @@ class CheckoutController extends GetxController {
   }
 
   /// MAIN ACTION — "Place Order" button yahi call karta hai.
+  /// GetUserOrders ke RAW rows laao (naya-order identify karne ke liye —
+  /// snapshot/POLL dono isi se). paginate=100 — sab rows ek hi call me.
+  Future<List<Map<String, dynamic>>> _fetchOrderRows() async {
+    try {
+      final r = await ApiService().request<List<Map<String, dynamic>>>(
+        endpoint: ApiEndpoints.getUserOrders,
+        method: ApiMethod.get,
+        queryParams: const {'page': '1', 'paginate': '100'},
+        fromJson: (json) {
+          dynamic raw = json;
+          for (var i = 0; i < 3 && raw is Map; i++) {
+            raw = raw['data'] ??
+                raw['Data'] ??
+                raw['orders'] ??
+                raw['Orders'] ??
+                raw['items'];
+          }
+          if (raw is! List) return <Map<String, dynamic>>[];
+          return raw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        },
+      );
+      if (r.isSuccess && r.data != null) return r.data!;
+    } catch (_) {}
+    return const [];
+  }
+
+  /// Row ka STABLE PK (id) — ye unique hota hai; order_number server baad
+  /// me assign karta hai isliye snapshot identity PK hi hai.
+  static int _rowPk(Map<String, dynamic> m) =>
+      int.tryParse((m['id'] ??
+                  m['Id'] ??
+                  m['order_id'] ??
+                  m['Order_Id'] ??
+                  m['orderId'] ??
+                  m['OrderId'])
+              ?.toString() ??
+          '') ??
+      0;
+
+  /// Row ka order_number (display number) — na ho to 0.
+  static int _rowOrderNumber(Map<String, dynamic> m) =>
+      int.tryParse((m['order_number'] ??
+                  m['Order_Number'] ??
+                  m['orderNumber'] ??
+                  m['order_no'])
+              ?.toString() ??
+          '') ??
+      0;
+
   Future<void> placeOrder() async {
     if (isPlacing) return;
 
@@ -284,6 +336,18 @@ class CheckoutController extends GetxController {
 
     isPlacing = true;
     update();
+
+    // ISSUE-FIX (06/09 — "dono orders ka success-page number SAME #1041
+    // aaya"): purana fallback GetUserOrders ke SAB rows me se MAX number
+    // uthata tha — server naye order ka order_number TURANT assign nahi
+    // karta (rows pehle number ke BINA dikhti hai / baad me number lagta
+    // hai), isliye max() PURANE order ka #1041 hi pakad leta tha. Ab
+    // place karne se PEHLE existing orders ke PK ka snapshot lete hai aur
+    // baad me snapshot ke BAHAR wali NAYI row ko hi mera order maante
+    // hai — kisi doosre order ka number kabhi nahi dikh sakta.
+    final beforePks = <int>{
+      for (final r in await _fetchOrderRows()) _rowPk(r),
+    }..remove(0);
 
     final payload = <String, dynamic>{
       'consumer_id': _userId,
@@ -377,13 +441,17 @@ class CheckoutController extends GetxController {
         // response se order id — shape SUPER-lenient (id / orderId /
         // order_number / root num / root string). User screenshot me Order
         // Number BLANK aaya tha (server data:null ya alag key bhejta hai).
+        // [isRealNo] = order_number se aaya (Track Order → detail GetOrder
+        // isi se chalta hai); PK id ho to false.
         int orderId = 0;
+        bool isRealNo = false;
         try {
           dynamic d = res.data;
           if (d is num) orderId = d.toInt();
           if (orderId == 0 && d is String) {
             orderId = int.tryParse(d) ?? 0;
           }
+          var tentativeId = 0;
           for (var i = 0; i < 4 && d is Map && orderId == 0; i++) {
             final m = Map<String, dynamic>.from(d as Map);
             // DISPLAY consistency: order# PEHLE (history card bhi wahi
@@ -393,67 +461,77 @@ class CheckoutController extends GetxController {
                 m['Order_Number'] ??
                 m['orderNumber'] ??
                 m['number'] ??
-                m['Number'] ??
-                m['id'] ??
-                m['Id'] ??
-                m['order_id'] ??
-                m['Order_Id'] ??
-                m['orderId'] ??
-                m['OrderId'];
+                m['Number'];
             if (v != null) {
               orderId = int.tryParse(v.toString()) ?? 0;
+              isRealNo = orderId > 0;
               break;
+            }
+            // PK sirf TENTATIVE rakho — nested {order:{order_number}} me
+            // asli number ho sakta hai, pehle woh dhoondo.
+            if (tentativeId == 0) {
+              final v2 = m['id'] ??
+                  m['Id'] ??
+                  m['order_id'] ??
+                  m['Order_Id'] ??
+                  m['orderId'] ??
+                  m['OrderId'];
+              tentativeId = int.tryParse(v2?.toString() ?? '') ?? 0;
             }
             d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
           }
+          if (orderId == 0) orderId = tentativeId;
         } catch (_) {}
-        // FALLBACK: response me id nahi mili to GetUserOrders ka SABSE NAYA
-        // order hi abhi placed order hoga — uski id dikhao (success page par
-        // "Order #1038" aana chahiye, BLANK nahi).
+        // FALLBACK (deep-fix): response me number nahi mila to NAYI row
+        // dhundho — wo row jo place karne se PEHLE ke snapshot me nahi
+        // thi. Server order_number thodi der baad bhi assign karta hai,
+        // isliye ~9 sec tak poll karo: pehle PK se NAYI row pakdo, phir
+        // usi row me number aane ka intezaar. Kisi PURANE order ka number
+        // ab dikhna NA-MUMKIN hai.
         if (orderId == 0) {
-          try {
-            final r = await ApiService().request(
-              endpoint: ApiEndpoints.getUserOrders,
-              method: ApiMethod.get,
-              queryParams: {'page': '1', 'paginate': '5'},
-              fromJson: (json) {
-                dynamic raw = json;
-                for (var i = 0; i < 3 && raw is Map; i++) {
-                  raw = raw['data'] ??
-                      raw['Data'] ??
-                      raw['orders'] ??
-                      raw['Orders'] ??
-                      raw['items'];
-                }
-                return raw is List ? raw : const [];
-              },
-            );
-            if (r.isSuccess && r.data is List) {
-              int best = 0;
-              for (final e in (r.data as List)) {
-                if (e is! Map) continue;
-                final m = Map<String, dynamic>.from(e);
-                // Display number = order_number PEHLE (history card se
-                // match), PK id fallback.
-                final v = m['order_number'] ??
-                    m['Order_Number'] ??
-                    m['orderNumber'] ??
-                    m['id'] ??
-                    m['Id'] ??
-                    m['order_id'] ??
-                    m['Order_Id'] ??
-                    m['orderId'];
-                final n = int.tryParse(v?.toString() ?? '') ?? 0;
-                if (n > best) best = n;
-              }
-              if (best > 0) orderId = best;
+          int newPk = 0;
+          for (var attempt = 0; attempt < 6 && orderId == 0; attempt++) {
+            if (attempt > 0) {
+              await Future.delayed(const Duration(milliseconds: 1500));
             }
-          } catch (_) {}
+            final rows = await _fetchOrderRows();
+            Map<String, dynamic>? fresh;
+            if (newPk > 0) {
+              // nayi row pehchani jaa chuki — ab usi me number ka intezaar
+              for (final r in rows) {
+                if (_rowPk(r) == newPk) {
+                  fresh = r;
+                  break;
+                }
+              }
+            } else {
+              // list newest-first aati hai — snapshot ke BAHAR wali pehli
+              // row hi abhi-just-placed order hai.
+              for (final r in rows) {
+                final pk = _rowPk(r);
+                if (pk > 0 && !beforePks.contains(pk)) {
+                  fresh = r;
+                  newPk = pk;
+                  break;
+                }
+              }
+            }
+            final no = fresh == null ? 0 : _rowOrderNumber(fresh);
+            if (no > 0) {
+              orderId = no;
+              isRealNo = true;
+            }
+          }
+          // number mil gaya to THEEK; nahi mila par nayi row pakki hai to
+          // uska PK dikhao (history card bhi wahi PK fallback dikhati hai
+          // — dono jagah SAME rahega, kisi doosre order ka nahi).
+          if (orderId == 0) orderId = newPk;
         }
         lastPlacedOrder = {
           'items': snapItems,
           'total': _currentTotal(),
           'orderId': orderId,
+          'isOrderNumber': isRealNo,
           'payment': paymentMethod == 'cod' ? 'Cash on Delivery' : paymentMethod,
           // REAL delivery address (success page STATIC New York ke bajaye)
           'address': _selectedAddressText(),
