@@ -43,6 +43,15 @@ class PaymentController extends GetxController {
       if ((live ?? 0) > 0) totalAmount = live!.toStringAsFixed(2);
     }
     update();
+    // GLITCH FIX (user report 06/09: "payment page pe 0 dikhata hai, COD
+    // select karo TAB price aata hai"): ye page GetBuilder<CheckoutController>
+    // sunti hai — PaymentController ka update() us builder ko refresh NAHI
+    // karta, isliye pehli frame ka 0 tab tak atka rehta tha jab tak COD
+    // tap CheckoutController ko jagah na de. Ab onReady me Checkout ko bhi
+    // turant rebuild karao (onReady post-frame hota hai — safe call).
+    if (Get.isRegistered<CheckoutController>()) {
+      Get.find<CheckoutController>().update();
+    }
     // Backend (06/09): "Orders/CheckOut — use this api for check out" —
     // payment total SERVER se confirm karo (shipping/tax samet). Fail ho
     // to upar ka live-cart total hi dikhta rahega (kuch tootta nahi).

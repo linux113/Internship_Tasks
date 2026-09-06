@@ -308,6 +308,7 @@ final dynamic hi = {
   "placingOrder": "ऑर्डर दिया जा रहा है...",
   "statusLabel": "स्थिति",
   "allStatus": "सभी स्थितियाँ",
+  "orderUpdate": "ऑर्डर अपडेट",
   "moveToWishListDesc":
       "क्या आप वाकई इस आइटम को कार्ट से विशलिस्ट में ले जाना चाहते हैं?",
   "removeDesc":

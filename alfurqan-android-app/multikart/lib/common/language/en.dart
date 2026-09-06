@@ -306,6 +306,7 @@ final dynamic en = {
   "placingOrder": "PLACING ORDER...",
   "statusLabel": "STATUS",
   "allStatus": "All Status",
+  "orderUpdate": "Order update",
   "moveToWishListDesc":
       "Are you sure you want to move this item to wishlist from the cart?",
   "removeDesc":

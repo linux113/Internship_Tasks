@@ -809,3 +809,14 @@ User report: "order placing par cart khali dikhata + order ke baad back = direct
 **DEBUG NOTE (user ke liye):** ApiService console me ➡️ request body / ✅ full response / ❌ error+body print karti hai — agar order place/detail phir fail ho, terminal ka text copy karke bhejo to EXACT server wajah mil jayegi.
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100%, .tr 0 undefined); audit3 CLEAN (core flows guarded).
+
+## 06/09/2026 (v1.6.11+40) ORDER PLACE SUCCESSFUL 🎉 — "#42" screenshots se polish: payment-0 glitch, tracking "False"/grey, success# display
+
+**BADA WIN (user screenshots 1:16 PM):** Order **place ho gaya** (success page: order summary w/ REAL book + REAL address + COD) — variant-retry ne backend ke 400 ko self-heal kar diya. Double-probe se Order Detail ab POORA real (item naam+photo, tax breakup, Tanzania address, Cash on Delivery) dikhata hai. Currency-sheet me UAE Dirham/INR/USD teeno, language sheet 4 langs — sab live verify.
+
+**Uske baad ke polish fixes:**
+1. **Payment page GLITCH (user report): "page pe 0 dikhata, COD select karo TAB price aata hai"** — ROOT: page `GetBuilder<CheckoutController>` sunti hai, par total PaymentController ke `update()` se refresh hi nahi hota tha; pehli frame ka 0 COD-tap (jo Checkout ko jagata) tak atka rehta tha. FIX: PaymentController.onReady se CheckoutController.update() turant (post-frame) — ab khulte hi price.
+2. **Order Tracking me "False" step + saare steps grey:** server activity me kabhi-kabhi bool ("False") status-naam ki jagah aata hai (case guard miss ho gaya tha) + order ka status embed nahi tha (current-step highlight kabhi nahi hota). FIX: bool guard case-INSENSITIVE; activity/order dono me naam khaali ho to `order_status_id`/`status_id` se dynamic list (GetOrderStatus) resolve — ab current step colored, pending grey, "False" entry merge ho kar sahi step banegi; naam bilkul na mile to "Order update" (nayi key x4: orderUpdate).
+3. **Success page Order # display consistency:** ab `order_number` PEHLE (history card jaisa), PK id fallback — "#42 vs #1042" jaisa mismatch nahi.
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100% — 535 keys each; .tr 308 used, 0 undefined); audit3 CLEAN (119 finds, core guarded).

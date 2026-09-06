@@ -304,7 +304,16 @@ class OrderDetailController extends GetxController {
           '';
     }
     // entity me 'status' boolean hota hai — numeric/bool status mat dikhao
-    if (status == 'true' || status == 'false') status = '';
+    { final sl = status.trim().toLowerCase();
+      if (sl == 'true' || sl == 'false') status = ''; }
+    // status embed nahi aaya to order_status_id se dynamic list decode
+    // (warna flow me current-step highlight kabhi nahi hota).
+    if (status.isEmpty) {
+      status = OrderStatusService.nameFor(j['order_status_id'] ??
+          j['Order_Status_Id'] ??
+          j['status_id'] ??
+          j['statusId']);
+    }
 
     // ---- totals (OrdersDto: amount=subtotal, total=grand) ----
     subtotal = jsonToDouble(j['amount'] ??
@@ -455,9 +464,25 @@ class OrderDetailController extends GetxController {
                     Map<String, dynamic>.from(stMap)['Name']) ??
                 '')
             : (jsonToString(stMap) ?? '');
-        if (nm == 'true' || nm == 'false') nm = '';
+        // Entity serializer kabhi status ki jagah BOOL bhej deta hai —
+        // screenshot me timeline step "False" dikh raha tha (case-sensitive
+        // guard miss kar gaya tha). Bool kisi bhi case me status-NAAM nahi.
+        final nml = nm.trim().toLowerCase();
+        if (nml == 'true' || nml == 'false') nm = '';
+        // Naam khaali ho to dynamic status list se id-decode karo
+        // (OrderStatusActivityDto: order_status_id + status string).
+        if (nm.isEmpty) {
+          nm = OrderStatusService.nameFor(a['order_status_id'] ??
+              a['Order_Status_Id'] ??
+              a['status_id'] ??
+              a['statusId']);
+        }
         timeline.add({
-          'name': nm.isNotEmpty ? nm : status,
+          // Naam/status dono khaali ho to bhi row chhoti se chhoti sahi
+          // dikhni chahiye — 'Order update' generic label (x4 langs).
+          'name': nm.isNotEmpty
+              ? nm
+              : (status.isNotEmpty ? status : 'orderUpdate'.tr),
           'date': jsonToString(a['changed_At'] ??
                   a['changed_at'] ??
                   a['changedAt'] ??

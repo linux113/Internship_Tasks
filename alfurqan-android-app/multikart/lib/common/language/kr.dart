@@ -304,6 +304,7 @@ final dynamic kr = {
   "placingOrder": "주문 처리 중...",
   "statusLabel": "상태",
   "allStatus": "전체 상태",
+  "orderUpdate": "주문 업데이트",
   "moveToWishListDesc": "이 항목을 장바구니에서 위시리스트로 옮기시겠습니까?",
   "removeDesc": "장바구니에서 이 항목을 제거하거나 이동하시겠습니까?",
   "noDeliveryCharges": "이 주문에 적용되는 배송료 없음",

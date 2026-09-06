@@ -378,16 +378,20 @@ class CheckoutController extends GetxController {
           }
           for (var i = 0; i < 4 && d is Map && orderId == 0; i++) {
             final m = Map<String, dynamic>.from(d as Map);
-            final v = m['id'] ??
+            // DISPLAY consistency: order# PEHLE (history card bhi wahi
+            // dikhati hai — success "#42" vs history "#1042" mismatch na
+            // ho), phir PK id.
+            final v = m['order_number'] ??
+                m['Order_Number'] ??
+                m['orderNumber'] ??
+                m['number'] ??
+                m['Number'] ??
+                m['id'] ??
                 m['Id'] ??
                 m['order_id'] ??
                 m['Order_Id'] ??
                 m['orderId'] ??
-                m['OrderId'] ??
-                m['order_number'] ??
-                m['Order_Number'] ??
-                m['number'] ??
-                m['Number'];
+                m['OrderId'];
             if (v != null) {
               orderId = int.tryParse(v.toString()) ?? 0;
               break;
@@ -421,7 +425,12 @@ class CheckoutController extends GetxController {
               for (final e in (r.data as List)) {
                 if (e is! Map) continue;
                 final m = Map<String, dynamic>.from(e);
-                final v = m['id'] ??
+                // Display number = order_number PEHLE (history card se
+                // match), PK id fallback.
+                final v = m['order_number'] ??
+                    m['Order_Number'] ??
+                    m['orderNumber'] ??
+                    m['id'] ??
                     m['Id'] ??
                     m['order_id'] ??
                     m['Order_Id'] ??
