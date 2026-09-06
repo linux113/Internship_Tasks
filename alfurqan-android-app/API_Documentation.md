@@ -853,3 +853,14 @@ ROOT: purana success-number fallback `GetUserOrders` ke SAB rows me se MAX numbe
 **BUG-D (ADDRESS REMOVE — phir fail hua, toast "could not be removed"):** live-probe se pata chala GET-on-DELETE-route par website-404 aata hai (CheckOut jaisi working route par bhi SAME 404) — yaani 404 se delete-route ka hona/nahona prove NAHI hota, server DELETE ko pakata to hai. Sab 6 shapes isliye fail hue ki syntax match nahi hua / DB block. Ab **9 NAYE shapes** add: query `Id` capital, `PUT ?id`, **RAW-int body** (`[FromBody] int` wala ASP.NET case — dio direct, map-body bind nahi karta) DELETE+POST, **is_default=0 unset (UpdateAddress PUT) → DELETE retry** (default-address delete-protect?), `DeleteAllAddress` 3 shapes (query + DELETE body + POST body). Har attempt ke baad FRESH GetAllAddress VERIFY same. ~15 shapes ke baad bhi fail = server sach me FK-block kar raha (order-linked address DB se nahi hat sakta) — HONEST toast same rahega. Naya test-address (kabhi order me use na hua) normal shapes se turant delete hona chahiye.
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (parity 100%; .tr 310, 0 undefined); audit3 CLEAN (core guarded); lang 4-file key-parity 100%.
+
+## 06/09/2026 (v1.6.15+44) — DEEP-fix: AED 65/95 total DIKH raha tha phir bhi "Your cart is empty" + address remove 2 aur shapes
+
+**BUG (screenshot 3:08/3:09pm — payment page par total AED65/AED95 saaf dikh raha, PLACE ORDER dabate hi "Your cart is empty" toast):**
+ROOT (ASLI, pichli baar sirf symptoms theke the): server ka `GetCart` **kabhi-kabhi galti se EMPTY return karta hai (FLAKY)** — aur guard ke 2 refreshes DONO empty nikle. Worse: getCart ka success-empty result app ke visible cart ko NULL kar deta hai, isliye `_orderCart products` bhi khaali + totals galat ban sakte the. ANDHA-BHAROSA refresh hi asli dushman tha.
+**FIX (VISIBLE-TRUTH snapshot):** refresh se PEHLE jo products/total/items user ko screen par dikh rahe the unka snapshot lete hai. Guard ke 2 refreshes ke baad bhi server empty bole PAR snapshot me items the → **server ka empty JHOOTH maano — visible items se hi order banao** (Orders/CheckOut + OrderPlace dono products[] hamare payload se hote hai — server par cart is waqt kya dikha raha hai farak nahi padta). Sirf tabhi "cart empty" bolo jab user ne KABHI koi item dekha hi na ho. Totals/success-summary bhi pre-refresh snapshot se — '0' kabhi nahi.
+Net: jab tak user ko items dikh rahe hai, "cart empty" toast **namumkin**; order same-tap par place hoga.
+
+**ADDRESS REMOVE — 2 aur shapes:** full-AddressDto body DELETE + POST (is backend company ka PUT/POST pattern poora DTO maangna hai) — total **17 shapes** × fresh-GetAllAddress VERIFY. Sab fail = server hi delete rok raha (order-linked FK ya cookie-auth) — website par test + BACKEND_API_NOTES #6 me cookie-auth sawaal bhi likha.
+
+**Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (.tr 310, 0 undefined); audit3 CLEAN (core guarded).

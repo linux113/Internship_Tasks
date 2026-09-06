@@ -106,12 +106,16 @@ home content, AED currency, users/orders) migrate karna hoga — fir hum
 ## 5) NAYA (06/09 shaam) — Address delete + order_number timing ⚠️
 
 6. **`Location/DeleteAddress` har shape par fail ho raha hai** user ke
-   account se (DELETE `?id=<int>` — swagger exact, + 14 aur shapes:
-   capital `Id`, POST/PUT/body `{id}`/`{Id}`, raw-int body,
-   `DeleteAllAddress` query/body). Har attempt ke baad fresh
-   `GetAllAddress` se verify kiya — address nahi hatta. Andhaaz:
-   **order-linked addresses par DB FK restrict** hai (saare test
-   addresses kisi-na-kisi order me use ho chuke hai). Options:
+   account se (DELETE `?id=<int>` — swagger exact, + 16 aur shapes:
+   capital `Id`, POST/PUT/body `{id}`/`{Id}`, raw-int body, FULL
+   AddressDto body, `DeleteAllAddress` query/body). Har attempt ke baad
+   fresh `GetAllAddress` se verify kiya — address nahi hatta. Do
+   possibilities: (i) **order-linked addresses par DB FK restrict** hai
+   (saare test addresses kisi-na-kisi order me use ho chuke hai);
+   (ii) shayad DeleteAddress ko website wala **cookie/CSRF session
+   chahiye, Bearer token nahi** (agar website par SAME address delete
+   ho jata hai par app se kabhi nahi hota, to yahi reason hai — batao
+   delete ko kya auth chahiye). Options:
    (a) soft-delete (`is_active=0`) implement kar do, ya
    (b) DeleteAddress ko FK ke bawajood chalne do (orders me address
    snapshot already pada hona chahiye), ya

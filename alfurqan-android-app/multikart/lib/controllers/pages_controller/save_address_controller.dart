@@ -211,6 +211,20 @@ class SaveAddressController extends GetxController {
           }
         } catch (_) {}
       }
+      // FULL-DTO body variants — is backend company ka pattern hai ki
+      // PUT/POST ko POORA AddressDto body chahiye (AddAddress/UpdateAddress
+      // dono aise hi chalte hai) — shayad DELETE bhi DTO body maangta ho.
+      for (final usePost in [false, true]) {
+        try {
+          final res = await ApiService().request(
+            endpoint: ApiEndpoints.deleteAddress,
+            method: usePost ? ApiMethod.post : ApiMethod.delete,
+            data: item.toPostJson(variant: 1, isDefault: 0, serverId: id),
+            fromJson: (json) => json,
+          );
+          if (res.isSuccess && await _serverAddressGone(id)) return true;
+        } catch (_) {}
+      }
       // DEFAULT-ADDRESS guard — DB/server default (is_default=1) address
       // ko delete rok sakta hai: pehle UpdateAddress se is_default=0 karo
       // (PUT website se verified-chalta shape), phir swagger DELETE retry.

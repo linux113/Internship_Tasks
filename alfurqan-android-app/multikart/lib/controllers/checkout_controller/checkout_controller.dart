@@ -299,10 +299,33 @@ class CheckoutController extends GetxController {
     // khaali" toast aa jata tha (user report). Refresh ke baad bhi khaali
     // ho tabhi toast do.
     var products = _orderProducts();
-    // FALSE-EMPTY guard (06/09 user glitch: cart me item dikh raha tha,
-    // phir bhi "Your cart is empty" toast aa gaya): ek transient network
-    // hiccup par refresh shuru me khaali de sakta hai — 2 baar refresh
-    // karke tabhi empty maano (donon sources khaali hon tabhi).
+    // ⭐ VISIBLE-TRUTH SNAPSHOT (06/09 3:08pm LIVE glitch — payment page
+    // par AED 65/95 total dikh raha tha phir bhi "Your cart is empty"!):
+    // ROOT: server ka GetCart kabhi-kabhi galti se EMPTY deta hai (FLAKY
+    // — pichli versions me bhi isi liye double-verify banai thi). 1-2
+    // refreshes bhi dono empty aaye, par user ko to JITNE bhi items cart/
+    // payment page par DIKH rahe the wo sach hai. Orders/CheckOut +
+    // OrderPlace dono products[] hamare payload se lete hai — server cart
+    // se farak NAHI padta. Isliye refresh se PEHLE jo user ko dikh raha
+    // tha wo snapshot rakho; refreshes empty aaye to wahi use karo.
+    final preRefreshProducts = products;
+    final preRefreshTotal = _currentTotal();
+    final cPre = _cartCtrl;
+    final preSnapItems = <Map<String, dynamic>>[
+      for (final e in (cPre?.cartModelList?.cartList ?? []))
+        {
+          'name': e.name ?? '',
+          'image': e.image ?? '',
+          'qty': int.tryParse(RegExp(r'(\d+)')
+                      .firstMatch(e.byWhom ?? '')
+                      ?.group(1) ??
+                  '') ??
+              1,
+          'price': e.mrp ?? 0,
+        }
+    ];
+    // FALSE-EMPTY guard: ek transient network hiccup par refresh shuru me
+    // khaali de sakta hai — 2 baar refresh karke tabhi empty maano.
     for (var attempt = 0; attempt < 2 && products.isEmpty; attempt++) {
       try {
         await _cartCtrl?.getCart(silent: true);
@@ -313,10 +336,17 @@ class CheckoutController extends GetxController {
       }
     }
     if (products.isEmpty) {
-      _toast('cartEmptyToast'.tr);
-      // FIX: galat-empty par dashboard par DHAKA mat do (stack bhi tootta
-      // tha) — user yahin rahe aur dobara try kar sake.
-      return;
+      if (preRefreshProducts.isNotEmpty) {
+        // server ka empty JHOOTH nikla (user items dekh raha tha) —
+        // visible items se hi order banao. Galat "cart khaali" toast +
+        // user ka dobara-do combo tap karna — bilkul khatam.
+        products = preRefreshProducts;
+      } else {
+        _toast('cartEmptyToast'.tr);
+        // FIX: galat-empty par dashboard par DHAKA mat do (stack bhi
+        // tootta tha) — user yahin rahe aur dobara try kar sake.
+        return;
+      }
     }
 
     // 3) server address chahiye
@@ -327,7 +357,10 @@ class CheckoutController extends GetxController {
       return;
     }
 
-    final totalText = _currentTotal();
+    // flaky GetCart ne cartModelList NULL kar diya ho to '0' na bane —
+    // refresh se PEHLE user ko jo total dikh raha tha wahi lo.
+    final totalText =
+        preRefreshTotal != '0' ? preRefreshTotal : _currentTotal();
     // coupon: payment page box ya coupons page se selected code
     String coupon = txtCoupon.text.trim();
     if (coupon.isEmpty) {
@@ -426,7 +459,7 @@ class CheckoutController extends GetxController {
       if (res.isSuccess) {
         // ---- Issue#3: success page ke liye REAL order snapshot banao ----
         // cart clear hone se PEHLE items ka naam/qty/price pakad lo.
-        final snapItems = <Map<String, dynamic>>[];
+        var snapItems = <Map<String, dynamic>>[];
         final c0 = _cartCtrl;
         for (final e in (c0?.cartModelList?.cartList ?? [])) {
           final m = RegExp(r'(\d+)').firstMatch(e.byWhom ?? '');
@@ -438,6 +471,9 @@ class CheckoutController extends GetxController {
             'price': e.mrp ?? 0,
           });
         }
+        // flaky GetCart ne guard ke dauraan cartModelList khaali kar diya
+        // ho to success page KHAALI summary na dikhe — visible snapshot.
+        if (snapItems.isEmpty) snapItems = preSnapItems;
         // response se order id — shape SUPER-lenient (id / orderId /
         // order_number / root num / root string). User screenshot me Order
         // Number BLANK aaya tha (server data:null ya alag key bhejta hai).
@@ -529,7 +565,7 @@ class CheckoutController extends GetxController {
         }
         lastPlacedOrder = {
           'items': snapItems,
-          'total': _currentTotal(),
+          'total': preRefreshTotal != '0' ? preRefreshTotal : _currentTotal(),
           'orderId': orderId,
           'isOrderNumber': isRealNo,
           'payment': paymentMethod == 'cod' ? 'Cash on Delivery' : paymentMethod,
