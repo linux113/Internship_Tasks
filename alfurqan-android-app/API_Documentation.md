@@ -875,3 +875,19 @@ Net: "pehle empty phir chalta hai" wala tribute swing KHATAM — pehli hi tap pa
 (Proof in same screenshots: #1061 success — naya order-number pipeline sahi; success page "Order Number #1061" NAYA tha purana nahi; detail page address/price/tax REAL.)
 
 **Verify:** 544 files 0 bracket/string problems; audit2 ALL CLEAN (.tr 310, 0 undefined); audit3 CLEAN (core guarded).
+
+## 08/09/2026 (v1.6.17+46) — FILTER deep-fix + RATING deep-fix + ADDRESS page loaders/server-sync
+
+**1) FILTER page (screenshot: price "AED0 — AED3" + slider bekaar + page zyadatar khaali):**
+ROOTS (3 mile): (a) price labels 45px FIXED boxes me fixed slots (0/50/100..300) par dikhte the — "AED300.0" clip hokar **"AED3"** dikhta tha, aur slider ghumate hi label GAYAB (sirf exact slot match par dikhta tha); (b) slider fixed max 300 + sirf 6 divisions — 25–65 AED ki books ke liye 80% area useless; (c) APPLY par poora network REFETCH (slow, flash).
+FIX: labels ab hamesha-dikhte LIVE 2 boxes (AED{start}/AED{end}, kabhi clip nahi); slider **dynamic max = loaded catalog ki REAL max price** (50 ke steps, 10-AED divisions); filter page reopen par **already-applied sort+price** wapas dikhta hai (pehle hamesha "All" reset dikhata tha jabki list filtered hoti thi — jhootha); APPLY/RESET ab **client-side reapply** (loaded catalog par TURANT, refetch nahi). Sort/price engine ShopController me pehle se client-side tha — ab wiring bhi tight.
+
+**2) RATING (screenshot: "★★★★½ (0 ratings)" + rating dene par 0 hi rehta):**
+ROOTS (2 mile): (a) `toProduct()` me **ratingPoints kabhi set hi nahi hota tha** — isliye "(0 ratings)" HAMESHA dikh ata tha chahe server par reviews ho (stars avg = rating_count, count = reviews_count — dono ab sahi map; live-verified server fields: `rating_count/reviews_count/reviews[]/can_review`); (b) WRITE-REVIEW sheet **100% decorative thi** — SUBMIT button ka onTap EXIST hi nahi karta tha, stars callback khaali, text field bina controller — user kitni bhi rating de, server par KUCH NAHI jata tha (!).
+FIX: toProduct mapping sahi + **server ke REAL reviews** parse (name/consumer/date/rating/text) → "Customer Reviews (N)" section ab asli reviews dikhata hai (avatar icon + stars + text; size/like-dislike sirf purane demo reviews ke liye). Sheet ab REAL: stars select + text + SUBMIT → **endpoint chain** (`Review/AddReview` + 5 variants × 3 body shapes — naming pattern Cart/AddToCart, Location/AddAddress wala; swagger hidden tha) → success par **user ki apni rating locally save** → detail page stars/count me USKI rating turant dikhti hai (server approval queue me rahega to global count baad me badhega — website par bhi aisa hi). Product page stars tap = review sheet khulti hai (pehle khaali callback). Naye keys ×4: selectRatingFirst/reviewSubmitted/reviewFailed/loadingAddresses.
+
+**3) ADDRESSES page (screenshot 6:20 — Delivery Details page sirf "Add New Address", list BLANK):**
+ROOT (BADA): Delivery Details page **sirf LOCAL store** padhta tha — server `GetAllAddress` KABHI call hi nahi karta tha! Fresh install / storage clear hone par checkout delivery step par addresses kabhi nahi aate chahe server par pade ho. Saved Address page bhi fetch ke dauraan BLANK dikhta tha (isShimmer kabhi set nahi hota tha).
+FIX: `AddressStore.syncFromServer()` SHARED sync (merge logic ek jagah) — Saved Address AUR Delivery dono pages server se fetch karte hai; dono me **loader** (spinner/"Loading your addresses..."/shimmer) jab tak list nahi aa-ti — blank screen khatam.
+
+**Verify:** 545 files 0 bracket/string problems; audit2 ALL CLEAN (lang parity 358/358/358/358; .tr 313, 0 undefined; routeName 30, 0 undefined); audit3 CLEAN (core guarded).

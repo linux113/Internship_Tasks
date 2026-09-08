@@ -75,6 +75,31 @@ class ShopController extends GetxController {
   List<ProductApiModel> _filtered = []; // price+sort apply ke baad
   static const int _pageSize = 12;
 
+  /// Loaded catalog ki max price (filter slider ki range isi se banti hai —
+  /// 08/09; min 100, 50 ke steps me rounded-up).
+  double get catalogMaxPrice {
+    var m = 100.0;
+    for (final p in _fullList) {
+      if (p.finalPrice > m) m = p.finalPrice;
+    }
+    return (m / 50).ceil() * 50.0;
+  }
+
+  /// ALREADY-LOADED catalog par filter/sort dobara apply — APPLY dabate hi
+  /// TURANT (network refetch nahi, spinner flash nahi). Agar list abhi load
+  /// hi nahi hui to full getProducts.
+  void applyClientFilters() {
+    if (_fullList.isEmpty) {
+      getProducts(reset: true);
+      return;
+    }
+    _applyFiltersAndSort();
+    currentPage = 1;
+    hasMore = _filtered.length > _pageSize;
+    productList = _filtered.take(_pageSize).toList();
+    update();
+  }
+
   /// price filter + sort apply karke _filtered set karo.
   void _applyFiltersAndSort() {
     List<ProductApiModel> list = List<ProductApiModel>.from(_fullList);

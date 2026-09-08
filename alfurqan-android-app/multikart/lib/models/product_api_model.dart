@@ -32,6 +32,9 @@ class ProductApiModel {
   /// CLIENT-SIDE hota hai (backend sort params IGNORE karta hai — live
   /// verify), isliye date chahiye hoti hai.
   final String? createdAt;
+  /// Server ke REAL reviews (api `reviews: []` node — 08/09 live verify).
+  /// Pehle detail page ka review section static/demo rehta tha.
+  final List<Reviews> apiReviews;
 
   ProductApiModel({
     this.id,
@@ -56,6 +59,7 @@ class ProductApiModel {
     this.thumbnail,
     this.categories = const [],
     this.createdAt,
+    this.apiReviews = const [],
   });
 
   factory ProductApiModel.fromJson(Map<String, dynamic> json) {
@@ -95,6 +99,39 @@ class ProductApiModel {
               .map((e) => CategoryApiModel.fromJson(
                   Map<String, dynamic>.from(e as Map)))
               .toList()
+          : const [],
+      // REAL server reviews (lenient — name/review/description/rating/
+      // created_at alag-alag keys ho sakte hai).
+      apiReviews: json['reviews'] is List
+          ? (json['reviews'] as List)
+              .where((e) => e is Map)
+              .map((e) {
+              final m = Map<String, dynamic>.from(e as Map);
+              final consumer = m['consumer'] ?? m['user'] ?? m['created_by'];
+              final cname = consumer is Map
+                  ? jsonToString(
+                      consumer['name'] ?? consumer['Name'] ?? consumer['email'])
+                  : null;
+              final rawDate = jsonToString(m['created_at'] ??
+                      m['Created_at'] ??
+                      m['date'] ??
+                      m['createdAt']) ??
+                  '';
+              return Reviews(
+                name: (cname != null && cname.isNotEmpty)
+                    ? cname
+                    : (jsonToString(m['name'] ?? m['title']) ?? 'Customer'),
+                description: jsonToString(m['review'] ??
+                        m['description'] ??
+                        m['comment'] ??
+                        m['message']) ??
+                    '',
+                date: rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate,
+                rating:
+                    (jsonToDouble(m['rating'] ?? m['stars']) ?? 0).toDouble(),
+                image: '', // server avatar nahi deta — ReviewCard icon dikhata hai
+              );
+            }).toList()
           : const [],
     );
   }
@@ -197,8 +234,14 @@ class ProductApiModel {
       // nahi — product detail page pe cart quantity hamesha 1 se shuru honi
       // chahiye (quantityIncrease/quantityDecrease isi ko badalte hai).
       quantity: 1,
+      // Stars = rating_count (average), "(N ratings)" = reviews_count —
+      // 08/09 deep-fix: ratingPoints kabhi set hi nahi hota tha isliye
+      // detail page HAMESHA "(0 ratings)" dikhata tha chahe reviews ho.
       rating: ratingCount?.toDouble(),
+      ratingPoints: (reviewsCount ?? 0).toDouble(),
       totalReview: reviewsCount,
+      // REAL server reviews — pehle detail review section demo/static tha.
+      reviews: apiReviews.isEmpty ? null : apiReviews,
       images: thumbnail != null ? [Images(image: thumbnail!.url)] : [],
     );
   }

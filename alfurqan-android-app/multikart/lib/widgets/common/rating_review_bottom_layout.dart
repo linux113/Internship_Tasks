@@ -1,12 +1,14 @@
 import '../../config.dart';
+import '../../controllers/pages_controller/rating_review_controller.dart';
 
 class RatingReviewBottomLayout extends StatelessWidget {
   const RatingReviewBottomLayout({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return  GetBuilder<AppController>(
-      builder: (appCtrl) {
+    return  GetBuilder<RatingReviewController>(
+      builder: (c) {
+        final appCtrl = c.appCtrl;
         return Container(
             width: MediaQuery.of(Get.context!).size.width,
             padding: EdgeInsets.symmetric(
@@ -27,17 +29,27 @@ class RatingReviewBottomLayout extends StatelessWidget {
               child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    LatoFontStyle(
-                        text: CardBalanceFont().back.toUpperCase(),
-                        fontWeight: FontWeight.w600,
-                        fontSize: FontSizes.f14),
+                    // BACK — pehle dead text tha (tap nahi hota tha)
+                    InkWell(
+                      onTap: () => Get.back(),
+                      child: LatoFontStyle(
+                          text: CardBalanceFont().back.toUpperCase(),
+                          fontWeight: FontWeight.w600,
+                          fontSize: FontSizes.f14),
+                    ),
                     VerticalDivider(
                       color: appCtrl.appTheme.greyLight25,
                     ),
+                    // FIX (08/09 — "rating dene par 0 hi rehta hai"): SUBMIT
+                    // ka onTap EXIST hi nahi karta tha — 100% decorative
+                    // button tha! Ab REAL server submit.
                     CustomButton(
-                      title: OrderHistoryFont().submit.toUpperCase(),
+                      title: c.isSubmitting
+                          ? "${OrderHistoryFont().submit.toUpperCase()}..."
+                          : OrderHistoryFont().submit.toUpperCase(),
                       width: AppScreenUtil().screenWidth(100),
                       height: AppScreenUtil().screenHeight(30),
+                      onTap: () => c.submit(),
                     )
                   ]),
             ));

@@ -23,7 +23,10 @@ class SaveAddress extends StatelessWidget {
             title: LatoFontStyle(text: CommonTextFont().savedAddress,color: saveAddressCtrl.appCtrl.appTheme.blackColor,),
           ),
           body: SingleChildScrollView(
-            child: saveAddressCtrl.appCtrl.isShimmer
+            child: (saveAddressCtrl.isLoadingAddresses &&
+                    saveAddressCtrl.deliveryDetail == null)
+                // 08/09 — server fetch ke dauraan pehle BLANK page dikhta
+                // tha, ab shimmer loader dikhta hai.
                 ? const AddressListShimmer()
                 : Column(
                     children: [
@@ -32,7 +35,10 @@ class SaveAddress extends StatelessWidget {
                       if (saveAddressCtrl.deliveryDetail != null)
                         const SaveAddressList(),
                       // koi address save nahi hai to saaf message demo data ki jagah
-                      if (saveAddressCtrl.deliveryDetail == null)
+                      // (loading ke dauraan mat dikhao — warna addresses aate
+                      // hi message chalak jata hai)
+                      if (saveAddressCtrl.deliveryDetail == null &&
+                          !saveAddressCtrl.isLoadingAddresses)
                         Padding(
                           padding: EdgeInsets.symmetric(
                               horizontal: AppScreenUtil().screenWidth(15),

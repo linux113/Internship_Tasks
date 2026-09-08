@@ -12,6 +12,7 @@ class DeliveryDetailController extends GetxController {
   int selectRadio = 0;
   DeliveryDetailModel? deliveryDetail;
   String totalAmount ="0";
+  bool isLoadingAddresses = false;
 
   /// Checkout address step — user ke REAL saved addresses (local store se,
   /// server par Location/AddAddress se save hue). Koi nahi to khaali rahega
@@ -23,6 +24,23 @@ class DeliveryDetailController extends GetxController {
         : DeliveryDetailModel(
             addressList: saved.map((e) => e.toAddressListDisplay()).toList());
     update();
+  }
+
+  /// 08/09 DEEP-fix: purana code sirf LOCAL store padhta tha — fresh
+  /// install / storage-clear par checkout ke delivery step par addresses
+  /// KABHI nahi aate the (blank page + sirf Add New Address), chahe server
+  /// par pade ho. Ab server GetAllAddress se merge lao (shared sync) +
+  /// loader dikhao jab tak list nahi ban-ti.
+  Future<void> syncFromServer() async {
+    final loggedIn = (storage.read(Session.isLogin) ?? false) == true;
+    if (!loggedIn) return;
+    isLoadingAddresses = true;
+    update();
+    try {
+      await AddressStore.syncFromServer();
+    } catch (_) {}
+    isLoadingAddresses = false;
+    refreshList();
   }
 
   //select address — checkout ke liye selected address ka ID bhi save kar
@@ -54,6 +72,8 @@ class DeliveryDetailController extends GetxController {
       if ((live ?? 0) > 0) totalAmount = live!.toStringAsFixed(2);
     }
     update();
+    // server se addresses lao (blank page fix + loader)
+    syncFromServer();
     super.onReady();
   }
 }

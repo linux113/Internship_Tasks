@@ -31,6 +31,33 @@ class DeliveryDetail extends StatelessWidget {
                     //address list layout
                     if (deliveryDetailCtrl.deliveryDetail != null)
                       const AddressListLayout(),
+                    // 08/09 — server fetch ke dauraan pehle BLANK area dikhta
+                    // tha; ab spinner + text dikhta hai (user ko pata chale
+                    // ki addresses load ho rahe hai).
+                    if (deliveryDetailCtrl.isLoadingAddresses &&
+                        deliveryDetailCtrl.deliveryDetail == null)
+                      Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                              vertical:
+                                  AppScreenUtil().screenHeight(40)),
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(
+                                  color: const Color(0xFF044015)),
+                              SizedBox(
+                                  height: AppScreenUtil()
+                                      .screenHeight(14)),
+                              LatoFontStyle(
+                                text: 'loadingAddresses'.tr,
+                                fontSize: FontSizes.f14,
+                                color: deliveryDetailCtrl
+                                    .appCtrl.appTheme.contentColor,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     //add new address button layout
                     const AddAddressButton(),
                     const Space(0, 30),

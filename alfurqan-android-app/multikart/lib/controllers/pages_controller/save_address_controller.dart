@@ -48,53 +48,24 @@ class SaveAddressController extends GetxController {
   }
 
   /// Local store se turant dikhao; phir (logged-in ho to) server GetAllAddress
-  /// se fresh list laao — server hi source-of-truth hai.
+  /// se fresh list laao — server hi source-of-truth hai. Fetch ke dauraan
+  /// loader dikhta hai (08/09 — pehle blank screen dikhti thi).
+  bool isLoadingAddresses = false;
+
   Future<void> refreshList() async {
     _buildDisplay(AddressStore.load());
 
     if (!_isLoggedIn) return;
+    isLoadingAddresses = true;
+    update();
     try {
-      final res = await ApiService().request<List<AddressModel>>(
-        endpoint: ApiEndpoints.getAllAddress,
-        method: ApiMethod.get,
-        fromJson: (json) {
-          dynamic raw = json;
-          for (var i = 0; i < 3 && raw is Map; i++) {
-            raw = raw['data'] ?? raw['Data'] ?? raw['items'] ?? raw['Items'];
-          }
-          if (raw is! List) return <AddressModel>[];
-          return raw
-              .where((e) => e is Map)
-              .map((e) => AddressModel.fromServerJson(
-                  Map<String, dynamic>.from(e as Map)))
-              .toList();
-        },
-      );
-      if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
-        // sirf apne user ke addresses (agar row me user_id aata hai to filter)
-        var serverList = res.data!;
-        if (serverList.any((e) => (e.userId ?? 0) != 0)) {
-          serverList =
-              serverList.where((e) => (e.userId ?? 0) == _userId).toList();
-        }
-        if (serverList.isEmpty) return; // mera koi server address nahi — local hi dikhao
-
-        // local-only (kabhi server par save na hue) addresses append karo
-        final localOnly = AddressStore.load()
-            .where((l) =>
-                !l.fromServer &&
-                !serverList.any((s) =>
-                    s.street == l.street &&
-                    s.pincode == l.pincode &&
-                    s.phone == l.phone))
-            .toList();
-        final merged = [...serverList, ...localOnly];
-        await AddressStore.saveAll(merged);
-        _buildDisplay(merged);
-      }
+      final merged = await AddressStore.syncFromServer();
+      if (merged != null) _buildDisplay(merged);
     } catch (_) {
       // network issue — local list hi rahegi
     }
+    isLoadingAddresses = false;
+    update();
   }
 
   //select address

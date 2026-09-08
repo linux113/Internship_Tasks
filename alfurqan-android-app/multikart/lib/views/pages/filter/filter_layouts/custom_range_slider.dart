@@ -22,8 +22,12 @@ class CustomRangeSlider extends StatelessWidget {
         child: RangeSlider(
           values: filterCtrl.currentRangeValues,
           min: 0,
-          max: FilterController.maxPrice, // 300 (mehengī books bhi cover)
-          divisions: 6,
+          // 08/09: ab DYNAMIC — visible catalog ki max price (pehle fixed
+          // 300 + divisions 6 = sirf 0/50/100..300 pe rukta tha; 25-65 AED
+          // ki books ke liye slider ka 80% area bekaar tha). 10-AED steps
+          // me smooth selection.
+          max: filterCtrl.maxPriceVal,
+          divisions: (filterCtrl.maxPriceVal / 10).round().clamp(10, 60),
           onChanged: (RangeValues values) {
             filterCtrl.currentRangeValues = values;
             filterCtrl.update();

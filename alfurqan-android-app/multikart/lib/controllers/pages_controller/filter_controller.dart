@@ -6,9 +6,11 @@ class FilterController extends GetxController {
       ? Get.find<AppController>()
       : Get.put(AppController());
 
-  /// Price slider ki range — AED me real books ki pricing ke hisaab se
-  /// (pehle 0..100 tha, isse mehengi books filter me chhoot jaati thi).
+  /// Fallback price range — catalog load na hui ho tab (dynamic max
+  /// ShopController.catalogMaxPrice se aata hai — 08/09: slider ki range
+  /// ab SACH me visible products ke prices ke hisaab se hai).
   static const double maxPrice = 300;
+  double maxPriceVal = maxPrice;
   RangeValues currentRangeValues = const RangeValues(0, maxPrice);
 
   // Purane fashion-template filter state (Brand/Size/Occasion/Color) — ab
@@ -50,15 +52,16 @@ class FilterController extends GetxController {
   }
 
   /// APPLY — pehle YE BUTTON KUCH NAHI KARTA THA (sirf Get.back)!! Ab REAL:
-  /// sort + price range ShopController me set karke API se fresh list lata
-  /// hai (GetAllProductsFront ke real params: field, sort, price).
+  /// sort + price range ShopController me set karke list apply hoti hai.
+  /// 08/09: full REFETCH ki jagah client-side reapply (already-loaded
+  /// catalog par) — apply TURANT hota hai, spinner flash nahi.
   void applyToShop() {
     if (Get.isRegistered<ShopController>()) {
       final shop = Get.find<ShopController>();
 
       // price filter (poori range select = koi price filter nahi)
       if (currentRangeValues.start <= 0 &&
-          currentRangeValues.end >= maxPrice) {
+          currentRangeValues.end >= maxPriceVal) {
         shop.priceRange = "";
       } else {
         shop.priceRange =
@@ -87,7 +90,7 @@ class FilterController extends GetxController {
           shop.sortField = "";
           shop.sortDirection = "asc";
       }
-      shop.getProducts(reset: true);
+      shop.applyClientFilters();
     }
     Get.back();
   }
@@ -99,7 +102,7 @@ class FilterController extends GetxController {
     selectedOccasion = 0;
     selectedColor = 0;
     selectSize = 0;
-    currentRangeValues = const RangeValues(0, maxPrice);
+    currentRangeValues = RangeValues(0, maxPriceVal);
     update();
     if (Get.isRegistered<ShopController>()) {
       final shop = Get.find<ShopController>();
@@ -108,7 +111,7 @@ class FilterController extends GetxController {
       shop.attribute = "";
       shop.sortField = ""; // Recommended = natural order
       shop.sortDirection = "asc";
-      shop.getProducts(reset: true);
+      shop.applyClientFilters();
     }
   }
 
@@ -118,6 +121,36 @@ class FilterController extends GetxController {
     brandFilterList = AppArray().brandFilterList;
     sizeList = AppArray().sizeList;
     occasionFilterList = AppArray().occasionFilterList;
+    // 08/09: (1) slider ki MAX price visible catalog ke REAL prices se
+    // (25 wali books ke liye 300 ka slider bekaar tha — pura range ek
+    // chhote se hisse me simat jata); (2) shop me ALREADY-APPLIED filter
+    // dobara dikhna chahiye (har baar page reopen par "All" reset dikhna
+    // jhooth-lagta hai jabki list filtered hai).
+    if (Get.isRegistered<ShopController>()) {
+      final shop = Get.find<ShopController>();
+      maxPriceVal = shop.catalogMaxPrice;
+      if (shop.sortField == "price") {
+        dropDownVal = shop.sortDirection == "desc"
+            ? "Price: High to Low"
+            : "Price: Low to High";
+      } else if (shop.sortField == "created_at") {
+        dropDownVal = "What's New";
+      } else {
+        dropDownVal = "Recommended";
+      }
+      if (shop.priceRange.isNotEmpty) {
+        final parts = shop.priceRange.split(',');
+        final lo = double.tryParse(parts[0].trim()) ?? 0;
+        final hi = parts.length > 1
+            ? (double.tryParse(parts[1].trim()) ?? maxPriceVal)
+            : maxPriceVal;
+        currentRangeValues = RangeValues(
+            lo.clamp(0, maxPriceVal), hi.clamp(0, maxPriceVal));
+      } else {
+        currentRangeValues = RangeValues(0, maxPriceVal);
+      }
+      update();
+    }
     colorList = AppArray().colorList;
 
     update();
