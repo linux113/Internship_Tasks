@@ -891,3 +891,52 @@ ROOT (BADA): Delivery Details page **sirf LOCAL store** padhta tha — server `G
 FIX: `AddressStore.syncFromServer()` SHARED sync (merge logic ek jagah) — Saved Address AUR Delivery dono pages server se fetch karte hai; dono me **loader** (spinner/"Loading your addresses..."/shimmer) jab tak list nahi aa-ti — blank screen khatam.
 
 **Verify:** 545 files 0 bracket/string problems; audit2 ALL CLEAN (lang parity 358/358/358/358; .tr 313, 0 undefined; routeName 30, 0 undefined); audit3 CLEAN (core guarded).
+
+---
+
+## v1.6.18+47 — 08/09/2026 (Rating "0 hi rehta hai" ka ASLI jad + instant visible review)
+
+### Root cause (live screenshots se pakda gaya)
+User ne review submit kiya → server ne accept kiya (toast "Data has been save"
+server ka success message hai) → sheet close → phir bhi product page par
+"(0 ratings)". Code probe se ASLI jad mila: **GetStorage → SharedPreferences
+migration ne Map/List storage chupchaap tod diya tha** —
+`LocalStorage.write()` Map value ko `value.toString()` bana kar save karta
+tha (`{494: 5.0}` jaisa), aur `read()` par `raw is Map` kabhi true hota hi
+nahi tha. Matlab device par DO features hamesha DEAD the:
+1. `my_ratings` (user ki apni rating yaad rakhna) — kabhi save/padh nahi paaya.
+2. `cart_snapshot_v2` (GetCart flake rescue) — v1.6.16 ka persistent
+   snapshot asal me kabhi persist nahi hua tha (sirf in-memory rescue chal
+   raha tha).
+
+### Fixes (deep, storage layer par — ek fix, saare features zinda)
+1. **LocalStorage Map/List JSON support**: Map/List ab `@@json@@` marker +
+   jsonEncode se save hote hai; `read()` marker dekh kar wapas asli
+   Map/List decode karta hai. Plain strings ko touch nahi (address store,
+   wishlist, recent-searches khud jsonEncode karke RAW string expect karte
+   hai — unka format jaisa tha waisa hi, koi break nahi). Primitives
+   (bool/int/double/String) bilkul same. Purani corrupt values agli save
+   par khud heal ho jati hai.
+2. **Review turant screen par (optimistic)**: server review ko MODERATION
+   queue me rakhta hai — isliye GetAllProductsFront turant reviews[] me
+   nahi dikhata. Ab submit success par `ProductDetailController.applyMyReview()`
+   se USKI review Customer Reviews me TOP par render hoti hai (uska naam,
+   aaj ki tarikh, uski stars, uska text), count +1, stars (server avg 0 ho
+   to uski rating). Page reopen par fresh server data — duplicate nahi.
+3. **Rating count/stars ab sach**: storage fix ke baad reopen par bhi
+   "(1 ratings)" dikhta hai (my_ratings ab actually save hota hai).
+4. **Cart snapshot ab SACH me persist hota hai** — "pehli baar empty cart"
+   flake rescue ab app memory rely kiye bina bhi kaam karega.
+5. New lang key `you` ×4 (review author fallback naam).
+
+### Files
+- `services/local_storage_service.dart` (Map/List JSON round-trip + marker)
+- `controllers/pages_controller/product_detail_controller.dart` (applyMyReview)
+- `controllers/pages_controller/rating_review_controller.dart` (submit → optimistic append)
+- `common/language/{en,ar,hi,kr}.dart` (+1 key each, 359 each — parity OK)
+- `pubspec.yaml` 1.6.18+47, on-screen label "v1.6.18 (47)"
+- audits: deep_check 545 files 0 problems / audit2 parity + .tr 314 undefined 0 / audit3 CLEAN
+
+### Test notes
+Review submit → sheet band → WAHIN product page par count badhta aur apna
+review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.

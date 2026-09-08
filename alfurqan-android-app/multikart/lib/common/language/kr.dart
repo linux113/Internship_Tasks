@@ -613,6 +613,7 @@ final dynamic kr = {
   "couponRemoved": "쿠폰이 제거되었습니다",
   "addressRemoved": "주소가 삭제되었습니다",
   "addressNotRemoved": "서버에서 주소를 삭제할 수 없습니다. 주문에 연결되어 있을 수 있습니다 — 그렇지 않으면 다시 시도해 주세요.",
+  "you": "당신",
   "selectRatingFirst": "먼저 별점을 선택해 주세요",
   "reviewSubmitted": "리뷰가 제출되었습니다! 승인 후 표시됩니다.",
   "reviewFailed": "리뷰를 볼 수 없습니다. 다시 시도해 주세요.",

@@ -127,9 +127,14 @@ class RatingReviewController extends GetxController {
       } catch (_) {}
       _toast(serverMsg.isNotEmpty ? serverMsg : 'reviewSubmitted'.tr);
       Get.back();
-      // detail page turant rebuild (user ki rating wali stars dikhane ke liye)
+      // detail page TURANT user ki review ke saath rebuild — server approval
+      // queue tak reviews[] khali deta hai, isliye optimistic append (08/09
+      // deep-fix: pehle sirf update() hota tha par screen phir bhi 0 dikhati
+      // thi kyunki my_ratings Map LocalStorage me toString()-corrupt ho jata
+      // tha — ab storage fixed + review bhi turant render).
       if (Get.isRegistered<ProductDetailController>()) {
-        Get.find<ProductDetailController>().update();
+        Get.find<ProductDetailController>()
+            .applyMyReview(rating: ratingVal, text: review);
       }
     } else {
       _toast(serverMsg.isNotEmpty ? serverMsg : 'reviewFailed'.tr);

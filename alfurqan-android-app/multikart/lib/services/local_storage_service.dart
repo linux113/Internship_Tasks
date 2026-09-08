@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// GetStorage ki jagah ab SharedPreferences use ho raha hai.
@@ -31,8 +33,35 @@ class LocalStorage {
     return _prefs!;
   }
 
+  /// JSON-encoded Map/List values is marker ke saath store hote hai — read()
+  /// inhe wapas asli Map/List me decode kar deta hai. Plain strings ko touch
+  /// nahi kiya jata (decode fail = original string hi return hoti hai).
+  static const String _jsonMarker = '@@json@@';
+
   /// GetStorage.read(key) jaisa - jo bhi type save kiya tha wahi dynamic value milegi.
-  dynamic read(String key) => _p.get(key);
+  ///
+  /// DEEP-FIX (08/09 — "rating dene par phir bhi 0" ka ASLI jad): pehle
+  /// Map/List values `value.toString()` se save hoti thi (jaise
+  /// '{494: 5.0}') — read() par `raw is Map` kabhi true hota hi nahi tha,
+  /// isliye my_ratings AUR cart_snapshot_v2 dono device par DEAD the.
+  /// Ab Map/List JSON-encode hokar save hoti hai aur yaha decode ho jati hai.
+  dynamic read(String key) {
+    final v = _p.get(key);
+    if (v is String) {
+      if (v.startsWith(_jsonMarker)) {
+        try {
+          return jsonDecode(v.substring(_jsonMarker.length));
+        } catch (_) {
+          return v;
+        }
+      }
+    }
+    // NOTE: bina-marker strings deliberately touch nahi karte — address
+    // store / wishlist / recent-searches JAISI features khud jsonEncode kar
+    // ke RAW STRING save karti hai aur read par `raw is String` expect
+    // karti hai; unhe decode kar dena unka parse tod dega.
+    return v;
+  }
 
   /// GetStorage.write(key, value) jaisa - value ke runtime type ke hisaab se
   /// sahi SharedPreferences setter khud choose karta hai.
@@ -49,6 +78,13 @@ class LocalStorage {
       await _p.setDouble(key, value);
     } else if (value is List<String>) {
       await _p.setStringList(key, value);
+    } else if (value is Map || value is List) {
+      // Map/List ko round-trip-able JSON string me save karo (read() decode karega).
+      try {
+        await _p.setString(key, _jsonMarker + jsonEncode(value));
+      } catch (_) {
+        await _p.setString(key, value.toString());
+      }
     } else {
       // Koi complex/unknown type ho to string bana kar rakh do, taki data loss na ho.
       await _p.setString(key, value.toString());

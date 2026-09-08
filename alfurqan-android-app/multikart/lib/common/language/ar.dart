@@ -629,6 +629,7 @@ final dynamic ar = {
   "couponRemoved": "تمت إزالة القسيمة",
   "addressRemoved": "تم حذف العنوان",
   "addressNotRemoved": "تعذر حذف العنوان من الخادم. قد يكون مرتبطًا بطلب — وإلا حاول مرة أخرى.",
+  "you": "أنت",
   "selectRatingFirst": "يرجى اختيار تقييم النجوم أولاً",
   "reviewSubmitted": "تم إرسال المراجعة! ستظهر بعد الموافقة.",
   "reviewFailed": "تعذر إرسال المراجعة. حاول مرة أخرى.",

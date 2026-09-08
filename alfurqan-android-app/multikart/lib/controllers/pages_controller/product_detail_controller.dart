@@ -94,6 +94,42 @@ class ProductDetailController extends GetxController {
     }
   }
 
+  /// USER KA SUBMITTED REVIEW turant screen par dikhao (08/09 deep-fix —
+  /// "rating deta hoon phir bhi 0 rehta hai"): server review ko approval
+  /// queue me rakhta hai — GetAllProductsFront tab tak us product ke
+  /// reviews[]/reviews_count me nahi dikhata, isliye sirf server data par
+  /// bharosa karne se page par hamesha "(0 ratings)" hi rehta. Review
+  /// server accept kar chuka hai (toast "Data has been save"), isliye UI
+  /// me USKI entry turant top par dikhao: count+1, stars (agar server
+  /// avg 0 hai to uski rating), Customer Reviews me uska naam/tarikh/text.
+  /// Page reopen par fresh server data aata hai — duplicate nahi banta
+  /// (approval ke baad count server se hi aata hai).
+  void applyMyReview({required double rating, required String text}) {
+    final p = product;
+    p.totalReview = (p.totalReview ?? 0) + 1;
+    p.ratingPoints = (p.ratingPoints ?? 0) + 1;
+    if ((p.rating ?? 0) <= 0) p.rating = rating;
+    String name = (LocalStorage().read('name') ?? '').toString().trim();
+    if (name.isEmpty) name = 'you'.tr;
+    final now = DateTime.now();
+    final date =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    p.reviews = <Reviews>[
+      Reviews(
+        name: name,
+        description: text,
+        date: date,
+        rating: rating,
+        image: '',
+        size: '',
+        like: 0,
+        disLike: 0,
+      ),
+      ...?p.reviews,
+    ];
+    update();
+  }
+
   /// "You may also like" section — isi product ki category ke real products
   /// (GetAllProductsFront?category=<slug>) se bharo, current product hata kar.
   Future<void> fetchSimilarProducts() async {

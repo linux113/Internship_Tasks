@@ -629,6 +629,7 @@ final dynamic en = {
   "couponRemoved": "Coupon removed",
   "addressRemoved": "Address removed",
   "addressNotRemoved": "Address could not be removed on the server. It may be linked to an order — otherwise please try again.",
+  "you": "You",
   "selectRatingFirst": "Please select a star rating first",
   "reviewSubmitted": "Review submitted! It will appear after approval.",
   "reviewFailed": "Review could not be sent. Please try again.",
