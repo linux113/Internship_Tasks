@@ -956,3 +956,12 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
 9. **"inclusive of all taxes" → "exclusive of all taxes"** (×4 langs) — product price tax ke BINA hai, tax cart me add hota hai.
 10. **Search FIXED (shop page)**: shop page ke search box ka controller kahin LISTEN hi nahi hota tha — type karo aur kuch na ho (isliye "search not working"). Ab live listener → loaded catalog me filter (name/desc/SKU/slug/category, English+Arabic). (Dedicated search page pehle se client-side kaam karti thi — verified live probe.)
 - Version 1.6.19+48, label "v1.6.19 (48)"; lang keys ×4: exclusiveOfAllTaxes, pending, processing, shipped, outForDelivery, delivered, cancelled (366 each, parity OK); audits ALL CLEAN (deep_check 546 files, .tr 278/0, audit3 core guarded).
+
+---
+
+## v1.6.20+49 — 10/09/2026 (HOTFIX: build error)
+- banner_data.dart ka web_view_page import `../../../../widgets/...` (4 level)
+  tha — file 5 level andar hai, isliye `lib/views/widgets/...` ban gaya aur
+  release build fail hua (kernel_snapshot error). Ab DONO imports
+  `package:multikart/widgets/common/web_view_page.dart` (package-style,
+  path math ka koi sawaal hi nahi). Baaki naye files ke imports verify kiye.

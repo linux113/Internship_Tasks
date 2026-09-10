@@ -1,5 +1,5 @@
 import '../../config.dart';
-import '../../widgets/common/web_view_page.dart';
+import 'package:multikart/widgets/common/web_view_page.dart';
 import '../../models/category_api_model.dart';
 import '../../models/home_page_api_model.dart';
 import '../../models/product_api_model.dart';

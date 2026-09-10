@@ -1,5 +1,5 @@
 import '../../../../../config.dart';
-import '../../../../widgets/common/web_view_page.dart';
+import 'package:multikart/widgets/common/web_view_page.dart';
 
 class HomeBannerData extends StatelessWidget {
   final HomeBannerModel? data;
