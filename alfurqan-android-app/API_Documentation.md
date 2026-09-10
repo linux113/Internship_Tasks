@@ -1097,3 +1097,39 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
    step green ✓**, sab labels translated.
 3. Top bar ka search magnifier purana style ka (bina green box) — tap
    par real search page.
+
+---
+
+## v1.6.23+52 — 10/09/2026 (User: "add loading where data coming late — category click par screen blank rehti hai phir products aate hai")
+
+1. **Category/products page LOADER (user wala case)**: category chip tap
+   karne par products fetch hone tak screen bilkul BLANK rehti thi — jad:
+   page sirf `appCtrl.isShimmer` par ShopShimmer dikhata tha, jo dashboard
+   load ke baad false rehta hai; products fetch ke waqt `isLoadingProducts`
+   flag banta tha par UI uspar kuch nahi dikhati thi. Ab CLEAR 3-state:
+   (a) fetch chal raha + list khaali = **brand-green LOADER + "Loading
+   products..."** (naya shared `LoadingBox` widget — localized message
+   ke saath), (b) fetch khatam + sach me khaali (empty category/search ka
+   0 result) = **honest empty state** (icon + "No products found here
+   yet" — pehle blank rehti, lagta app hang), (c) data = grid.
+2. **Order detail page LOADER**: deep-open (history-prefill ke bina —
+   jaise track-order se) fetch pura hone tak white screen dikhti thi;
+   controller me `isLoading` flag tha par VIEW use hi nahi karti thi. Ab
+   `isLoading && orderNumber khali` = green loader + "Loading...".
+3. Baaki screens pehle se covered (verify isi round): home/category/
+   brands tabs shimmer, addresses shimmer, order history shimmer, search
+   page spinner, Place Order button = "placingOrder" text (double-tap
+   guard `isPlacing`), product images ka apna spinner, pull-to-refresh
+   6 screens.
+- Lang keys +3 ×4 (loadingProducts, loadingData, noProductsFound) =
+  369 each, parity OK; audits ALL CLEAN (deep_check 548 files, .tr
+  279/0, routeName 29/0, audit3 core guarded).
+- Version 1.6.23+52, label "v1.6.23 (52)".
+
+### Test notes (v1.6.23)
+1. Kisi bhi category par tap karo → products aane tak **green loader +
+   "Loading products..."** dikhe (blank nahi), phir grid aa jaye.
+2. Aisi jagah jaha products na hon (ya search me faltu type karo) →
+   loader ke baad "No products found here yet" likha aaye.
+3. Order history se kisi order ko kholo (ya Track Order) → data late ho
+   to green loader dikhe, blank nahi.

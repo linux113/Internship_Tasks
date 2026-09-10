@@ -1,6 +1,7 @@
 import 'package:multikart/config.dart';
 import 'package:multikart/shimmer_layouts/category_shimmer/shop_shimmer.dart';
 import 'package:multikart/views/pages/shop/shop_list_layout.dart';
+import 'package:multikart/widgets/common/loading_box.dart';
 
 class ShopPage extends StatelessWidget {
   final shopCtrl = Get.put(ShopController());
@@ -66,10 +67,40 @@ class ShopPage extends StatelessWidget {
                 ),
               ),
               const Space(0, 20),
-              //shop list layout
+              //shop list layout — 10/09 user request: category tap karne
+              //par screen BLANK rehti thi jab tak products na aa jaye
+              //(isShimmer tab tak false ho chuka hota hai, isliye shimmer
+              //bhi nahi dikhta tha). Ab CLEAR 3-state:
+              //  1) fetch chal raha + list khaali  = green LOADER + msg
+              //  2) fetch khatam + sach me khaali  = HONEST empty state
+              //  3) data aa gaya                   = product grid
               shopCtrl.appCtrl.isShimmer
                   ? const ShopShimmer()
-                  : const ShopListLayout()
+                  : (shopCtrl.isLoadingProducts &&
+                          shopCtrl.productList.isEmpty)
+                      ? LoadingBox(
+                          messageKey: 'loadingProducts',
+                          height: AppScreenUtil().screenHeight(320))
+                      : (!shopCtrl.isLoadingProducts &&
+                              shopCtrl.productList.isEmpty)
+                          ? SizedBox(
+                              height: AppScreenUtil().screenHeight(320),
+                              child: Center(
+                                  child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                    Icon(Icons.inventory_2_outlined,
+                                        size: AppScreenUtil().size(40),
+                                        color: shopCtrl
+                                            .appCtrl.appTheme.contentColor),
+                                    const Space(0, 12),
+                                    LatoFontStyle(
+                                        text: 'noProductsFound'.tr,
+                                        fontSize: FontSizes.f14,
+                                        color: shopCtrl
+                                            .appCtrl.appTheme.contentColor),
+                                  ])))
+                          : const ShopListLayout()
             ]))),
             bottomNavigationBar: CommonBottomNavigation(
                 onTap: (val) => shopCtrl.bottomNavigationChange(val, context)),

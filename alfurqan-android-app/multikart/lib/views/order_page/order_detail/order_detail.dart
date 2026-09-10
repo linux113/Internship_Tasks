@@ -1,4 +1,5 @@
 import 'package:multikart/config.dart';
+import 'package:multikart/widgets/common/loading_box.dart';
 import 'package:multikart/widgets/common_icons/back_arrow_button.dart';
 
 /// ORDER DETAIL page — pehle NestedSilverCustomAppBar ke andar static demo
@@ -47,7 +48,11 @@ class _OrderDetailState extends State<OrderDetail> {
               color: ctrl.appCtrl.appTheme.blackColor,
             ),
           ),
-          body: const SingleChildScrollView(child: OrderDetailBody()),
+          // 10/09 user request: detail fetch me late ho to BLANK screen
+          // ki jagah green LOADER (prefill mil chuka ho to content seedha).
+          body: (ctrl.isLoading && ctrl.orderNumber.isEmpty)
+              ? const Center(child: LoadingBox(messageKey: 'loadingData'))
+              : const SingleChildScrollView(child: OrderDetailBody()),
         ),
       ),
       );
