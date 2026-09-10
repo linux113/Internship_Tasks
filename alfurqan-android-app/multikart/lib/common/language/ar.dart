@@ -641,6 +641,8 @@ final dynamic ar = {
   "reviewSubmitted": "تم إرسال المراجعة! ستظهر بعد الموافقة.",
   "reviewFailed": "تعذر إرسال المراجعة. حاول مرة أخرى.",
   "loadingAddresses": "جاري تحميل عناوينك...",
+  "noReviewsYet": "لا توجد مراجعات بعد - كن أول من يكتب مراجعة!",
+  "customer": "عميل",
   "loadingProducts": "جاري تحميل المنتجات...",
   "loadingData": "جاري التحميل...",
   "noProductsFound": "لا توجد منتجات هنا حتى الآن",

@@ -39,6 +39,12 @@ class ProductApiModel {
   /// Pehle detail page ka review section static/demo rehta tha.
   final List<Reviews> apiReviews;
 
+  /// `review_ratings` node (int stars ka list, jaise [2]) — 10/09 live
+  /// verify: isme average Nahi har-review ke stars aate hai. Backend kayi
+  /// baar `rating_count` (average) 0 rakhta hai par `review_ratings` bhar
+  /// deta hai — stars ka sahi fallback yahi hai.
+  final List<double> reviewRatings;
+
   ProductApiModel({
     this.id,
     this.name,
@@ -64,6 +70,7 @@ class ProductApiModel {
     this.categories = const [],
     this.createdAt,
     this.apiReviews = const [],
+    this.reviewRatings = const [],
   });
 
   factory ProductApiModel.fromJson(Map<String, dynamic> json) {
@@ -137,6 +144,14 @@ class ProductApiModel {
                 image: '', // server avatar nahi deta — ReviewCard icon dikhata hai
               );
             }).toList()
+          : const [],
+      // Har-review star values (int list) — average lena ho to toProduct
+      // me use hota hai.
+      reviewRatings: json['review_ratings'] is List
+          ? (json['review_ratings'] as List)
+              .where((e) => e != null)
+              .map((e) => jsonToDouble(e) ?? 0)
+              .toList()
           : const [],
     );
   }
@@ -239,16 +254,58 @@ class ProductApiModel {
       // nahi — product detail page pe cart quantity hamesha 1 se shuru honi
       // chahiye (quantityIncrease/quantityDecrease isi ko badalte hai).
       quantity: 1,
-      // Stars = rating_count (average), "(N ratings)" = reviews_count —
-      // 08/09 deep-fix: ratingPoints kabhi set hi nahi hota tha isliye
-      // detail page HAMESHA "(0 ratings)" dikhata tha chahe reviews ho.
-      rating: ratingCount?.toDouble(),
-      ratingPoints: (reviewsCount ?? 0).toDouble(),
-      totalReview: reviewsCount,
+      // Stars/count — 08/09 deep-fix + 10/09 strict-fix. Backend ke TEEN
+      // alag shapes live mile: (a) reviews_count:1 + review_ratings:[2] +
+      // reviews:[...] (product 268), (b) reviews_count:0 par reviews me
+      // 1 entry (product 488), (c) compact payloads (home sections) jaha
+      // ye fields HAI HI NAHI (isliye "Customer Reviews (null)" aata tha).
+      // Sahi source-ka-kram: reviews[] list > reviews_count > review_ratings.
+      rating: _effectiveStars() > 0 ? _effectiveStars() : ratingCount?.toDouble(),
+      ratingPoints: _effectiveReviewCount().toDouble(),
+      totalReview: _effectiveReviewCount(),
       // REAL server reviews — pehle detail review section demo/static tha.
       reviews: apiReviews.isEmpty ? null : apiReviews,
       images: thumbnail != null ? [Images(image: thumbnail!.url)] : [],
     );
+  }
+
+  /// Review COUNT ka sahi value — backend kayi baar reviews_count:0 deta
+  /// hai jabki reviews[] me entries hoti hai (approval queue wala quirk);
+  /// compact payloads me count field hi nahi hota. List ki length sabse
+  /// bharosemand; phir reviews_count; phir review_ratings ki length.
+  int _effectiveReviewCount() {
+    final listed = apiReviews.length;
+    final counted = reviewsCount ?? 0;
+    final rated = reviewRatings.length;
+    var m = listed > counted ? listed : counted;
+    if (rated > m) m = rated;
+    return m;
+  }
+
+  /// Average stars — `rating_count` (average) backend aksar 0 rakhta hai
+  /// chahe review_ratings bhara ho (product 268 live: rating_count:0,
+  /// review_ratings:[2]). Fallback: reviews[] ka average, phir
+  /// review_ratings ka average.
+  double _effectiveStars() {
+    if ((ratingCount ?? 0) > 0) return ratingCount!.toDouble();
+    var sum = 0.0;
+    var n = 0;
+    for (final r in apiReviews) {
+      final v = r.rating ?? 0;
+      if (v > 0) {
+        sum += v;
+        n++;
+      }
+    }
+    if (n > 0) return sum / n;
+    for (final v in reviewRatings) {
+      if (v > 0) {
+        sum += v;
+        n++;
+      }
+    }
+    if (n > 0) return sum / n;
+    return 0;
   }
 }
 

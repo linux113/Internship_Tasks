@@ -641,6 +641,8 @@ final dynamic en = {
   "reviewSubmitted": "Review submitted! It will appear after approval.",
   "reviewFailed": "Review could not be sent. Please try again.",
   "loadingAddresses": "Loading your addresses...",
+  "noReviewsYet": "No reviews yet - be the first to write one!",
+  "customer": "Customer",
   "loadingProducts": "Loading products...",
   "loadingData": "Loading...",
   "noProductsFound": "No products found here yet",

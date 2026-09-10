@@ -39,11 +39,9 @@ class ReviewCard extends StatelessWidget {
               )
             ],
           ).marginSymmetric(vertical: AppScreenUtil().screenHeight(15)),
-          if ((reviews!.rating ?? 0) > 0)
-            Rating(val: reviews!.rating ?? 0, onRatingUpdate: (_) {})
-                .marginOnly(
-                    bottom: AppScreenUtil().screenHeight(6),
-                    left: AppScreenUtil().screenWidth(0)),
+          // NOTE: stars ka row yaha DOBARA mat dikhao — ReviewNameDate
+          // (upar) hi rating dikhata hai. Pehle dono jagah stars aate the
+          // (ek hi review ke neeche do-do star rows — bug).
           LatoFontStyle(
             text: reviews!.description.toString().tr,
             fontWeight: FontWeight.normal,

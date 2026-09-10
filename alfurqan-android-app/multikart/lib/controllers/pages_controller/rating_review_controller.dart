@@ -108,27 +108,99 @@ class RatingReviewController extends GetxController {
     String serverMsg = '';
     // 10/09 deep-fix: fail hone par generic "Review could not be sent" ki
     // jagah SERVER KA ASLI MESSAGE dikhao — backend rejection ka reason hi
-    // batata hai (jaise sirf purchased product par review allowed hai —
-    // payload ka can_review:false flag isi rule ka saathi hai).
+    // batata hai.
+    // 10/09 STRICT-fix (user: "review kabhi save hota hai kabhi nahi"):
+    // jad ye thi ki fallback endpoints (jo server par MAUJUD HI NAHI) ka
+    // junk "Server error (404/405)" PRIMARY endpoint ke ASLI reason ko
+    // overwrite kar deta tha — user galti samajh nahi paata tha. Ab:
+    //  (1) PRIMARY (swagger-confirmed) ko pehle 3 baar try karo (network
+    //      hiccup cover), uska message alag rakho.
+    //  (2) fail ho to fallback chain chalao (par uska message primary ke
+    //      real reason ko kabhi override nahi karega).
+    //  (3) aakhir me server se VERIFY karo — review save hua ya nahi
+    //      (GetProductReview guest-open hai) — app JHOOTH nahi bolega.
+    String primaryFail = '';
     String lastFailMsg = '';
-    outer:
-    for (final ep in endpoints) {
-      for (final b in bodies) {
-        try {
-          final res = await ApiService().request(
-            endpoint: ep,
-            method: ApiMethod.post,
-            data: b,
-            fromJson: (json) => json,
-          );
-          if (res.isSuccess) {
-            ok = true;
-            serverMsg = res.message;
-            break outer;
-          }
-          if (res.message.isNotEmpty) lastFailMsg = res.message;
-        } catch (_) {}
+    final primaryBody = bodies.first;
+    for (var attempt = 0; attempt < 3 && !ok; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
       }
+      try {
+        final res = await ApiService().request(
+          endpoint: endpoints.first,
+          method: ApiMethod.post,
+          data: primaryBody,
+          fromJson: (json) => json,
+        );
+        if (res.isSuccess) {
+          ok = true;
+          serverMsg = res.message;
+          break;
+        }
+        if (res.message.isNotEmpty) primaryFail = res.message;
+      } catch (_) {}
+    }
+    // PRIMARY nahi chala to purani safety chain (alag route-name/body
+    // shape ho to).
+    if (!ok) {
+      outer:
+      for (final ep in endpoints.skip(1)) {
+        for (final b in bodies) {
+          try {
+            final res = await ApiService().request(
+              endpoint: ep,
+              method: ApiMethod.post,
+              data: b,
+              fromJson: (json) => json,
+            );
+            if (res.isSuccess) {
+              ok = true;
+              serverMsg = res.message;
+              break outer;
+            }
+            if (res.message.isNotEmpty) lastFailMsg = res.message;
+          } catch (_) {}
+        }
+      }
+    }
+    // SAB fail — par ho sakta hai kisi attempt ne REVIEW SAVE to kar diya
+    // ho (response parse/marking me gadbad). Server se VERIFY karo —
+    // app UI aur server kabhi out-of-sync nahi rahenge.
+    if (!ok) {
+      try {
+        final chk = await ApiService().request<dynamic>(
+          endpoint: 'Review/GetProductReview',
+          method: ApiMethod.get,
+          queryParams: {'id': productId},
+          fromJson: (json) => json,
+        );
+        if (chk.isSuccess && chk.data != null) {
+          final node = chk.data;
+          final items = node is Map && node['data'] is List
+              ? node['data'] as List
+              : (node is List ? node : const []);
+          for (final e in items) {
+            if (e is! Map) continue;
+            final m = Map<String, dynamic>.from(e);
+            final d = (m['description'] ?? m['review'] ?? m['comment'] ?? '')
+                .toString()
+                .trim();
+            final rv = m['rating'] ?? m['stars'];
+            final r = rv is num
+                ? rv.toDouble()
+                : (double.tryParse(rv?.toString() ?? '') ?? 0);
+            final cid = m['consumer_id'] ?? m['consumerId'] ?? m['user_id'];
+            final mineOk = _userId <= 0 ||
+                cid == null ||
+                cid.toString() == _userId.toString();
+            if (d == review && r == ratingInt.toDouble() && mineOk) {
+              ok = true; // review pahunch gaya tha — success treat karo
+              break;
+            }
+          }
+        }
+      } catch (_) {}
     }
     isSubmitting = false;
     update();
@@ -158,10 +230,14 @@ class RatingReviewController extends GetxController {
             .applyMyReview(rating: ratingVal, text: review);
       }
     } else {
-      // Asli server message pehle (reason samajh aaye), warna generic.
-      _toast(lastFailMsg.isNotEmpty
-          ? lastFailMsg
-          : (serverMsg.isNotEmpty ? serverMsg : 'reviewFailed'.tr));
+      // Asli reason PEHLE primary endpoint se (woh swagger-confirmed asli
+      // route hai) — fallback endpoints ke junk 404/405 se kabhi override
+      // mat hone do; warna aakhiri fallback ka message, warna generic.
+      _toast(primaryFail.isNotEmpty
+          ? primaryFail
+          : (lastFailMsg.isNotEmpty
+              ? lastFailMsg
+              : (serverMsg.isNotEmpty ? serverMsg : 'reviewFailed'.tr)));
     }
   }
 }

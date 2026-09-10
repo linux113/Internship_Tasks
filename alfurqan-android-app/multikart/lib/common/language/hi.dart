@@ -644,6 +644,8 @@ final dynamic hi = {
   "reviewSubmitted": "समीक्षा भेज दी गई! स्वीकृति के बाद दिखेगी।",
   "reviewFailed": "समीक्षा नहीं भेजी जा सकी। फिर प्रयास करें।",
   "loadingAddresses": "आपके पते लोड हो रहे हैं...",
+  "noReviewsYet": "अभी कोई समीक्षा नहीं - पहली समीक्षा आप लिखें!",
+  "customer": "ग्राहक",
   "loadingProducts": "प्रोडक्ट्स लोड हो रहे हैं...",
   "loadingData": "लोड हो रहा है...",
   "noProductsFound": "यहाँ अभी कोई प्रोडक्ट नहीं मिला",

@@ -22,6 +22,11 @@ class ApiEndpoints {
   // GetAllTaxes. Products me sirf tax_id aata hai; rate yahi se milta hai
   // (login maangti hai). Cart/payment ka TAX row isi se banta hai.
   static const String taxes = 'Taxes/GetAllTaxes';
+
+  /// Review list for one product — GUEST ke liye bhi OPEN (10/09 live
+  /// verify: bina token {code:200, data:{data:[...]}} aata hai). Product
+  /// detail page ka count/list HAMESHA isi se fresh hota hai.
+  static const String productReviews = 'Review/GetProductReview';
   // Coupons list
   static const String getCoupons = 'Coupon/GetAllCoupons';
   // Change password — body: {current_password, new_password, confirm_password}

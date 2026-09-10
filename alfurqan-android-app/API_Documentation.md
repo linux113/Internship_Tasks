@@ -1133,3 +1133,59 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
    loader ke baad "No products found here yet" likha aaye.
 3. Order history se kisi order ko kholo (ya Track Order) → data late ho
    to green loader dikhe, blank nahi.
+
+---
+
+## v1.6.24+53 — 10/09/2026 (User: "review kabhi save hota hai kabhi nahi (405 error bhi aaya)" + "back karke aao to count 1 dikhta hai par neeche review nahi dikhta / Customer Reviews (null)")
+
+### LIVE server se root-cause (aaj raat ke REAL data se verify)
+- **Review submit "sometimes works"** — aaj 9:36PM ki ★★★★ review (product 492, الرحيق المختوم)
+  server par SAVE HI NAHI hui (live `GetProductReview?id=492` = EMPTY), 2 min baad 9:38PM
+  wali ★★ review (product 268, رياض الصالحين) SAVE ho gayi (server review id 5). App dono
+  baar SAME endpoint bhejti hai — asli galti ka reason toast me KABHI nahi pahuncha, kyunki
+  fallback chain ke LAST attempt ka junk **"Server error (405)"** (server par maujood-hi-nahi
+  endpoints ka response) PRIMARY endpoint ke ASLI server-message ko OVERWRITE kar deta tha.
+- **`Customer Reviews (null)`** — header "(1 ratings)" aur section count alag-alag sources se
+  aate the; home/compact payloads me review fields HOTE HI NAHI (toProduct: totalReview=null
+  → string me "null" print). Same product shop se kholo to (1)+list, home se kholo to (null).
+- **Backend serializer ke 2 alag shapes live mile:**
+  - product 268: `reviews_count:1`, `rating_count:0` (average 0 rakhta hai!), `review_ratings:[2]`, `reviews:[...]`
+  - product 488: `reviews_count:0` PAR `reviews` me 1 entry — dono shapes app me galat padhti thi.
+- **`GET /api/Review/GetProductReview?id=<pid>` GUEST ke liye bhi OPEN** (live verify:
+  bina token `{code:200, data:{data:[...]}}`) — product page ka review data HAMESHA yahi
+  fresh source ban gaya. Review entity: `{id, product_id, consumer_id, rating:int,
+  description, created_at, consumer:null}` (consumer null aata hai — naam app local profile se).
+
+### Fixes
+1. **Submit robust (rating_review_controller):** PRIMARY `Review/AddReview` (swagger-confirmed
+   exact-DTO body) ab 3 attempts (700ms gap — network hiccup cover). PRIMARY ka server-message
+   alag `primaryFail` me — fallback chain ka junk 404/405 usko kabhi override NAHI karega
+   (toast ab ASLI reason batayega, jaise approval/purchase rule). Chain ke baad SERVER-VERIFY:
+   `GetProductReview` me meri text+stars wali review mil jaye to success treat karo — app
+   kabhi jhooth nahi bolegi ("error" bola par save ho gaya / "save" bola par nahi hua).
+2. **Product page reviews HAMESHA server-fresh:** `ProductDetailController.fetchLiveReviews()`
+   har product-open par (home/shop/similar — kisi bhi entry se) reviews/count/stars server se
+   laata hai. Parse paginator `{data:{data:[...]}}`; name = consumer.name → meri id match par
+   mera local naam → warna "Customer"; created_at ISO → dd/MM/yyyy.
+3. **Optimistic reconcile:** `applyMyReview` ki entry `_myOptimisticReview` me yaad —
+   live fetch usse top par rakhta hai jab tak server list me na aaye (text+stars match par
+   dedupe — double entry kabhi nahi). Product switch par reset. 2 sec baad auto-reconcile.
+4. **`(null)` kabhi nahi:** `toProduct()` count = max(reviews-list len, reviews_count,
+   review_ratings len), stars = rating_count>0 ? wo : reviews ka avg : review_ratings ka avg
+   (backend rating_count 0 rakhta hai chahe ratings ho — product 268 live proof).
+   View bhi `?? 0` fallback + review na ho to honest "No reviews yet - be the first!"
+   (naya localized text — static/demo review kabhi nahi).
+5. **Double star-row bug:** review card me stars do jagah aa rahe the (ReviewNameDate +
+   card ka alag Rating row) — card wala hata diya (screenshot me bhi dikh raha tha).
+6. Lang keys +2 x4 = **371 parity**: `noReviewsYet`, `customer`.
+- Version 1.6.24+53, label "v1.6.24 (53)".
+
+### Test notes (v1.6.24)
+1. Kisi bhi product par review do (stars + text) → **jo toast aaye usi par bharosa karo** —
+   ab error ho to ASLI server reason dikhega; save hua to "Data has been save" jaisa server
+   message. Review submit ke baad tumhari entry TURANT list me top par; server approval ke
+   baad bhi duplicat nahi banegi.
+2. Product page back karke WAPAS kholo (home se bhi, shop se bhi) — **Customer Reviews (N)**
+   me kabhi "(null)" nahi aayega aur neeche review HAMESHA dikhega (count aur list ab ek hi
+   server source se). Review na ho to "No reviews yet" ka saaf message.
+3. Ek hi review ab do-do star rows nahi dikhayega.

@@ -625,6 +625,8 @@ final dynamic kr = {
   "reviewSubmitted": "리뷰가 제출되었습니다! 승인 후 표시됩니다.",
   "reviewFailed": "리뷰를 볼 수 없습니다. 다시 시도해 주세요.",
   "loadingAddresses": "주소를 불러오는 중...",
+  "noReviewsYet": "아직 리뷰가 없습니다 - 첫 리뷰를 작성해 보세요!",
+  "customer": "고객",
   "loadingProducts": "상품을 불러오는 중...",
   "loadingData": "불러오는 중...",
   "noProductsFound": "아직 여기에 상품이 없습니다",

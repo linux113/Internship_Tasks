@@ -60,10 +60,14 @@ class ProductDetailController extends GetxController {
 
   void loadProduct(dynamic args) {
     if (args is ProductApiModel) {
+      // NAYA product aa gaya to purane product ki optimistic review atki
+      // na rahe (match product id se).
+      if (apiProduct?.id != args.id) _myOptimisticReview = null;
       apiProduct = args;
       product = args.toProduct();
     } else {
       apiProduct = null;
+      _myOptimisticReview = null;
       product = productList; // purana static demo product fallback
     }
 
@@ -91,7 +95,156 @@ class ProductDetailController extends GetxController {
     update();
     if (apiProduct != null) {
       fetchSimilarProducts();
+      // Reviews HAMESHA server se fresh lao (10/09 strict-fix — "count 1
+      // dikhta hai par neeche review nahi"): home ke compact payloads me
+      // review fields hote hi nahi (isliye "Customer Reviews (null)"
+      // aata tha) aur list-ke review fields stale ho sakte hai. Ye api
+      // GUEST ke liye bhi open hai (live verify) — har entry point par
+      // sahi count/list/stars milenge.
+      fetchLiveReviews();
     }
+  }
+
+  /// Submit ke turant baad ka optimistic review — server approval queue
+  /// me rehne par bhi user ko uski entry dikhani hai. fetchLiveReviews
+  /// isko merge/dedupe karta hai.
+  Reviews? _myOptimisticReview;
+
+  /// Product ke reviews SERVER se fresh lao:
+  /// GET /api/Review/GetProductReview?id=<pid> (10/09 live verify —
+  /// GUEST bina token bhi {code:200, data:{data:[...]}} paata hai).
+  /// Ye teen cheezein theek karta hai:
+  ///  1. "Customer Reviews (null)" — count kabhi null nahi rahega.
+  ///  2. Header "(N ratings)" aur neeche ki list HAMESHA ek hi source se.
+  ///  3. Home/compact payloads (review fields gayab) se khulne par bhi
+  ///     reviews dikhte hai.
+  /// Meri optimistic entry tab tak upar rakho jab tak server list me na
+  /// aa jaye (match = same text + same stars — save hone par duplicate
+  /// apne aap hat jati hai).
+  Future<void> fetchLiveReviews() async {
+    final pid = apiProduct?.id ?? 0;
+    if (pid <= 0) return;
+    try {
+      final res = await ApiService().request<dynamic>(
+        endpoint: ApiEndpoints.productReviews,
+        method: ApiMethod.get,
+        queryParams: {'id': pid},
+        fromJson: (json) => json,
+      );
+      if (!res.isSuccess || res.data == null) return;
+      // Shape: { code, isSuccess, data: { current_page.., data: [...] } }
+      // (paginator ke andar list hoti hai), par safety ke liye seedhi
+      // list bhi accept karo.
+      dynamic node = res.data;
+      List<dynamic> items = const [];
+      if (node is Map && node['data'] is List) {
+        items = node['data'] as List<dynamic>;
+      } else if (node is List) {
+        items = node;
+      }
+      int myId = 0;
+      try {
+        final raw = LocalStorage().read('id');
+        myId = raw is num
+            ? raw.toInt()
+            : (int.tryParse(raw?.toString() ?? '') ?? 0);
+      } catch (_) {}
+      final myName =
+          (LocalStorage().read('name') ?? '').toString().trim();
+
+      final fetched = <Reviews>[];
+      for (final e in items) {
+        if (e is! Map) continue;
+        final m = Map<String, dynamic>.from(e);
+        final consumer = m['consumer'] ?? m['user'] ?? m['created_by'];
+        var name = consumer is Map
+            ? (consumer['name'] ?? consumer['Name'] ?? consumer['email'] ?? '')
+                .toString()
+                .trim()
+            : '';
+        final cid = m['consumer_id'] ?? m['consumerId'] ?? m['user_id'];
+        // Server consumer:null bhejta hai — meri apni review ka naam mujhe
+        // pata hai (local profile), to wahi dikhao.
+        if (name.isEmpty &&
+            myId > 0 &&
+            cid != null &&
+            cid.toString() == myId.toString() &&
+            myName.isNotEmpty) {
+          name = myName;
+        }
+        if (name.isEmpty) name = 'customer'.tr;
+        // created_at ISO "2026-09-10T21:38:01..." -> dd/MM/yyyy
+        final rawDate = (m['created_at'] ??
+                m['Created_at'] ??
+                m['createdAt'] ??
+                m['date'] ??
+                '')
+            .toString();
+        var date = rawDate;
+        if (rawDate.length >= 10) {
+          final p = rawDate.substring(0, 10).split('-');
+          if (p.length == 3 && p[0].length == 4) {
+            date = '${p[2]}/${p[1]}/${p[0]}';
+          } else if (rawDate.length >= 10) {
+            date = rawDate.substring(0, 10);
+          }
+        }
+        double rating = 0;
+        final rv = m['rating'] ?? m['stars'];
+        if (rv is num) {
+          rating = rv.toDouble();
+        } else {
+          rating = double.tryParse(rv?.toString() ?? '') ?? 0;
+        }
+        fetched.add(Reviews(
+          name: name,
+          description:
+              (m['description'] ?? m['review'] ?? m['comment'] ?? m['message'] ?? '')
+                  .toString(),
+          date: date,
+          rating: rating,
+          image: '',
+          size: '',
+          like: 0,
+          disLike: 0,
+        ));
+      }
+
+      // Meri optimistic entry server me aayi ya nahi? (match: text+stars)
+      final mine = _myOptimisticReview;
+      var merged = fetched;
+      if (mine != null) {
+        final alreadyThere = fetched.any((r) =>
+            (r.description ?? '').trim() ==
+                (mine.description ?? '').trim() &&
+            (r.rating ?? 0) == (mine.rating ?? 0));
+        if (!alreadyThere) {
+          merged = <Reviews>[mine, ...fetched];
+        } else {
+          // Server ne dikha diya — ab optimistic copy ki zarurat nahi.
+          _myOptimisticReview = null;
+        }
+      }
+
+      product.reviews = merged.isEmpty ? null : merged;
+      product.totalReview = merged.length;
+      product.ratingPoints = merged.length.toDouble();
+      // Stars = server reviews ka average (server ka rating_count field
+      // aksar 0 rehta hai chahe reviews ho — trustees list hi sahi hai).
+      if (merged.isNotEmpty) {
+        var sum = 0.0;
+        var n = 0;
+        for (final r in merged) {
+          final v = r.rating ?? 0;
+          if (v > 0) {
+            sum += v;
+            n++;
+          }
+        }
+        if (n > 0) product.rating = sum / n;
+      }
+      update();
+    } catch (_) {}
   }
 
   /// USER KA SUBMITTED REVIEW turant screen par dikhao (08/09 deep-fix —
@@ -114,20 +267,30 @@ class ProductDetailController extends GetxController {
     final now = DateTime.now();
     final date =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    final mine = Reviews(
+      name: name,
+      description: text,
+      date: date,
+      rating: rating,
+      image: '',
+      size: '',
+      like: 0,
+      disLike: 0,
+    );
+    // 10/09 strict-fix: is entry ko yaad rakho — fetchLiveReviews isko
+    // server list me aane tak top par rakhega aur aane par dedupe kar
+    // dega (pehle optimistic entry page reopen par gayab ho jati thi).
+    _myOptimisticReview = mine;
     p.reviews = <Reviews>[
-      Reviews(
-        name: name,
-        description: text,
-        date: date,
-        rating: rating,
-        image: '',
-        size: '',
-        like: 0,
-        disLike: 0,
-      ),
+      mine,
       ...?p.reviews,
     ];
     update();
+    // Thodi der baad server se reconcile (review abhi approval queue me
+    // ho sakti hai — dedupe logic duplicate nahi banayega).
+    Future.delayed(const Duration(seconds: 2), () {
+      if (apiProduct?.id != null) fetchLiveReviews();
+    });
   }
 
   /// "You may also like" section — isi product ki category ke real products
