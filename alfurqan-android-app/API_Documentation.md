@@ -1189,3 +1189,35 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
    me kabhi "(null)" nahi aayega aur neeche review HAMESHA dikhega (count aur list ab ek hi
    server source se). Review na ho to "No reviews yet" ka saaf message.
 3. Ek hi review ab do-do star rows nahi dikhayega.
+
+---
+
+## v1.6.25+54 — 10/09/2026 (User: "add to cart ke andar price dikhao" + "View Detail kuch nahi dikhata")
+
+### Root cause (code-read + user screenshots)
+- **"View Details" DEAD THA:** cart/payment ke bottom-bar ka `desc` text ka tap
+  sirf `Get.back()` karta tha (template ka purana placeholder) — isliye AED30 wali
+  item ka total AED35.40 (tax samet) dikhne par breakup dekhne ka koi raasta nahi
+  tha. User ko laga price "galat" hai.
+- **Add-to-cart bar me price hi nahi hota tha**: product page ka bottom bar sirf
+  WISHLIST | ADD TO BAG dikhata tha — "jab add karu to price dikhani chahiye".
+
+### Fixes
+1. **NEW `CartPriceDetailsSheet`** (bottom sheet): "View Details" tap = poora
+   price breakup jo payment page par hota hai — Bag total, Bag savings (ho to),
+   Coupon, **Tax (18%)**, Delivery, Total Amount. Data = live
+   `CartController.cartModelList` (server cart + TaxService) — kabhi static/demo
+   nahi. Cart page aur payment page dono par wired (dead text kahi nahi).
+   `CartBottomLayout` me naya optional `onDescTap` param.
+2. **PDP bottom bar me LIVE price strip:** ADD TO BAG ke upar ab product ka price
+   dikhta hai; quantity stepper badhao to "2 × AED30.00  =  AED60.00" — LIVE
+   update (wahi sale-price formula jo ProductPrice use karta hai, rate conversion
+   samet). Kitaab 30 ki hai par total 35.40 kyun — sheet me bilkul saaf dikhega.
+- Version 1.6.25+54, label "v1.6.25 (54)".
+
+### Test notes (v1.6.25)
+1. Product page kholo — neeche ADD TO BAG bar ke upar PRICE dikhega; quantity +
+2 karo to "2 × AEDxx.xx = AEDyy.yy" turant badlega.
+2. Cart page par neeche **"View Details"** dabao — sheet khulni chahiye jisme
+   Bag total / Tax (18%) / Delivery / Total Amount (payment page wale hi numbers).
+3. Payment page par bhi "View Details" wahi sheet kholega.

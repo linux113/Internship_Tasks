@@ -41,6 +41,14 @@ class _CartScreenState extends State<CartScreen> {
                           CartBottomLayout(
                               desc: CartFont().viewDetail,
                               buttonName: CartFont().placeOrder,
+                              // "View Details" = ASLI price breakup sheet
+                              // (Bag total / Tax / Delivery / Total) —
+                              // pehle tap par sirf wapas chala jata tha.
+                              onDescTap: () => Get.bottomSheet(
+                                    const CartPriceDetailsSheet(),
+                                    backgroundColor: Colors.white,
+                                    isScrollControlled: true,
+                                  ),
                               // RAW AED (server currency) — conversion ab
                               // CartBottomLayout KHUD karta hai (delivery/
                               // payment ke saath unified; pehle sirf cart

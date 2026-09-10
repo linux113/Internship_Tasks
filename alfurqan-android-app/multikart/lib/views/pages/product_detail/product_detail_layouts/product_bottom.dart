@@ -23,7 +23,46 @@ class ProductBottom extends StatelessWidget {
               ),
             ],
           ),
-          child: IntrinsicHeight(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 10/09 user ask: "add to cart ke andar price dikhao" — quantity
+              // badhane par total bhi LIVE update hota hai (2 × AED30 =
+              // AED60). Unit price = wahi jo page par dikhta hai (sale ho to
+              // sale, warna price) — same formula jo ProductPrice use karta hai.
+              GetBuilder<ProductDetailController>(builder: (pdCtrl) {
+                final prod = pdCtrl.product;
+                if (prod.price == null && prod.discountPrice == null) {
+                  return const SizedBox.shrink();
+                }
+                final int qty = (prod.quantity ?? 1) <= 0 ? 1 : (prod.quantity ?? 1);
+                final double unit =
+                    ((prod.discountPrice ?? prod.price) ?? 0.0) *
+                        appCtrl.rateValue;
+                final double lineTotal = unit * qty;
+                final String unitTxt =
+                    '${appCtrl.priceSymbol} ${unit.toStringAsFixed(2)}';
+                final String totalTxt =
+                    '${appCtrl.priceSymbol} ${lineTotal.toStringAsFixed(2)}';
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    LatoFontStyle(
+                      text: qty > 1 ? '$qty × $unitTxt' : unitTxt,
+                      fontWeight: FontWeight.w600,
+                      fontSize: FontSizes.f14,
+                      color: appCtrl.appTheme.contentColor,
+                    ),
+                    LatoFontStyle(
+                      text: qty > 1 ? totalTxt : '',
+                      fontWeight: FontWeight.w700,
+                      fontSize: FontSizes.f16,
+                      color: appCtrl.appTheme.blackColor,
+                    ),
+                  ],
+                ).marginOnly(bottom: AppScreenUtil().screenHeight(8));
+              }),
+              IntrinsicHeight(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -68,6 +107,8 @@ class ProductBottom extends StatelessWidget {
                 ),
               ],
             ),
+              ),
+            ],
           ),
         );
       }

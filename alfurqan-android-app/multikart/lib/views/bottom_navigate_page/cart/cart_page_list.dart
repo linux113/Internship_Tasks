@@ -6,6 +6,7 @@ export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/coupon_te
 export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/delivery_charges.dart';
 export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/cart_bottom_layout.dart';
 export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/cart_order_detail_layout.dart';
+export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/cart_price_details_sheet.dart';
 export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/delivery_instruction.dart';
 export 'package:multikart/views/bottom_navigate_page/cart/cart_layouts/empty_layout.dart';
 export 'package:multikart/models/cart_model.dart';

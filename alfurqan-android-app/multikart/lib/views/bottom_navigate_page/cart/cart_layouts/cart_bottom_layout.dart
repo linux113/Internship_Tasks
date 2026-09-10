@@ -10,12 +10,19 @@ class CartBottomLayout extends StatelessWidget {
   final bool isPrimaryDesc;
   final GestureTapCallback? onTap;
 
+  /// "View Details" (desc) ka tap — 10/09 user ask: pehle YE DEADTHA
+  /// (sirf Get.back() karta tha, isliye kuch "show" nahi hota tha).
+  /// Cart/Payment pages isko Price Details sheet kholne se wire karte hai.
+  final GestureTapCallback? onDescTap;
+
   const CartBottomLayout(
       {Key? key,
       this.totalAmount,
       this.buttonName,
       this.desc,
-      this.isPrimaryDesc = true,this.onTap})
+      this.isPrimaryDesc = true,
+      this.onTap,
+      this.onDescTap})
       : super(key: key);
 
   @override
@@ -60,7 +67,10 @@ class CartBottomLayout extends StatelessWidget {
                               color: isPrimaryDesc
                                   ? appCtrl.appTheme.primary
                                   : appCtrl.appTheme.contentColor)
-                          .gestures(onTap: () => Get.back())
+                          // "View Details" ab ASLI breakdown sheet kholta
+                          // hai (caller onDescTap deta hai); sirf wapas
+                          // mat jao — pehle yahi dead behavior tha.
+                          .gestures(onTap: onDescTap ?? () => Get.back())
                     ])),
             CustomButton(
                 title: buttonName!,
