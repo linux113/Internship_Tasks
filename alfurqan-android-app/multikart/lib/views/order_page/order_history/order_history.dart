@@ -34,7 +34,12 @@ class OrderHistory extends StatelessWidget {
               title: LatoFontStyle(
                   text: OrderHistoryFont().orderHistory,
                   color: orderHistoryCtrl.appCtrl.appTheme.blackColor)),
-          body: SingleChildScrollView(
+          // Issue #6 (10/09): neeche kheencho -> orders dobara server se.
+          body: RefreshIndicator(
+            color: const Color(0xFF044015),
+            onRefresh: () async => orderHistoryCtrl.fetchOrders(),
+            child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -75,6 +80,7 @@ class OrderHistory extends StatelessWidget {
                   const OrderHistoryLayout()
               ],
             ).width(MediaQuery.of(context).size.width),
+          ),
           ),
         ),
         ),

@@ -233,6 +233,13 @@ class CheckoutController extends GetxController {
       );
       if (res.isSuccess && (res.data ?? 0) > 0) {
         serverPreviewTotal = res.data;
+        // Issue #4 (10/09): payment page ka totals (CartOrderDetailLayout)
+        // CartController ke model se banta hai — preview ke total se TAX row
+        // waha bhi dikhao (order place hone ke BAAD detail me jo tax dikhta
+        // hai, wahi ab PEHLE payment/cart me).
+        try {
+          _cartCtrl?.applyServerTotals(serverPreviewTotal!, null);
+        } catch (_) {}
         update();
       }
     } catch (_) {}

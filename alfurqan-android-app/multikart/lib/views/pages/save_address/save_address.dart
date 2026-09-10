@@ -22,7 +22,12 @@ class SaveAddress extends StatelessWidget {
             backgroundColor: saveAddressCtrl.appCtrl.appTheme.whiteColor,
             title: LatoFontStyle(text: CommonTextFont().savedAddress,color: saveAddressCtrl.appCtrl.appTheme.blackColor,),
           ),
-          body: SingleChildScrollView(
+          // Issue #6 (10/09): neeche kheencho -> addresses server se refresh.
+          body: RefreshIndicator(
+            color: const Color(0xFF044015),
+            onRefresh: () async => saveAddressCtrl.refreshList(),
+            child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: (saveAddressCtrl.isLoadingAddresses &&
                     saveAddressCtrl.deliveryDetail == null)
                 // 08/09 — server fetch ke dauraan pehle BLANK page dikhta
@@ -54,6 +59,7 @@ class SaveAddress extends StatelessWidget {
                       const AddAddressButton(),
                     ],
                   ),
+          ),
           ),
         ),
       );

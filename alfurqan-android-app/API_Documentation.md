@@ -940,3 +940,19 @@ nahi tha. Matlab device par DO features hamesha DEAD the:
 ### Test notes
 Review submit → sheet band → WAHIN product page par count badhta aur apna
 review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
+
+---
+
+## v1.6.19+48 — 10/09/2026 (User ki 10-point list — sab deep end-to-end)
+
+1. **External links → in-app WEBVIEW**: pehle external_url links (banner 3 ka youtube link, offer banner externals) DEAD tap the — `if(linkType=='external_url') return;`. Naya `WebViewPage` (webview_flutter added, AppBar + back + progress) — banners/offer banners ke external links ab app ke andar khulte hai. HomeBannerModel me externalUrl field add.
+2. **Deals "See All" → 0 records FIXED**: RowTextLayout "See All" shopPage/"All" kholta tha, par ShopController REUSE hota hai — GetX me onReady sirf PEHLI baar chalta hai, isliye purani (kabhi empty) category atki rehti thi. Ab `ShopController.openCategory(args)` har route-entry par postFrame sync (same-args dedupe, naye-args fresh refetch) + literal "All"/"All".tr dono recognize.
+3. **Order tracking SEQUENCE FIXED**: view AppArray().orderTrack ka STATIC demo (Out For Delivery UPAR, Ordered NEECHY + fake 2020 dates) dikhata tha; controller ka dynamic timeline view se jooda hi nahi tha. View rewrite — `orderDetailCtrl.timeline` chronological (Pending→Processing→Shipped→Out for delivery→Delivered), 'cancelled' server-list ke BEECH se HATA kar sirf terminal-red jab order khud cancelled; canonical translation keys (pending/processing/…×4), green checks, colored connectors.
+4. **TAX row cart+payment me**: order detail me ~18% tax dikhne ke bawajood cart/payment me kahin nahi tha. Ab CartController.fetchServerTax() — silent CheckOut preview (products+saved address) se explicit tax YA (serverTotal−bagTotal) fark (server truth, fake nahi); unified `_rebuildOrderDetail()` (Bag total/Savings/Coupon/**Tax**/Delivery + total=bag+tax); checkout preview bhi applyServerTotals karta hai; removeFromCart par row barkarar. Guest/address-nahi ho to row chhupi (no fake).
+5. **Filter overlap FIXED**: RESET/APPLY buttons (Stack overlay) price ke LIVE boxes ke upar aa jate the — scroll content ko 110px bottom padding, ab kuch neeche nahi chhipta.
+6. **Pull-to-refresh 6 screens**: home (full reload), shop collection, order history, wishlist, saved addresses, delivery details — sab RefreshIndicator (green).
+7. **Order items LOGO → REAL image**: (a) items parse me productId add + HomeController product pool se REAL thumbnail backfill; (b) image empty ho to view ab logo ki jagah grey box + book icon. (Logo dikhane wala asli code = imageNetwork ka errorWidget = noImageBanner asset.)
+8. **Services strip = SINGLE container**: horizontal slider + alag-alag cards hata diye — ek container me columns + dividers, koi slide nahi; "Test" description nahi dikhta.
+9. **"inclusive of all taxes" → "exclusive of all taxes"** (×4 langs) — product price tax ke BINA hai, tax cart me add hota hai.
+10. **Search FIXED (shop page)**: shop page ke search box ka controller kahin LISTEN hi nahi hota tha — type karo aur kuch na ho (isliye "search not working"). Ab live listener → loaded catalog me filter (name/desc/SKU/slug/category, English+Arabic). (Dedicated search page pehle se client-side kaam karti thi — verified live probe.)
+- Version 1.6.19+48, label "v1.6.19 (48)"; lang keys ×4: exclusiveOfAllTaxes, pending, processing, shipped, outForDelivery, delivered, cancelled (366 each, parity OK); audits ALL CLEAN (deep_check 546 files, .tr 278/0, audit3 core guarded).

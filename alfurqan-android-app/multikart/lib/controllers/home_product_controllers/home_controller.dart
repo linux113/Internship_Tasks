@@ -1,4 +1,5 @@
 import '../../config.dart';
+import '../../widgets/common/web_view_page.dart';
 import '../../models/category_api_model.dart';
 import '../../models/home_page_api_model.dart';
 import '../../models/product_api_model.dart';
@@ -362,14 +363,19 @@ class HomeController extends GetxController {
 
   /// Offer banner tap — Redirect_Link ke hisaab se route karo:
   /// product -> usi product ka detail, collection -> us category ka shop page,
-  /// external_url -> kuch mat kholo (app ke bahar ka link).
+  /// external_url -> app ke ANDAR WebView page me kholo (10/09 — pehle dead tap tha).
   openOfferBanner(HomePageBanner? banner) {
     if (banner == null) return;
     if (banner.linkType == 'product' && banner.productId != null) {
       openProductById(banner.productId!);
       return;
     }
-    if (banner.linkType == 'external_url') return;
+    if (banner.linkType == 'external_url') {
+      openWebViewScreen(banner.externalUrl != null && banner.externalUrl!.isNotEmpty
+          ? banner.externalUrl
+          : banner.link);
+      return;
+    }
     if (banner.categorySlug != null && banner.categorySlug!.isNotEmpty) {
       goToCategoryProducts(banner.categorySlug);
       return;

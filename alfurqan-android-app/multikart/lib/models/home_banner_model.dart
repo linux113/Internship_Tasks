@@ -12,7 +12,10 @@ class HomeBannerModel {
   String? linkType;
   int? productId;
 
-  HomeBannerModel({required this.title, this.image,this.subTitle,this.buttonTitle,this.offers,this.slug,this.linkType,this.productId});
+  /// external_url banner ka asli link (WebView me kholne ke liye — 10/09).
+  String? externalUrl;
+
+  HomeBannerModel({required this.title, this.image,this.subTitle,this.buttonTitle,this.offers,this.slug,this.linkType,this.productId,this.externalUrl});
 
   factory HomeBannerModel.fromJson(Map<dynamic, dynamic> json) {
     return HomeBannerModel(

@@ -24,7 +24,12 @@ class DeliveryDetail extends StatelessWidget {
           body: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              SingleChildScrollView(
+              // Issue #6 (10/09): neeche kheencho -> addresses server se refresh.
+              RefreshIndicator(
+                color: const Color(0xFF044015),
+                onRefresh: () async => deliveryDetailCtrl.syncFromServer(),
+                child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -66,6 +71,7 @@ class DeliveryDetail extends StatelessWidget {
                     // blank gray container user ko "locked/broken" lagta tha.
                   ],
                 ).marginOnly(bottom: AppScreenUtil().screenHeight(80)),
+              ),
               ),
 
               //proceed to payment and view detail layout

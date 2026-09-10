@@ -9,6 +9,13 @@ class ShopPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Har route-entry par arguments ke saath sync karo (See All / category
+    // chip / banner) — ShopController REUSE hota hai isliye onReady dobara
+    // nahi chalta; bina iske See All par PURANI (kabhi-kabhi empty) category
+    // atki rehti thi: "collection 0 record" (10/09). Same args par dedupe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      shopCtrl.openCategory(Get.arguments);
+    });
     return GetBuilder<ShopController>(builder: (_) {
       return Directionality(
         textDirection:
@@ -33,7 +40,12 @@ class ShopPage extends StatelessWidget {
                 desc: "${shopCtrl.productList.length} ${ShopFont().products}",
               ),
             ),
-            body: SingleChildScrollView(
+            body: RefreshIndicator(
+                // Issue #6 (10/09) — neeche kheencho to products refresh.
+                color: const Color(0xFF044015),
+                onRefresh: () async => shopCtrl.getProducts(reset: true),
+                child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(children: [
               IntrinsicHeight(
                 child: Row(
@@ -58,7 +70,7 @@ class ShopPage extends StatelessWidget {
               shopCtrl.appCtrl.isShimmer
                   ? const ShopShimmer()
                   : const ShopListLayout()
-            ])),
+            ]))),
             bottomNavigationBar: CommonBottomNavigation(
                 onTap: (val) => shopCtrl.bottomNavigationChange(val, context)),
           ),

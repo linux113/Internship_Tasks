@@ -22,7 +22,13 @@ class _HomeScreenState extends State<HomeScreen> {
             resizeToAvoidBottomInset: false,
             body: homeCtrl.appCtrl.isShimmer
                 ? const HomerShimmer()
-                : const SingleChildScrollView(
+                // Issue #6 (10/09): neeche kheencho -> home refresh (banners,
+                // deals, categories, brands sab dobara server se).
+                : RefreshIndicator(
+                    color: const Color(0xFF044015),
+                    onRefresh: () async => homeCtrl.getData(),
+                    child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.max,
@@ -63,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         //offer corner
                         OfferCorner()
-                      ]))),
+                      ])))),
       );
     });
   }

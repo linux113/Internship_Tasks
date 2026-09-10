@@ -1,10 +1,11 @@
 import '../../../../../config.dart';
 
-/// SERVICES STRIP (Issue #2) — home page par "service container" missing
-/// tha. Ab GetHomePageDataApp ke Services section se real data (icon +
-/// title + description) horizontal strip me dikhta hai. Backend abhi "Test"
-/// placeholder bhejta hai — wo model me filter ho jata hai, isliye strip
-/// tabhi dikhti hai jab real services ho (khaali ho to section hide).
+/// SERVICES STRIP (Issue #8 — 10/09): pehle har service apna ALAG card tha
+/// aur horizontal SLIDER me slide hota tha ("should be single container,
+/// shouldn't have slider option"). Ab EK hi single container — jitni bhi
+/// services hai sab usi ek box me columns ki tarah dikhti hai, koi slide
+/// nahi. Data GetHomePageDataApp ke Services section se REAL aata hai;
+/// "Test" placeholder description nahi dikhate. Khaali ho to section hide.
 class ServicesStrip extends StatelessWidget {
   const ServicesStrip({Key? key}) : super(key: key);
 
@@ -19,72 +20,95 @@ class ServicesStrip extends StatelessWidget {
       return Padding(
         padding: EdgeInsets.symmetric(
             horizontal: AppScreenUtil().screenWidth(15),
-            vertical: AppScreenUtil().screenHeight(15)),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+            vertical: AppScreenUtil().screenHeight(8)),
+        // ---- SINGLE container (no slider) ----
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+              horizontal: AppScreenUtil().screenWidth(10),
+              vertical: AppScreenUtil().screenHeight(12)),
+          decoration: BoxDecoration(
+            color: appCtrl.appTheme.greyLight25,
+            borderRadius:
+                BorderRadius.circular(AppScreenUtil().borderRadius(8)),
+          ),
           child: Row(
-            children: services.map((svc) {
-              return Container(
-                width: AppScreenUtil().screenWidth(220),
-                margin: EdgeInsets.only(
-                    right: AppScreenUtil().screenWidth(10)),
-                padding: EdgeInsets.symmetric(
-                    horizontal: AppScreenUtil().screenWidth(12),
-                    vertical: AppScreenUtil().screenHeight(12)),
-                decoration: BoxDecoration(
-                  color: appCtrl.appTheme.greyLight25,
-                  borderRadius: BorderRadius.circular(
-                      AppScreenUtil().borderRadius(8)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (svc.image.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                            AppScreenUtil().borderRadius(6)),
-                        child: imageNetwork(
-                            url: svc.image,
-                            width: AppScreenUtil().screenWidth(36),
-                            height: AppScreenUtil().screenHeight(36),
-                            fit: BoxFit.contain),
-                      )
-                    else
-                      Icon(Icons.local_shipping_outlined,
-                          size: AppScreenUtil().size(30),
-                          color: appCtrl.appTheme.primary),
-                    const Space(8, 0),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LatoFontStyle(
-                            text: svc.title,
-                            fontSize: FontSizes.f13,
-                            fontWeight: FontWeight.w700,
-                            maxLines: 2,
-                            color: appCtrl.appTheme.blackColor,
-                          ),
-                          if (svc.description.isNotEmpty) ...[
-                            const Space(0, 3),
-                            LatoFontStyle(
-                              text: svc.description,
-                              fontSize: FontSizes.f11,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              color: appCtrl.appTheme.contentColor,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (var i = 0; i < services.length; i++) ...[
+                Expanded(child: _ServiceCell(svc: services[i])),
+                if (i != services.length - 1)
+                  Container(
+                    width: 1,
+                    height: AppScreenUtil().screenHeight(34),
+                    color: appCtrl.appTheme.borderColor,
+                  ),
+              ],
+            ],
           ),
         ),
       );
     });
+  }
+}
+
+class _ServiceCell extends StatelessWidget {
+  final dynamic svc;
+  const _ServiceCell({Key? key, required this.svc}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final appCtrl = Get.isRegistered<AppController>()
+        ? Get.find<AppController>()
+        : Get.put(AppController());
+    final desc = (svc.description ?? '').toString().trim();
+    final showDesc = desc.isNotEmpty && desc.toLowerCase() != 'test';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if ((svc.image ?? '').toString().isNotEmpty)
+              ClipRRect(
+                borderRadius:
+                    BorderRadius.circular(AppScreenUtil().borderRadius(6)),
+                child: imageNetwork(
+                    url: svc.image.toString(),
+                    width: AppScreenUtil().size(26),
+                    height: AppScreenUtil().size(26),
+                    fit: BoxFit.contain),
+              )
+            else
+              Icon(Icons.local_shipping_outlined,
+                  size: AppScreenUtil().size(24),
+                  color: appCtrl.appTheme.primary),
+            const Space(6, 0),
+            Flexible(
+              child: LatoFontStyle(
+                text: svc.title.toString(),
+                fontSize: FontSizes.f12,
+                fontWeight: FontWeight.w700,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                color: appCtrl.appTheme.blackColor,
+              ),
+            ),
+          ],
+        ),
+        if (showDesc) ...[
+          const Space(0, 3),
+          LatoFontStyle(
+            text: desc,
+            fontSize: FontSizes.f10,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            color: appCtrl.appTheme.contentColor,
+          ),
+        ],
+      ],
+    );
   }
 }

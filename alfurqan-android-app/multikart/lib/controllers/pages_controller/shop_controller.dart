@@ -44,26 +44,69 @@ class ShopController extends GetxController {
 
   @override
   void onReady() {
-    // Arguments: naya format {'slug':..., 'name':...} ya purana plain String.
-    final args = Get.arguments;
-    if (args is Map) {
-      name = (args['slug'] ?? '').toString();
-      displayName = (args['name'] ?? '').toString();
-      if (name.isEmpty) name = "All".tr;
-      if (displayName.isEmpty) displayName = name;
-    } else {
-      name = args ?? "All".tr;
-      displayName = name;
-    }
+    // NOTE: purana arg-parse + getProducts seedha yaha tha — ab openCategory()
+    // karta hai, taaki ROUTE dobara khulne par bhi (See All, category chip,
+    // banner) naye arguments se refresh ho (GetX controller REUSE karta hai
+    // isliye onReady sirf PEHLI baar chalta hai — yahi wajah thi ki See All
+    // par purani/empty category atki rehti thi: "0 record", 10/09).
     categoryList = AppArray().categoryList;
     homeShopPageList = AppArray().homeShopPageList;
     appCtrl.isNotification = true;
     appCtrl.update();
     update();
 
-    getProducts(reset: true);
+    // SHOP page ka search box LIVE filter kare (Issue #10 — pehle controller
+    // ka listener kahi attached hi nahi tha; type karo aur kuch na ho).
+    controller.addListener(_onSearchText);
+
+    openCategory(Get.arguments, force: true);
     super.onReady();
   }
+
+  /// Shop page me type kiya text — catalog ke ANDAR filter (price/sort ke
+  /// upar layer). Har keystroke par client-side.
+  void _onSearchText() {
+    final q = controller.text.trim();
+    if (q == searchQuery) return;
+    searchQuery = q;
+    applyClientFilters();
+  }
+
+  /// YE page kis category/All ke liye khula — har route-entry par call hota
+  /// hai (shop_page postFrame se). Same args par REFETCH nahi (loop-safe);
+  /// naye args par fresh fetch.
+  void openCategory(dynamic args, {bool force = false}) {
+    String newName = '';
+    String newDisplay = '';
+    if (args is Map) {
+      newName = (args['slug'] ?? '').toString();
+      newDisplay = (args['name'] ?? '').toString();
+    } else {
+      newName = args?.toString() ?? '';
+    }
+    if (newName.isEmpty) newName = 'All';
+    if (newDisplay.isEmpty || newDisplay == newName) {
+      newDisplay = newName == 'All' ? 'All'.tr : newName;
+    }
+    final key = '$newName|$newDisplay';
+    if (!force && key == _lastOpenKey && _fullList.isNotEmpty) return;
+    _lastOpenKey = key;
+    name = newName;
+    displayName = newDisplay;
+    // naye page par purana search text atka na rahe
+    if (searchQuery.isNotEmpty) {
+      searchQuery = '';
+      controller.clear();
+    }
+    update();
+    getProducts(reset: true);
+  }
+
+  /// "All" user ki language me kuch bhi ho (ya raw "All" arg aaya ho) —
+  /// category filter aakhir me bhejna hi nahi.
+  bool get _isAll => name == 'All' || name == 'All'.tr;
+
+  String _lastOpenKey = '__never__';
 
   // ---------------- Client-side filter/sort ----------------
   /// LIVE VERIFY (04/09/2026): backend GetAllProductsFront `field`, `sort`,
@@ -72,8 +115,11 @@ class ShopController extends GetxController {
   /// product AA RAHA THA). Isliye ab filter+sort CLIENT-SIDE karte hai:
   /// ek baar me bada page (500) la kar locally sort/filter/slice karte hai.
   List<ProductApiModel> _fullList = []; // server se aayi poori (category tak)
-  List<ProductApiModel> _filtered = []; // price+sort apply ke baad
+  List<ProductApiModel> _filtered = []; // price+sort+search apply ke baad
   static const int _pageSize = 12;
+
+  /// Shop page ke search box ka LIVE text (Issue #10 — 10/09).
+  String searchQuery = '';
 
   /// Loaded catalog ki max price (filter slider ki range isi se banti hai —
   /// 08/09; min 100, 50 ke steps me rounded-up).
@@ -119,6 +165,27 @@ class ShopController extends GetxController {
             .where((p) => p.finalPrice >= min && p.finalPrice <= max)
             .toList();
       }
+    }
+
+    // ---- search text (shop page ka box) — name/desc/SKU/slug/category me
+    // match (English+Arabic dono). Client-side kyunki backend ke
+    // field/sort/price params server-side IGNORE hote hai (live verify).
+    if (searchQuery.isNotEmpty) {
+      final lower = searchQuery.toLowerCase();
+      list = list.where((p) {
+        if ((p.name ?? '').toLowerCase().contains(lower)) return true;
+        if ((p.shortDescription ?? '').toLowerCase().contains(lower)) {
+          return true;
+        }
+        if ((p.description ?? '').toLowerCase().contains(lower)) return true;
+        if ((p.sku ?? '').toLowerCase().contains(lower)) return true;
+        if ((p.slug ?? '').toLowerCase().contains(lower)) return true;
+        for (final c in p.categories) {
+          if ((c.name ?? '').toLowerCase().contains(lower)) return true;
+          if ((c.slug ?? '').toLowerCase().contains(lower)) return true;
+        }
+        return false;
+      }).toList();
     }
 
     // ---- sort
@@ -174,7 +241,7 @@ class ShopController extends GetxController {
     // tiles ke fashion titles) aa jata tha — backend naam nahi pehchanta
     // aur shop page khaali dikhne lagta tha. Ab cached categories se
     // naam -> slug convert kar lete hai.
-    String categoryFilter = (name == "All".tr) ? "" : name;
+    String categoryFilter = _isAll ? "" : name;
     if (categoryFilter.isNotEmpty) {
       await CategoryCache.ensureLoaded();
       final match = CategoryCache.resolve(categoryFilter);
@@ -264,7 +331,7 @@ class ShopController extends GetxController {
 
   //go back to home page
   goToHomePage() async {
-    if(name == "All".tr) {
+    if(_isAll) {
       appCtrl.goToHome();
 
       await storage.write(Session.selectedIndex, 0);

@@ -67,7 +67,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
           );
         }
 
-        return ListView.builder(
+        // Issue #6 (10/09): neeche kheencho -> wishlist server se refresh.
+        return RefreshIndicator(
+          color: const Color(0xFF044015),
+          onRefresh: () async => WishlistController.ensureServerSync(),
+          child: ListView.builder(
           itemCount: wishListCtrl.wishlist.length,
           itemBuilder: (context, index) {
             final item = wishListCtrl.wishlist[index];
@@ -83,7 +87,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               secondActionTap: () => wishListCtrl.removeItem(item.id),
             );
           },
-        );
+        ));
       }),
     );
   }

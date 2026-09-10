@@ -3,6 +3,7 @@ import '../../models/json_parse_utils.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../../services/order_status_service.dart';
+import '../home_product_controllers/home_controller.dart';
 
 /// ORDER DETAIL — pehle yaha STATIC demo data tha (fake timeline, fake
 /// address, cartList demo products). Ab order history se aaye REAL order id
@@ -43,8 +44,41 @@ class OrderDetailController extends GetxController {
   /// items: {name, image, qty, price, lineTotal}
   List<Map<String, dynamic>> items = [];
 
-  /// timeline: {name, date, note, done}
+  /// timeline: {name, key, date, note, done} — 'key' = canonical
+  /// translation key (pending/processing/shipped/outForDelivery/delivered/
+  /// cancelled), 'name' = server ka raw naam (fallback display).
   List<Map<String, dynamic>> timeline = [];
+
+  /// Tracking flow ka SAHI order (Issue #3, 10/09). Server list me
+  /// 'cancelled' beech me aa jata hai — flow view isi canonical order se
+  /// banta hai, cancelled flow se BAHAR (sirf terminal, jab order khud
+  /// cancelled ho).
+  static const List<String> kStatusOrder = <String>[
+    'pending',
+    'processing',
+    'shipped',
+    'outForDelivery',
+    'delivered',
+  ];
+
+  /// Server ka raw status naam -> canonical key.
+  static String canonStatusKey(String raw) {
+    final l = raw.trim().toLowerCase().replaceAll(' ', '_');
+    if (l.isEmpty) return '';
+    if (l.contains('cancel')) return 'cancelled';
+    if (l.contains('out') && l.contains('deliver')) return 'outForDelivery';
+    if (l.contains('deliver') && !l.contains('undeliver')) return 'delivered';
+    if (l.contains('ship') || l.contains('dispatch')) return 'shipped';
+    if (l.contains('process') ||
+        l.contains('progress') ||
+        l.contains('confirm') ||
+        l.contains('pack')) return 'processing';
+    if (l.contains('pend') ||
+        l.contains('place') ||
+        l.contains('new') ||
+        l.contains('order')) return 'pending';
+    return '';
+  }
 
   /// shipping address: {name, line1, city, state, country, phone}
   Map<String, dynamic> address = {};
@@ -426,6 +460,12 @@ class OrderDetailController extends GetxController {
               '';
         }
         if (img.isEmpty) img = _mediaUrl(prod['product_thumbnail']);
+        final pid = jsonToInt(it['product_id'] ??
+                it['productId'] ??
+                it['id'] ??
+                prod['id'] ??
+                prod['Id']) ??
+            0;
         items.add({
           'name': jsonToString(it['name'] ??
                   it['Name'] ??
@@ -434,12 +474,38 @@ class OrderDetailController extends GetxController {
                   prod['Name']) ??
               'Item',
           'image': buildMediaUrl(img),
+          'productId': pid,
           'qty': qty,
           'price': price,
           'lineTotal': line,
         });
       }
       if (subtotal <= 0 && sum > 0) subtotal = sum;
+
+      // Issue #7 (10/09 — "ordered list shows LOGO instead of product
+      // image"): order api rows me aksar image hi nahi hoti. App ke
+      // ALREADY-LOADED product pool (home api products) me id se product
+      // dhundh kar uski REAL thumbnail backfill karo — logo fallback bilkul
+      // nahi (view me image empty ho to grey placeholder + book icon).
+      try {
+        if (Get.isRegistered<HomeController>()) {
+          final pool = Get.find<HomeController>().homeApiProductsAll;
+          for (final it in items) {
+            if (((it['image'] ?? '') as String).isNotEmpty) continue;
+            final pid = it['productId'] is num
+                ? (it['productId'] as num).toInt()
+                : 0;
+            if (pid <= 0) continue;
+            for (final p in pool) {
+              if ((p.id ?? 0) == pid) {
+                final u = p.thumbnail?.url ?? '';
+                if (u.isNotEmpty) it['image'] = u;
+                break;
+              }
+            }
+          }
+        }
+      } catch (_) {}
     }
 
     // ---- status timeline: order_status_activities (DTO: status string,
@@ -485,6 +551,11 @@ class OrderDetailController extends GetxController {
           'name': nm.isNotEmpty
               ? nm
               : (status.isNotEmpty ? status : 'orderUpdate'.tr),
+          // Activities REAL hui hui events hai — done=true + canonical key
+          // (view ka green-check + translated label, Issue #3).
+          'key': canonStatusKey(nm.isNotEmpty ? nm : status),
+          'seq': 0,
+          'done': true,
           'date': jsonToString(a['changed_At'] ??
                   a['changed_at'] ??
                   a['changedAt'] ??
@@ -505,7 +576,14 @@ class OrderDetailController extends GetxController {
     }
     // timeline khaali ho to kam se kam current status ki ek entry dikhao
     if (timeline.isEmpty && status.isNotEmpty) {
-      timeline.add({'name': status, 'date': orderDate, 'note': ''});
+      timeline.add({
+        'name': status,
+        'key': canonStatusKey(status),
+        'seq': 0,
+        'done': true,
+        'date': orderDate,
+        'note': ''
+      });
     }
 
     // ---- DYNAMIC status flow (Orders/GetOrderStatus — backend 06/09) ----
@@ -544,6 +622,8 @@ class OrderDetailController extends GetxController {
             (statusSequence > 0 && seq > 0 && seq < statusSequence);
         merged.add({
           'name': nm,
+          'key': canonStatusKey(nm),
+          'seq': seq,
           // Aane wale (pending) steps ka fake date mat dikhao
           'date': isDone
               ? (act?['date'] ?? (isCurrent ? orderDate : '')).toString()
@@ -555,9 +635,37 @@ class OrderDetailController extends GetxController {
       // Server steps me shamil na hone wali custom activities end me jodo
       for (var i = 0; i < timeline.length; i++) {
         if (!used.contains(i)) {
-          merged.add({...timeline[i], 'done': true});
+          merged.add({
+            ...timeline[i],
+            'key': canonStatusKey(
+                (timeline[i]['name'] ?? '').toString()),
+            'seq': 0,
+            'done': true,
+          });
         }
       }
+      // Issue #3 (10/09 — "tracking sequence wrong"):
+      //  1) Server ki GetOrderStatus LIST ka raw order galat hai —
+      //     "cancelled" beech me (3rd position) aa jata hai. 'cancel' step
+      //     flow ka hissa nahi — use HATA do, SIRF tab dikhana jab ye order
+      //     khud cancelled ho (aur wo bhi SABSE AAKHIR me).
+      //  2) Steps ko sahi chronological order me rakho: Pending/Placed ->
+      //     Processing -> Shipped -> Out for delivery -> Delivered. Har
+      //     step pe canonical translation key ('pending'/'processing'/...)
+      //     hai — view translated label dikhata hai.
+      final curKey = canonStatusKey(status);
+      if (curKey != 'cancelled') {
+        merged.removeWhere((e) => e['key'] == 'cancelled');
+      }
+      int rank(Map<String, dynamic> e) {
+        final k = (e['key'] ?? '').toString();
+        if (k == 'cancelled') return 1000; // hamesha aakhir me
+        final idx = kStatusOrder.indexOf(k);
+        if (idx >= 0) return idx;
+        final sq = e['seq'] is num ? (e['seq'] as num).toInt() : 0;
+        return sq > 0 ? 500 + sq : 900;
+      }
+      merged.sort((a, b) => rank(a).compareTo(rank(b)));
       timeline = merged;
     }
 

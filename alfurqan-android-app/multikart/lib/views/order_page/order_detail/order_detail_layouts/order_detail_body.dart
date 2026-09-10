@@ -90,11 +90,23 @@ class OrderDetailBody extends StatelessWidget {
                 ClipRRect(
                   borderRadius:
                       BorderRadius.circular(AppScreenUtil().borderRadius(8)),
-                  child: imageNetwork(
-                      url: (it['image'] ?? '').toString(),
-                      width: AppScreenUtil().screenWidth(55),
-                      height: AppScreenUtil().screenHeight(55),
-                      fit: BoxFit.cover),
+                  // Issue #7 (10/09): image URL khaali ho to LOGO fallback
+                  // MAT dikhao — grey placeholder + book icon. Logo asal
+                  // order-item image nahi hoti, confuse karta hai.
+                  child: ((it['image'] ?? '').toString()).isNotEmpty
+                      ? imageNetwork(
+                          url: (it['image'] ?? '').toString(),
+                          width: AppScreenUtil().screenWidth(55),
+                          height: AppScreenUtil().screenHeight(55),
+                          fit: BoxFit.cover)
+                      : Container(
+                          width: AppScreenUtil().screenWidth(55),
+                          height: AppScreenUtil().screenHeight(55),
+                          color: appCtrl.appTheme.greyLight25,
+                          child: Icon(Icons.menu_book_rounded,
+                              color: appCtrl.appTheme.primary,
+                              size: AppScreenUtil().size(24)),
+                        ),
                 ),
                 const Space(10, 0),
                 Expanded(

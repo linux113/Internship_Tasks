@@ -1,4 +1,5 @@
 import '../../../../../config.dart';
+import '../../../../widgets/common/web_view_page.dart';
 
 class HomeBannerData extends StatelessWidget {
   final HomeBannerModel? data;
@@ -21,8 +22,10 @@ class HomeBannerData extends StatelessWidget {
               return;
             }
           }
-          // "external_url" banners (youtube etc.) — app ke andar kuch na kholo
+          // "external_url" banners (youtube etc.) — Issue #1 (10/09): pehle
+          // ye tap KHAALI dead tha; ab app ke andar WebView me khulta hai.
           if (data?.linkType == 'external_url') {
+            openWebViewScreen(data?.externalUrl);
             return;
           }
           if (data?.slug != null && data!.slug!.isNotEmpty) {

@@ -2,7 +2,10 @@
 import 'package:get/get.dart';
 //text constants
 class ProductDetailFont {
-  String inclusiveOfAllTaxes = "inclusiveOfAllTaxes".tr;
+  // Issue #9 (10/09): product price tax ke BINA hota hai — tax cart me add
+  // hota hai (order detail me bhi alag dikhta hai). Isliye "inclusive of
+  // all taxes" GALAT tha.
+  String inclusiveOfAllTaxes = "exclusiveOfAllTaxes".tr;
   String selectColor = "selectColor".tr;
   String quantity = "quantity".tr;
   String offersForYou = "offersForYou".tr;

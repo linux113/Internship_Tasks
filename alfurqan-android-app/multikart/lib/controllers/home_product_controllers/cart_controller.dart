@@ -1,7 +1,9 @@
 import 'package:multikart/models/cart_api_model.dart';
+import 'package:multikart/models/json_parse_utils.dart';
 import 'package:multikart/models/product_api_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
+import 'package:multikart/utilities/address_store.dart';
 
 import '../../config.dart';
 import 'home_controller.dart';
@@ -463,6 +465,11 @@ class CartController extends GetxController {
       try {
         await _persistIfNonEmpty(res.data!);
       } catch (_) {}
+      // Issue #4: cart/payment me TAX row — server preview se lao (fire &
+      // forget; guest/address-nahi ho to chupchaap skip, koi error nahi).
+      try {
+        fetchServerTax();
+      } catch (_) {}
     }
 
     update();
@@ -565,24 +572,171 @@ class CartController extends GetxController {
 
     final double total =
         (apiCart.total ?? 0) > 0 ? apiCart.total! : bagTotalFinal;
-    final double savings = bagTotalMrp - bagTotalFinal;
 
     // EDGE-FIX: saari lines zero-qty nikli (ya koi valid item nahi bana) to
     // EMPTY cart dikhao — warna khali CartModel se "blank" screen aati thi.
-    if (viewItems.isEmpty) return null;
+    if (viewItems.isEmpty) {
+      serverTax = null;
+      return null;
+    }
 
-    return CartModel(
+    // Bag totals yaad rakho — tax row/total rebuild (_rebuildOrderDetail)
+    // aur removeFromCart inhi par chalte hai (Issue #4).
+    _bagTotalMrp = bagTotalMrp;
+    _bagTotalFinal = bagTotalFinal;
+
+    final model = CartModel(
       cartList: viewItems,
       totalAmount: total,
-      orderDetail: [
-        OrderDetail(title: "Bag total".tr, value: bagTotalMrp),
-        if (savings > 0) OrderDetail(title: "Bag savings".tr, value: savings),
-        OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
-        OrderDetail(title: "Delivery".tr, value: 0.0),
-      ],
+      orderDetail: const [],
       deliveryChargesInstruction: _demoDeliveryCharges,
       deliveryInstruction: _demoDeliveryInstruction,
     );
+    cartModelList = model; // _rebuildOrderDetail ko list chahiye (items)
+    _rebuildOrderDetail();
+    return model;
+  }
+
+  // ---------------- Issue #4 (10/09): TAX row cart me bhi ----------------
+  // Order detail page par order place hone ke BAAD tax dikhta hai (~18%),
+  // par cart/payment par kahin nahi — user: "Tax should show in the order
+  // cart as it is showing after placing the order". Server ka tax bina
+  // checkout-preview (CheckOut POST) ke milta hi nahi — products me sirf
+  // tax_id aata hai (rate nahi). Isliye: server preview se tax nikaalo
+  // (explicit tax field ho to wo, warna serverTotal - bagTotal ka FARK —
+  // ye fark hi server ka add-on hai, fake kuch bhi nahi). Preview possible
+  // na ho (guest/address nahi/flake) to tax row NA dikhao.
+  double? serverTax;
+  double _bagTotalMrp = 0;
+  double _bagTotalFinal = 0;
+  bool _taxFetching = false;
+
+  /// orderDetail rows (Bag total / savings / Coupon / TAX / Delivery) aur
+  /// totalAmount ko latest bag totals + serverTax se rebuild karo.
+  void _rebuildOrderDetail() {
+    final m = cartModelList;
+    if (m == null) return;
+    final savings = _bagTotalMrp - _bagTotalFinal;
+    m.orderDetail = [
+      OrderDetail(title: "Bag total".tr, value: _bagTotalMrp),
+      if (savings > 0) OrderDetail(title: "Bag savings".tr, value: savings),
+      OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
+      if (serverTax != null && serverTax! > 0)
+        OrderDetail(title: "taxLabel".tr, value: serverTax),
+      OrderDetail(title: "Delivery".tr, value: 0.0),
+    ];
+    m.totalAmount = _bagTotalFinal + (serverTax ?? 0);
+    update();
+  }
+
+  /// Server (CheckOut preview) se tax nikaal kar cart/payment me dikhao.
+  /// CheckoutController ka preview bhi isi ko apply karta hai
+  /// (applyServerTotals), taaki payment page par bhi row aa jaye.
+  void applyServerTotals(double serverTotal, double? explicitTax) {
+    if (cartModelList == null) return;
+    final t = (explicitTax != null && explicitTax > 0)
+        ? explicitTax
+        : (serverTotal > _bagTotalFinal
+            ? serverTotal - _bagTotalFinal
+            : null);
+    if (t == null || ((t - (serverTax ?? 0)).abs() < 0.001)) return;
+    serverTax = t;
+    _rebuildOrderDetail();
+  }
+
+  /// Cart page khulte hi (logged-in + saved address ho to) ek silent
+  /// preview call se tax fetch — payment page se PEHLE hi row dikh jaye.
+  Future<void> fetchServerTax() async {
+    if (_taxFetching) return;
+    if (cartModelList == null) return;
+    if ((storage.read(Session.isLogin) ?? false) != true) return;
+    final rawUid = storage.read('id');
+    final uid = rawUid is num
+        ? rawUid.toInt()
+        : (int.tryParse(rawUid?.toString() ?? '') ?? 0);
+    if (uid <= 0) return;
+    final lines = (cartApiModel?.items ?? const <CartItemModel>[])
+        .where((l) => (l.quantity ?? 0) > 0 && (l.productId ?? 0) > 0)
+        .map((l) => <String, dynamic>{
+              'product_id': l.productId ?? 0,
+              'variation_id': l.variationId ?? 0,
+              'quantity': l.quantity ?? 1,
+            })
+        .toList();
+    if (lines.isEmpty) return;
+    final addrs = AddressStore.load();
+    if (addrs.isEmpty) return;
+    int addressId = 0;
+    final sel = int.tryParse('${storage.read('selected_address_id') ?? ''}') ?? -1;
+    for (final a in addrs) {
+      if ((a.id ?? 0) > 0 && (addressId == 0 || a.id == sel)) {
+        addressId = a.id ?? 0;
+        if (a.id == sel) break;
+      }
+    }
+    if (addressId <= 0) return;
+    _taxFetching = true;
+    try {
+      double? taxOf(Map m) {
+        final v = jsonToDouble(m['tax'] ??
+            m['Tax'] ??
+            m['tax_amount'] ??
+            m['taxAmount'] ??
+            m['total_tax'] ??
+            m['Total_Tax'] ??
+            m['taxes']);
+        return v;
+      }
+      final res = await ApiService().request<Map<String, double>?>(
+        endpoint: ApiEndpoints.checkout,
+        method: ApiMethod.post,
+        data: <String, dynamic>{
+          'consumer_id': uid,
+          'products': lines,
+          'shipping_address_id': addressId,
+          'billing_address_id': addressId,
+          'points_amount': false,
+          'wallet_balance': false,
+          'delivery_description': '',
+          'delivery_interval': '',
+          'payment_method': 'cod',
+        },
+        fromJson: (json) {
+          // total + tax DONO — lenient unwrap (data/order), 4 level tak
+          double? total;
+          double? tax;
+          dynamic d = json;
+          for (var i = 0; i < 4 && d is Map; i++) {
+            final m = Map<String, dynamic>.from(d as Map);
+            total ??= jsonToDouble(m['total'] ??
+                m['Total'] ??
+                m['grand_total'] ??
+                m['Grand_Total']);
+            tax ??= taxOf(m);
+            d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
+          }
+          if (tax != null && tax > 0) {
+            return <String, double>{'tax': tax};
+          }
+          if (total != null && total > 0) {
+            return <String, double>{'total': total};
+          }
+          return null;
+        },
+      );
+      if (res.isSuccess && res.data != null) {
+        if ((res.data!['tax'] ?? 0) > 0) {
+          // explicit tax mil gaya
+          serverTax = res.data!['tax'];
+          _rebuildOrderDetail();
+        } else if ((res.data!['total'] ?? 0) > 0) {
+          // fallback: server ka total - bag total = server add-on (tax)
+          applyServerTotals(res.data!['total']!, null);
+        }
+      }
+    } catch (_) {} finally {
+      _taxFetching = false;
+    }
   }
 
   /// Cart item tap ke liye real product (detail page kholne ke liye).
@@ -605,24 +759,23 @@ class CartController extends GetxController {
     final remaining = cartModelList?.cartList ?? <HomeDealOfTheDayModel>[];
     if (remaining.isEmpty) {
       cartModelList = null;
+      serverTax = null;
+      _bagTotalMrp = 0;
+      _bagTotalFinal = 0;
     } else {
       double total = 0;
       for (final e in remaining) {
         total += (e.mrp ?? 0);
       }
-      cartModelList!.totalAmount = total;
-      // order detail bhi turant refresh karo (Bag total/Savings)
+      // bag totals update karo aur UNIFIED rebuild — Tax row barkarar
+      // rehti hai (pehle remove par tax row gayab ho jati thi, Issue #4).
+      _bagTotalFinal = total;
       double mrpTotal = 0;
       for (final e in remaining) {
         mrpTotal += (e.totalPrice ?? e.mrp ?? 0);
       }
-      cartModelList!.orderDetail = [
-        OrderDetail(title: "Bag total".tr, value: mrpTotal),
-        if (mrpTotal - total > 0)
-          OrderDetail(title: "Bag savings".tr, value: mrpTotal - total),
-        OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
-        OrderDetail(title: "Delivery".tr, value: 0.0),
-      ];
+      _bagTotalMrp = mrpTotal;
+      _rebuildOrderDetail();
     }
     update();
     appCtrl.update();

@@ -192,6 +192,12 @@ class HomePageBanner {
       // tap-routing ke liye naye fields
       linkType: linkType,
       productId: productId,
+      // external_url banner — WebView me kholne ke liye asli link yaad rakho
+      externalUrl: linkType == 'external_url'
+          ? ((externalUrl != null && externalUrl!.isNotEmpty)
+              ? externalUrl
+              : link)
+          : externalUrl,
     );
   }
 }

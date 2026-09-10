@@ -22,6 +22,14 @@ class Filter extends StatelessWidget {
                 actions: const [CloseSquareIcon()]),
             body: Stack(alignment: Alignment.bottomCenter, children: [
               SingleChildScrollView(
+                  // Issue #5 (10/09): RESET/APPLY buttons content ke UPAR
+                  // float karte hai (Stack) — price ke LIVE value boxes
+                  // slider ghumate waqt unke neeche chhup jaate the
+                  // ("price container is overlapped by the buttons"). Ab
+                  // scroll content ke end me buttons-jitni empty space hai,
+                  // isliye koi bhi cheez unke neeche nahi chhupti.
+                  padding: EdgeInsets.only(
+                      bottom: AppScreenUtil().screenHeight(110)),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
