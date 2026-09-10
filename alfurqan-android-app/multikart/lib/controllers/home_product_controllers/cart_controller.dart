@@ -494,6 +494,42 @@ class CartController extends GetxController {
     return null;
   }
 
+  /// Issue #4 (10/09 FINAL): product tax-rate se cart ka tax DETERMINISTIC
+  /// compute — tax_id → rate (TaxService, Taxes/GetAllTaxes). NOTE: rates
+  /// ASYNC load hote hai — cart page pehli baar khulne par rates abhi na
+  /// aaye ho to ye null deta hai aur tax row chhupi rehti hai (isliye pehle
+  /// sirf PAYMENT page par tax dikhta tha, cart par nahi). Isko
+  /// _rebuildOrderDetail LAZILY dobara chalata hai jab rates aa chuki ho.
+  /// Server ka explicit tax aane par ye value override (applyServerTotals).
+  double? _computeClientTaxFromLines() {
+    // VIEW items (jo user ko DIKH rahe hai) se compute — server lines
+    // stale/replace ho sakti hai (remove ke turant baad sahi rahe).
+    final list = cartModelList?.cartList ?? <HomeDealOfTheDayModel>[];
+    if (list.isEmpty) return null;
+    double sum = 0;
+    bool any = false;
+    for (final e in list) {
+      // mapping byWhom me 'Qty: N' likhti hai — wahi se qty wapas
+      int qty = 1;
+      final m = RegExp(r'(\d+)').firstMatch(e.byWhom ?? '');
+      if (m != null) qty = int.tryParse(m.group(1)!) ?? 1;
+      if (qty <= 0) continue;
+      final unitFinal = (e.mrp ?? 0); // view item ka mrp = selling price
+      if (unitFinal <= 0) continue;
+      ProductApiModel? product;
+      if (e.id > 0) product = _lookupKnownProduct(e.id);
+      // Store me ek hi active rate hai (tax_id:3 = 18%, order #1078:
+      // 65 × 18% = 11.70 EXACT) — isliye singleActiveRate fallback SAFE.
+      final rate = TaxService.rateFor(product?.taxId) ??
+          TaxService.singleActiveRate;
+      if (rate != null && rate > 0) {
+        sum += (unitFinal * qty) * rate / 100;
+        any = true;
+      }
+    }
+    return any ? sum : null;
+  }
+
   /// Real api cart (CartApiModel) ko app ke existing cart UI ke model
   /// (CartModel) me convert karna — isse cart screen ka koi bhi widget
   /// change kiye bina real api ka data dikhne lagta hai.
@@ -524,8 +560,6 @@ class CartController extends GetxController {
     final List<HomeDealOfTheDayModel> viewItems = [];
     double bagTotalMrp = 0; // original (mrp) prices ka sum
     double bagTotalFinal = 0; // selling prices ka sum
-    double clientTax = 0; // product tax-rate se computed tax (Issue #4 fix)
-    bool anyTaxRated = false; // kam se kam ek line ka rate mila?
 
     for (final key in groupOrder) {
       final lines = grouped[key]!;
@@ -561,21 +595,6 @@ class CartController extends GetxController {
       bagTotalMrp += unitMrp * qty;
       bagTotalFinal += unitFinal * qty;
 
-      // Issue #4 (10/09 REVISITED — payment par Tax row aayi hi nahi):
-      // server preview (CheckOut POST) kabhi-kabhi fail hota hai ya tax ke
-      // BINA total deta hai, isliye ab tax DETERMINISTIC client-side bhi
-      // compute hota hai — product ke tax_id ka rate TaxService se
-      // (Taxes/GetAllTaxes, swagger verified). Store me ek hi rate hai
-      // (tax_id:3 = 18%, order #1078: 65 × 18% = 11.70 EXACT) — isliye
-      // singleActiveRate fallback bhi SAFE hai. Server ka explicit tax
-      // aane par ye value override ho jaati hai (applyServerTotals).
-      final rate = TaxService.rateFor(product?.taxId) ??
-          TaxService.singleActiveRate;
-      if (rate != null && rate > 0) {
-        clientTax += (unitFinal * qty) * rate / 100;
-        anyTaxRated = true;
-      }
-
       viewItems.add(
         HomeDealOfTheDayModel(
           id: item.productId ?? item.id ?? 0,
@@ -608,10 +627,6 @@ class CartController extends GetxController {
     // aur removeFromCart inhi par chalte hai (Issue #4).
     _bagTotalMrp = bagTotalMrp;
     _bagTotalFinal = bagTotalFinal;
-    // Deterministic client tax — server preview ka explicit tax aane tak
-    // yehi dikhega (order #1078 math se EXACT match: 65 × 18% = 11.70).
-    _clientTax = anyTaxRated ? clientTax : null;
-
     final model = CartModel(
       cartList: viewItems,
       totalAmount: total,
@@ -620,6 +635,11 @@ class CartController extends GetxController {
       deliveryInstruction: _demoDeliveryInstruction,
     );
     cartModelList = model; // _rebuildOrderDetail ko list chahiye (items)
+    // Deterministic client tax — server preview ka explicit tax aane tak
+    // yehi dikhega (order #1078 math se EXACT match: 65 × 18% = 11.70).
+    // NOTE: helper VIEW items (cartModelList) se compute karta hai, isliye
+    // model set hone ke BAAD hi chalana chahiye.
+    _clientTax = _computeClientTaxFromLines();
     _rebuildOrderDetail();
     return model;
   }
@@ -657,6 +677,13 @@ class CartController extends GetxController {
     final m = cartModelList;
     if (m == null) return;
     final savings = _bagTotalMrp - _bagTotalFinal;
+    // Tax rates async baad me aaye ho (cart khulne ke waqt na the) to ab
+    // dobara compute karo — isi liye pehle cart page par Tax row chhupi
+    // rehti thi jabki payment page par aa jati thi (10/09 user screenshot).
+    if (_clientTax == null || _clientTax == 0) {
+      final c = _computeClientTaxFromLines();
+      if (c != null && c > 0) _clientTax = c;
+    }
     final tax = _effectiveTax;
     // Ek hi rate wali dukkan me label ke saath rate bhi dikhao ("Tax (18%)")
     // — jaise order detail page par server dikhata hai.
@@ -853,6 +880,10 @@ class CartController extends GetxController {
   Future<void> removeFromCart(HomeDealOfTheDayModel item) async {
     final pid = item.id;
     cartModelList?.cartList?.removeWhere((e) => e.id == pid);
+    // Tax bhi resync tak reset — hataaye gaye item ka tax na dikhta rahe
+    // (getCart verify ke baad dobara compute ho jayega).
+    serverTax = null;
+    _clientTax = null;
     final remaining = cartModelList?.cartList ?? <HomeDealOfTheDayModel>[];
     if (remaining.isEmpty) {
       cartModelList = null;

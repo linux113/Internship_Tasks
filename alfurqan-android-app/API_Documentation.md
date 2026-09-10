@@ -1050,3 +1050,50 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
    (server message) aayegi; 4.5★ dene par bhi crash nahi (int banta).
 4. Home/category top bar: green search button → real search page;
    back aane par wahi tab (category tab jump nahi).
+
+---
+
+## v1.6.22+51 — 10/09/2026 (User screenshots 8:47PM se feedback round)
+
+1. **Search icon WAPAS PURANA (user request)**: v1.6.21 me magnifier ko
+   brand-green rounded box me badla tha — user ne saaf kaha "make previous
+   only without green, maine sirf SPACE fix ke liye kaha tha". Ab icon
+   purana simple black magnifier (green box hata diya); icons row ke beech
+   ka equal gap (AppBarActionLayout ka padding) barkarar = jo asli space
+   fix maanga tha wo yahi tha. Tab-jump bug fix (selectedIndex chhedna
+   band) + direct real search page — dono functioning jaise hi rahegi.
+2. **CART PAGE par bhi TAX row (user screenshot root)**: payment page par
+   "Tax (18%)" dikhta tha par CART page PAR NAHI (8:47 screenshot: cart
+   Total AED8.00 vs payment Total AED9.44). JAD: tax rates ASYNC aate hai
+   (Taxes/GetAllTaxes) — cart khulne ke waqt rates na ho to client-tax
+   null pada rehta tha aur sirf preview-chalne-wala payment page hi tax
+   laata tha. Ab: (a) `_rebuildOrderDetail()` LAZILY dobara compute karti
+   hai jab rates aa chuki hon (har rebuild par), (b) compute helper ab
+   VIEW items se chalti hai (cartApiModel stale nahi — remove ke turant
+   baad bhi sahi), (c) remove par tax reset + flat-rate se instant
+   recomputation. Ab CART / DELIVERY / PAYMENT / SUCCESS / ORDER DETAIL —
+   PAACHO jagah Total SAME (jaise 8 → 9.44).
+3. **Tracking: 'Pending' step ab GREEN (order #1079 root)**: track-order
+   se detail khulne par history-prefill nahi milta, aur swagger se
+   CONFIRM hua ki placement activity me `order_status_id`/`status` dono
+   NULL aate hai (OrderStatusActivityDto: order_status_id int + status
+   string — dono nullable; OrdersDto: order_status{OrderStatusDto} map +
+   order_status_id) — isliye status khaali reh kar 'pending' step grey
+   reh jata tha. Ab: (a) `StatusId` (entity casing) dono jagah id-keys me
+   add, (b) FINAL fallback: status abhi bhi khaali ho to timeline ki
+   SABSE LATEST canonical activity se derive (placement 'Order update' →
+   'pending' — order placed ka matlab pending step DONE, delivered order
+   ho to delivery activity → 'delivered' tak sab done). Server schema se
+   verify: karwate hue parsed keys sab DTO ke official fields hain.
+- Swagger schemas doc me noted (OrdersDto/OrderStatusDto/
+  OrderStatusActivityDto/OrderSaveDto) — BACKEND_API_NOTES ke saath.
+- Version 1.6.22+51, label "v1.6.22 (51)"; audits ALL CLEAN (deep_check
+  547 files / parity 366×4, .tr 278/0, routeName 29/0 / audit3 CLEAN).
+
+### Test notes (v1.6.22)
+1. Cart page "Order Details" me ab **Tax (18%) + Total = Bag + Tax**
+   dikhe — payment se pehle hi (wohi number jo order ke baad aata hai).
+2. Koi bhi order track karo (history se ya track-order se): **pending
+   step green ✓**, sab labels translated.
+3. Top bar ka search magnifier purana style ka (bina green box) — tap
+   par real search page.

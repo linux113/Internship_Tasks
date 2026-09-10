@@ -361,7 +361,8 @@ class OrderDetailController extends GetxController {
           j['Order_Status_Id'] ??
           j['orderStatusId'] ??
           j['status_id'] ??
-          j['statusId']);
+          j['statusId'] ??
+          j['StatusId']);
     }
     // 10/09 deep-fix: detail JSON me status ka drop hi nahi mila to ORDER
     // HISTORY se prefill kiya hua REAL status wapas lao (history list ka
@@ -566,7 +567,8 @@ class OrderDetailController extends GetxController {
               a['Order_Status_Id'] ??
               a['orderStatusId'] ??
               a['status_id'] ??
-              a['statusId']);
+              a['statusId'] ??
+              a['StatusId']);
         }
         final displayName = nm.isNotEmpty
             ? nm
@@ -616,6 +618,25 @@ class OrderDetailController extends GetxController {
         'date': orderDate,
         'note': ''
       });
+    }
+
+    // 10/09 FINAL (order #1079 — track-order se detail khuli, history
+    // prefill bhi nahi): detail JSON me server kabhi status KISI bhi key
+    // par nahi bhejta (placement activity me bhi order_status_id/status
+    // null aata hai — swagger OrderStatusActivityDto nullable). Tab bhi
+    // current-step highlight chalna chahiye: timeline ki SABSE LATEST
+    // canonical activity (chronological list ke END se pehli non-empty
+    // key) se status derive karo — jaise placement activity ('Order
+    // update' = order PLACED) se 'pending'. Delivered orders me delivery
+    // activity ka key 'delivered' aayega — sahi hi hoga.
+    if (status.isEmpty && timeline.isNotEmpty) {
+      for (var i = timeline.length - 1; i >= 0; i--) {
+        final k = (timeline[i]['key'] ?? '').toString();
+        if (k.isNotEmpty && k != 'cancelled') {
+          status = k;
+          break;
+        }
+      }
     }
 
     // ---- DYNAMIC status flow (Orders/GetOrderStatus — backend 06/09) ----
