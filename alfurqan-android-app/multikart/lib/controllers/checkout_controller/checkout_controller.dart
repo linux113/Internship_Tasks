@@ -4,6 +4,7 @@ import '../../models/json_parse_utils.dart';
 import '../../models/location_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/tax_service.dart';
 import '../../utilities/address_store.dart';
 import '../home_product_controllers/cart_controller.dart';
 
@@ -77,7 +78,12 @@ class CheckoutController extends GetxController {
       if (pid > 0 && qty > 0) {
         items.add({
           'product_id': pid,
-          'variation_id': l.variationId,
+          // Swagger (10/09): CheckOutProducts.variation_id STRING hai.
+          // int bhejne par .NET model-binding 400 de sakta hai — isi liye
+          // CheckOut preview kabhi-kabhi fail hota tha (aur payment page
+          // par tax/total nahi aata tha).
+          'variation_id':
+              (l.variationId ?? 0) > 0 ? '${l.variationId}' : '',
           'quantity': qty,
         });
       }
@@ -92,7 +98,7 @@ class CheckoutController extends GetxController {
       if (e.id > 0) {
         items.add({
           'product_id': e.id,
-          'variation_id': null,
+          'variation_id': '',
           'quantity': qty <= 0 ? 1 : qty,
         });
       }
@@ -177,6 +183,11 @@ class CheckoutController extends GetxController {
   Future<void> loadCheckoutPreview() async {
     serverPreviewTotal = null;
     if (!isLoggedIn) return;
+    // Tax rates bhi refresh karo (payment page ka deterministic tax row
+    // preview fail hone par bhi sahi rahe — order #1078 math se verified).
+    try {
+      TaxService.load();
+    } catch (_) {}
     try {
       var products = _orderProducts();
       if (products.isEmpty) {
@@ -200,7 +211,7 @@ class CheckoutController extends GetxController {
       if (coupon.isEmpty) {
         coupon = storage.read('coupon_code')?.toString() ?? '';
       }
-      final res = await ApiService().request<double?>(
+      final res = await ApiService().request<Map<String, double>?>(
         endpoint: ApiEndpoints.checkout,
         method: ApiMethod.post,
         data: <String, dynamic>{
@@ -216,29 +227,71 @@ class CheckoutController extends GetxController {
           'payment_method': paymentMethod,
         },
         fromJson: (json) {
-          // Lenient: {total} / {Total} / {grand_total} / {data:{...}} /
-          // {order:{...}} — pehla >0 total uthao.
-          dynamic d = json;
-          for (var i = 0; i < 4 && d is Map; i++) {
-            final m = Map<String, dynamic>.from(d as Map);
-            final v = jsonToDouble(m['total'] ??
-                m['Total'] ??
-                m['grand_total'] ??
-                m['Grand_Total']);
-            if ((v ?? 0) > 0) return v;
-            d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
+          // DEEP walker (10/09 deep-fix): total ke SAATH explicit tax bhi
+          // dhundo — response kisi bhi depth/shape par ho (data/Data/
+          // order/Data.data ...). tax keys: 'tax' samet sab (tax_total,
+          // Tax_Total, tax_amount...), tax_id NAHI. Pehle sirf 4-level
+          // unwrap + 4 fixed keys the — shape tb preview se tax row
+          // kabhi nahi banti thi.
+          double? deepTotal;
+          double? deepTax;
+          void walk(dynamic node, int depth) {
+            if (depth > 8 || node == null) return;
+            if (deepTax != null && deepTotal != null) return;
+            if (node is Map) {
+              node.forEach((k, v) {
+                final key = k.toString().toLowerCase();
+                if (deepTax == null &&
+                    key.contains('tax') &&
+                    !key.contains('tax_id') &&
+                    !key.contains('taxid') &&
+                    !key.contains('taxable')) {
+                  final n = jsonToDouble(v);
+                  if (n != null && n > 0) deepTax = n;
+                }
+                if (deepTotal == null &&
+                    (key == 'total' ||
+                        key == 'grand_total' ||
+                        key == 'payable' ||
+                        key == 'amount_payable' ||
+                        key == 'order_total' ||
+                        key == 'final_total')) {
+                  final n = jsonToDouble(v);
+                  if (n != null && n > 0) deepTotal = n;
+                }
+              });
+              for (final v in node.values) {
+                if (v is Map || v is List) walk(v, depth + 1);
+                if (deepTax != null && deepTotal != null) return;
+              }
+            } else if (node is List) {
+              for (final v in node) {
+                walk(v, depth + 1);
+                if (deepTax != null && deepTotal != null) return;
+              }
+            }
           }
-          return null;
+
+          walk(json, 0);
+          final out = <String, double>{};
+          if (deepTax != null && deepTax! > 0) out['tax'] = deepTax!;
+          if (deepTotal != null && deepTotal! > 0) out['total'] = deepTotal!;
+          return out.isEmpty ? null : out;
         },
       );
-      if (res.isSuccess && (res.data ?? 0) > 0) {
-        serverPreviewTotal = res.data;
-        // Issue #4 (10/09): payment page ka totals (CartOrderDetailLayout)
-        // CartController ke model se banta hai — preview ke total se TAX row
-        // waha bhi dikhao (order place hone ke BAAD detail me jo tax dikhta
-        // hai, wahi ab PEHLE payment/cart me).
+      if (res.isSuccess && res.data != null) {
+        serverPreviewTotal = res.data!['total'];
+        // Issue #4 (10/09 REVISITED): payment page ka totals
+        // (CartOrderDetailLayout) CartController ke model se banta hai —
+        // preview ke total + explicit tax se TAX row waha bhi dikhao
+        // (order place hone ke BAAD detail me jo tax dikhta hai, wahi ab
+        // PEHLE payment/cart me — server value authoritative).
         try {
-          _cartCtrl?.applyServerTotals(serverPreviewTotal!, null);
+          final t = res.data!['tax'];
+          final tot = res.data!['total'] ?? 0;
+          if ((t ?? 0) > 0 || tot > 0) {
+            _cartCtrl?.applyServerTotals(tot, (t ?? 0) > 0 ? t : null);
+          }
         } catch (_) {}
         update();
       }

@@ -38,9 +38,9 @@ class RatingReviewController extends GetxController {
     update();
   }
 
-  /// Server ka review-submit endpoint swagger me visible nahi (hidden) —
-  /// backend family ka naming pattern (Cart/AddToCart, Wishlist/
-  /// AddToWishlist, Location/AddAddress, Coupon/GetAllCoupons) se chain.
+  /// Submit: endpoint swagger (10/09 live) se CONFIRM — POST
+  /// /api/Review/AddReview, body AddReviewDto {id, product_id, rating:int,
+  /// description}. Chain ke baaki variants sirf safety-fallback hai.
   /// Pehla endpoint×body jo IsSuccess de, wahi final.
   Future<void> submit() async {
     if (isSubmitting) return;
@@ -60,37 +60,57 @@ class RatingReviewController extends GetxController {
     isSubmitting = true;
     update();
     final review = textCtrl.text.trim();
+    // SWAGGER (10/09/2026 live) se CONFIRM: POST /api/Review/AddReview ka
+    // body EXACTLY AddReviewDto hai = {id:int, product_id:int,
+    // rating:int(INT32!), description:string}. Yani (a) rating INT hi
+    // chahiye — 4.5 jaisi decimal bhejne par model-binding 400, (b) extra
+    // keys (consumer_id/title/stars/comment) DTO me HAI HI NAHI (strict
+    // validators unknown keys reject karte hai). Isliye ab SABSE PEHLE
+    // exact-DTO body — baaki purane variants sirf backup.
     const endpoints = <String>[
-      'Review/AddReview',
+      'Review/AddReview', // swagger-confirmed — sabse pehle
       'Reviews/AddReview',
       'Review/SaveReview',
       'Reviews/SaveReview',
       'Front/AddProductReview',
       'Product/AddReview',
     ];
+    // rating server ke liye INT — user ne 4.5 di ho to nearest int.
+    final int ratingInt = ratingVal.round();
     final bodies = <Map<String, dynamic>>[
+      // #1 = EXACT AddReviewDto (swagger)
+      <String, dynamic>{
+        'id': 0,
+        'product_id': productId,
+        'rating': ratingInt,
+        'description': review,
+      },
       <String, dynamic>{
         'product_id': productId,
-        'rating': ratingVal.round(),
+        'rating': ratingInt,
         'description': review,
-        'review': review,
         if (_userId > 0) 'consumer_id': _userId,
       },
       <String, dynamic>{
         'product_id': productId,
-        'stars': ratingVal.round(),
+        'stars': ratingInt,
         'comment': review,
         if (_userId > 0) 'consumer_id': _userId,
       },
       <String, dynamic>{
         'product_id': productId,
-        'rating': ratingVal,
+        'rating': ratingInt,
         'message': review,
         if (_userId > 0) 'user_id': _userId,
       },
     ];
     bool ok = false;
     String serverMsg = '';
+    // 10/09 deep-fix: fail hone par generic "Review could not be sent" ki
+    // jagah SERVER KA ASLI MESSAGE dikhao — backend rejection ka reason hi
+    // batata hai (jaise sirf purchased product par review allowed hai —
+    // payload ka can_review:false flag isi rule ka saathi hai).
+    String lastFailMsg = '';
     outer:
     for (final ep in endpoints) {
       for (final b in bodies) {
@@ -106,6 +126,7 @@ class RatingReviewController extends GetxController {
             serverMsg = res.message;
             break outer;
           }
+          if (res.message.isNotEmpty) lastFailMsg = res.message;
         } catch (_) {}
       }
     }
@@ -137,7 +158,10 @@ class RatingReviewController extends GetxController {
             .applyMyReview(rating: ratingVal, text: review);
       }
     } else {
-      _toast(serverMsg.isNotEmpty ? serverMsg : 'reviewFailed'.tr);
+      // Asli server message pehle (reason samajh aaye), warna generic.
+      _toast(lastFailMsg.isNotEmpty
+          ? lastFailMsg
+          : (serverMsg.isNotEmpty ? serverMsg : 'reviewFailed'.tr));
     }
   }
 }

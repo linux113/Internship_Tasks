@@ -332,6 +332,15 @@ class OrderDetailController extends GetxController {
     if (st is Map) {
       status = jsonToString(st['name'] ?? st['Name'] ?? st['title'] ?? st['slug']) ?? '';
       statusSequence = jsonToInt(st['sequence'] ?? st['Sequence']) ?? 0;
+    } else if (st is num) {
+      // 10/09 deep-fix (tracking current-step grey reh gaya tha): detail JSON
+      // me 'order_status' kabhi status-ka-NAME nahi, status-ID (int) bhejta
+      // hai — wo seedha text ki tarah parse ho kar "18" jaisa faltu status ban
+      // jata tha (ya bool 'status' null hone par khaali reh jata tha), isliye
+      // current step matches() me kabhi TRUE nahi hota tha. Ab id se dynamic
+      // list (GetOrderStatus) decode.
+      status = OrderStatusService.nameFor(st);
+      statusSequence = 0;
     } else {
       status = jsonToString(
               j['status_name'] ?? j['Status_Name'] ?? j['status'] ?? st) ??
@@ -340,6 +349,11 @@ class OrderDetailController extends GetxController {
     // entity me 'status' boolean hota hai — numeric/bool status mat dikhao
     { final sl = status.trim().toLowerCase();
       if (sl == 'true' || sl == 'false') status = ''; }
+    // pure-digit status = id string — dynamic list se decode karo
+    if (RegExp(r'^\d+$').hasMatch(status)) {
+      final nm = OrderStatusService.nameFor(status);
+      status = nm.isNotEmpty ? nm : '';
+    }
     // status embed nahi aaya to order_status_id se dynamic list decode
     // (warna flow me current-step highlight kabhi nahi hota).
     if (status.isEmpty) {
@@ -348,6 +362,15 @@ class OrderDetailController extends GetxController {
           j['orderStatusId'] ??
           j['status_id'] ??
           j['statusId']);
+    }
+    // 10/09 deep-fix: detail JSON me status ka drop hi nahi mila to ORDER
+    // HISTORY se prefill kiya hua REAL status wapas lao (history list ka
+    // status isi order ka server-status hota hai — uspar bharosa karna
+    // khaali chhodne se hamesha behtar hai). Isi wajah se 'pending' step
+    // green nahi ho raha tha aur activity ka naam "Order update" fallback
+    // par gir gaya tha.
+    if (status.isEmpty && _prefillStatus.isNotEmpty) {
+      status = _prefillStatus;
     }
 
     // ---- totals (OrdersDto: amount=subtotal, total=grand) ----
@@ -545,12 +568,18 @@ class OrderDetailController extends GetxController {
               a['status_id'] ??
               a['statusId']);
         }
+        final displayName = nm.isNotEmpty
+            ? nm
+            : (status.isNotEmpty ? status : 'orderUpdate'.tr);
         timeline.add({
           // Naam/status dono khaali ho to bhi row chhoti se chhoti sahi
           // dikhni chahiye — 'Order update' generic label (x4 langs).
-          'name': nm.isNotEmpty
-              ? nm
-              : (status.isNotEmpty ? status : 'orderUpdate'.tr),
+          'name': displayName,
+          // 10/09: view ko bataya jata hai ye entry ek REAL ACTIVITY hai —
+          // iska label RAW hi dikhe ("Order update" + note), canonical key
+          // se TRANSLATE mat karo (warna "Pending" ka duplicate row ban
+          // jata hai — jaise screenshots me dikh raha tha).
+          'label': displayName,
           // Activities REAL hui hui events hai — done=true + canonical key
           // (view ka green-check + translated label, Issue #3).
           'key': canonStatusKey(nm.isNotEmpty ? nm : status),
@@ -578,6 +607,9 @@ class OrderDetailController extends GetxController {
     if (timeline.isEmpty && status.isNotEmpty) {
       timeline.add({
         'name': status,
+        // label khaali = view canonical key se TRANSLATED naam dikhaye
+        // (raw lowercase 'pending' ki jagah "Pending" — 10/09 fix).
+        'label': '',
         'key': canonStatusKey(status),
         'seq': 0,
         'done': true,
@@ -622,6 +654,10 @@ class OrderDetailController extends GetxController {
             (statusSequence > 0 && seq > 0 && seq < statusSequence);
         merged.add({
           'name': nm,
+          // Server-flow steps label KHAALI — view canonical 'key' se
+          // TRANSLATED naam dikhata hai (raw lowercase 'out_for_delivery'
+          // ki jagah "Out for delivery" — 10/09 user complaint fix).
+          'label': '',
           'key': canonStatusKey(nm),
           'seq': seq,
           // Aane wale (pending) steps ka fake date mat dikhao
@@ -667,6 +703,21 @@ class OrderDetailController extends GetxController {
       }
       merged.sort((a, b) => rank(a).compareTo(rank(b)));
       timeline = merged;
+
+      // 10/09 deep-fix (tracking): current status TAK ke saare steps done
+      // mark karo — statusSequence server kabhi deta hi nahi (0 rehta
+      // hai), isliye pehle sirf EXACT-current step green hota tha aur
+      // delivered orders me bhi 'pending' grey dikhta tha. Rank compare
+      // canonical keys par — pending<processing<shipped<outForDelivery<
+      // delivered. 'cancelled' current ho to ye pass skip (rank nahi milta).
+      final curK = canonStatusKey(status);
+      final curRank = curK.isEmpty ? -1 : kStatusOrder.indexOf(curK);
+      if (curRank >= 0) {
+        for (final e in timeline) {
+          final r = kStatusOrder.indexOf((e['key'] ?? '').toString());
+          if (r >= 0 && r <= curRank) e['done'] = true;
+        }
+      }
     }
 
     // ---- shipping address (AddressDto: title/street/city/stateName/

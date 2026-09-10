@@ -18,6 +18,10 @@ class ApiEndpoints {
   // (Pending/In Process/Ready to ship/Shipped...) ab static nahi, table se
   // aate hai. Status dropdown/flow jaha bhi dikhta hai, isi api se le.
   static const String orderStatus = 'Orders/GetOrderStatus';
+  // TAX rates (id/name/rate/status) — swagger 10/09: GET /api/Taxes/
+  // GetAllTaxes. Products me sirf tax_id aata hai; rate yahi se milta hai
+  // (login maangti hai). Cart/payment ka TAX row isi se banta hai.
+  static const String taxes = 'Taxes/GetAllTaxes';
   // Coupons list
   static const String getCoupons = 'Coupon/GetAllCoupons';
   // Change password — body: {current_password, new_password, confirm_password}

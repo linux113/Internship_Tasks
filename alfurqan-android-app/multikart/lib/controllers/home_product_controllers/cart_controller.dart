@@ -3,6 +3,7 @@ import 'package:multikart/models/json_parse_utils.dart';
 import 'package:multikart/models/product_api_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
+import 'package:multikart/services/tax_service.dart';
 import 'package:multikart/utilities/address_store.dart';
 
 import '../../config.dart';
@@ -465,8 +466,13 @@ class CartController extends GetxController {
       try {
         await _persistIfNonEmpty(res.data!);
       } catch (_) {}
-      // Issue #4: cart/payment me TAX row — server preview se lao (fire &
-      // forget; guest/address-nahi ho to chupchaap skip, koi error nahi).
+      // Issue #4: cart/payment me TAX row — (a) tax RATES lao (Taxes/
+      // GetAllTaxes, login ke saath) taaki deterministic client tax bane,
+      // (b) server preview (CheckOut) se bhi lao — jo jyada authoritative
+      // ho wo win. Dono fire & forget (guest/flake par chupchaap skip).
+      try {
+        TaxService.load().then((_) => _rebuildOrderDetail());
+      } catch (_) {}
       try {
         fetchServerTax();
       } catch (_) {}
@@ -518,6 +524,8 @@ class CartController extends GetxController {
     final List<HomeDealOfTheDayModel> viewItems = [];
     double bagTotalMrp = 0; // original (mrp) prices ka sum
     double bagTotalFinal = 0; // selling prices ka sum
+    double clientTax = 0; // product tax-rate se computed tax (Issue #4 fix)
+    bool anyTaxRated = false; // kam se kam ek line ka rate mila?
 
     for (final key in groupOrder) {
       final lines = grouped[key]!;
@@ -553,6 +561,21 @@ class CartController extends GetxController {
       bagTotalMrp += unitMrp * qty;
       bagTotalFinal += unitFinal * qty;
 
+      // Issue #4 (10/09 REVISITED — payment par Tax row aayi hi nahi):
+      // server preview (CheckOut POST) kabhi-kabhi fail hota hai ya tax ke
+      // BINA total deta hai, isliye ab tax DETERMINISTIC client-side bhi
+      // compute hota hai — product ke tax_id ka rate TaxService se
+      // (Taxes/GetAllTaxes, swagger verified). Store me ek hi rate hai
+      // (tax_id:3 = 18%, order #1078: 65 × 18% = 11.70 EXACT) — isliye
+      // singleActiveRate fallback bhi SAFE hai. Server ka explicit tax
+      // aane par ye value override ho jaati hai (applyServerTotals).
+      final rate = TaxService.rateFor(product?.taxId) ??
+          TaxService.singleActiveRate;
+      if (rate != null && rate > 0) {
+        clientTax += (unitFinal * qty) * rate / 100;
+        anyTaxRated = true;
+      }
+
       viewItems.add(
         HomeDealOfTheDayModel(
           id: item.productId ?? item.id ?? 0,
@@ -577,6 +600,7 @@ class CartController extends GetxController {
     // EMPTY cart dikhao — warna khali CartModel se "blank" screen aati thi.
     if (viewItems.isEmpty) {
       serverTax = null;
+      _clientTax = null;
       return null;
     }
 
@@ -584,6 +608,9 @@ class CartController extends GetxController {
     // aur removeFromCart inhi par chalte hai (Issue #4).
     _bagTotalMrp = bagTotalMrp;
     _bagTotalFinal = bagTotalFinal;
+    // Deterministic client tax — server preview ka explicit tax aane tak
+    // yehi dikhega (order #1078 math se EXACT match: 65 × 18% = 11.70).
+    _clientTax = anyTaxRated ? clientTax : null;
 
     final model = CartModel(
       cartList: viewItems,
@@ -610,22 +637,45 @@ class CartController extends GetxController {
   double _bagTotalMrp = 0;
   double _bagTotalFinal = 0;
   bool _taxFetching = false;
+  // Product tax-rate se computed tax (server preview ke BINA bhi row).
+  // serverTax (server explicit) isko OVERRIDE karta hai — dono ka source
+  // tag: serverTax = authoritative, _clientTax = deterministic estimate.
+  double? _clientTax;
+
+  /// Effective tax jo UI me dikhega — server explicit pehle, warna client.
+  double? get _effectiveTax {
+    final s = serverTax;
+    if (s != null && s > 0) return s;
+    final c = _clientTax;
+    if (c != null && c > 0) return c;
+    return null;
+  }
 
   /// orderDetail rows (Bag total / savings / Coupon / TAX / Delivery) aur
-  /// totalAmount ko latest bag totals + serverTax se rebuild karo.
+  /// totalAmount ko latest bag totals + tax se rebuild karo.
   void _rebuildOrderDetail() {
     final m = cartModelList;
     if (m == null) return;
     final savings = _bagTotalMrp - _bagTotalFinal;
+    final tax = _effectiveTax;
+    // Ek hi rate wali dukkan me label ke saath rate bhi dikhao ("Tax (18%)")
+    // — jaise order detail page par server dikhata hai.
+    String taxTitle = "taxLabel".tr;
+    final r = TaxService.singleActiveRate;
+    if (tax != null && r != null) {
+      final rs = r == r.roundToDouble()
+          ? r.toStringAsFixed(0)
+          : r.toStringAsFixed(2);
+      taxTitle = '${"taxLabel".tr} ($rs%)';
+    }
     m.orderDetail = [
       OrderDetail(title: "Bag total".tr, value: _bagTotalMrp),
       if (savings > 0) OrderDetail(title: "Bag savings".tr, value: savings),
       OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
-      if (serverTax != null && serverTax! > 0)
-        OrderDetail(title: "taxLabel".tr, value: serverTax),
+      if (tax != null) OrderDetail(title: taxTitle, value: tax),
       OrderDetail(title: "Delivery".tr, value: 0.0),
     ];
-    m.totalAmount = _bagTotalFinal + (serverTax ?? 0);
+    m.totalAmount = _bagTotalFinal + (tax ?? 0);
     update();
   }
 
@@ -639,7 +689,16 @@ class CartController extends GetxController {
         : (serverTotal > _bagTotalFinal
             ? serverTotal - _bagTotalFinal
             : null);
-    if (t == null || ((t - (serverTax ?? 0)).abs() < 0.001)) return;
+    if (t == null) return;
+    // Server ka value AUTHORITATIVE hai — client estimate (same bhi ho to)
+    // ab server par switch kar do. Same value par rebuild skip.
+    if (serverTax != null && (t - serverTax!).abs() < 0.001) return;
+    if (serverTax == null &&
+        _clientTax != null &&
+        (t - _clientTax!).abs() < 0.001) {
+      serverTax = t; // client estimate server se CONFIRM ho gaya
+      return;
+    }
     serverTax = t;
     _rebuildOrderDetail();
   }
@@ -659,7 +718,12 @@ class CartController extends GetxController {
         .where((l) => (l.quantity ?? 0) > 0 && (l.productId ?? 0) > 0)
         .map((l) => <String, dynamic>{
               'product_id': l.productId ?? 0,
-              'variation_id': l.variationId ?? 0,
+              // CheckOutProducts.variation_id swagger me STRING hai (int
+              // bhejne par .NET model-binding 400 kar deta hai — isliye kabhi
+              // kabhi preview hi fail ho jata tha aur tax row nahi banti thi)
+              'variation_id': (l.variationId ?? 0) > 0
+                  ? '${l.variationId}'
+                  : '',
               'quantity': l.quantity ?? 1,
             })
         .toList();
@@ -677,16 +741,60 @@ class CartController extends GetxController {
     if (addressId <= 0) return;
     _taxFetching = true;
     try {
-      double? taxOf(Map m) {
-        final v = jsonToDouble(m['tax'] ??
-            m['Tax'] ??
-            m['tax_amount'] ??
-            m['taxAmount'] ??
-            m['total_tax'] ??
-            m['Total_Tax'] ??
-            m['taxes']);
-        return v;
+      // DEEP walker: response kisi bhi depth par ho (data/data/order/...),
+      // total aur tax DONO nikaal lo. tax keys: name me 'tax' ho (tax,
+      // Tax, tax_total, Tax_Total, tax_amount ...) par tax_id NAHI.
+      // total keys: total/Total/grand_total/payable/amount_payable — pehla
+      // (sabse upar wala) candidate valid. Depth 8, Map+List dono.
+      double? deepTotal;
+      double? deepTax;
+      bool taxKeyOk(String k) {
+        final l = k.toLowerCase();
+        return l.contains('tax') &&
+            !l.contains('tax_id') &&
+            !l.contains('taxid') &&
+            !l.contains('taxable');
       }
+
+      bool totalKeyOk(String k) {
+        final l = k.toLowerCase();
+        return l == 'total' ||
+            l == 'grand_total' ||
+            l == 'payable' ||
+            l == 'amount_payable' ||
+            l == 'order_total' ||
+            l == 'final_total';
+      }
+
+      void walk(dynamic node, int depth) {
+        if (depth > 8 || node == null) return;
+        if (deepTax != null && deepTotal != null) return;
+        if (node is Map) {
+          node.forEach((k, v) {
+            final key = k.toString();
+            if (deepTax == null && taxKeyOk(key)) {
+              final n = jsonToDouble(v);
+              if (n != null && n > 0) deepTax = n;
+            }
+            if (deepTotal == null && totalKeyOk(key)) {
+              final n = jsonToDouble(v);
+              if (n != null && n > 0) deepTotal = n;
+            }
+          });
+          if (deepTax == null || deepTotal == null) {
+            for (final v in node.values) {
+              if (v is Map || v is List) walk(v, depth + 1);
+              if (deepTax != null && deepTotal != null) return;
+            }
+          }
+        } else if (node is List) {
+          for (final v in node) {
+            walk(v, depth + 1);
+            if (deepTax != null && deepTotal != null) return;
+          }
+        }
+      }
+
       final res = await ApiService().request<Map<String, double>?>(
         endpoint: ApiEndpoints.checkout,
         method: ApiMethod.post,
@@ -702,37 +810,26 @@ class CartController extends GetxController {
           'payment_method': 'cod',
         },
         fromJson: (json) {
-          // total + tax DONO — lenient unwrap (data/order), 4 level tak
-          double? total;
-          double? tax;
-          dynamic d = json;
-          for (var i = 0; i < 4 && d is Map; i++) {
-            final m = Map<String, dynamic>.from(d as Map);
-            total ??= jsonToDouble(m['total'] ??
-                m['Total'] ??
-                m['grand_total'] ??
-                m['Grand_Total']);
-            tax ??= taxOf(m);
-            d = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
-          }
-          if (tax != null && tax > 0) {
-            return <String, double>{'tax': tax};
-          }
-          if (total != null && total > 0) {
-            return <String, double>{'total': total};
-          }
-          return null;
+          deepTotal = null;
+          deepTax = null;
+          walk(json, 0);
+          final out = <String, double>{};
+          if (deepTax != null && deepTax! > 0) out['tax'] = deepTax!;
+          if (deepTotal != null && deepTotal! > 0) out['total'] = deepTotal!;
+          return out.isEmpty ? null : out;
         },
       );
       if (res.isSuccess && res.data != null) {
-        if ((res.data!['tax'] ?? 0) > 0) {
-          // explicit tax mil gaya
-          serverTax = res.data!['tax'];
-          _rebuildOrderDetail();
-        } else if ((res.data!['total'] ?? 0) > 0) {
-          // fallback: server ka total - bag total = server add-on (tax)
-          applyServerTotals(res.data!['total']!, null);
+        final t = res.data!['tax'] ?? 0;
+        final tot = res.data!['total'] ?? 0;
+        if (t > 0) {
+          // explicit tax mil gaya — authoritative
+          applyServerTotals(tot, t);
+        } else if (tot > 0) {
+          // fallback: server total - bag total = server add-on (tax)
+          applyServerTotals(tot, null);
         }
+        // Preview me tax nahi (tot ≈ bag) to client-computed tax hi rahega.
       }
     } catch (_) {} finally {
       _taxFetching = false;
@@ -760,6 +857,7 @@ class CartController extends GetxController {
     if (remaining.isEmpty) {
       cartModelList = null;
       serverTax = null;
+      _clientTax = null;
       _bagTotalMrp = 0;
       _bagTotalFinal = 0;
     } else {

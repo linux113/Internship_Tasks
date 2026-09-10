@@ -965,3 +965,88 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
   release build fail hua (kernel_snapshot error). Ab DONO imports
   `package:multikart/widgets/common/web_view_page.dart` (package-style,
   path math ka koi sawaal hi nahi). Baaki naye files ke imports verify kiye.
+
+---
+
+## v1.6.21+50 — 10/09/2026 (LIVE SWAGGER + order #1078 evidence se 4 deep fixes)
+
+1. **TAX row cart+payment me (ASLI JAD)**: pichli baar tax sirf server
+   preview (CheckOut POST) par nirbhar tha — wo preview response tax ke
+   BINA total deta hai ya fail ho jata hai, isliye payment page "Bag
+   total 65 / Total 65" dikha jabki server ne order #1078 me
+   **Tax AED 11.70 = EXACT 18%** liya (65 × 0.18 = 11.70, order detail
+   screenshot se proof). Ab **DETERMINISTIC client tax**: products ka
+   `tax_id` (3) → rate **Taxes/GetAllTaxes** (swagger 10/09 live se naya
+   endpoint mila, login ke saath; ORDER ke math se verified) →
+   har line (final price × qty × rate%) ka yog. Store me EK hi rate hai
+   isliye singleActiveRate fallback bhi exact. Server explicit tax aane
+   par wahi win (authoritative) — dono milne par value SAME. Rate label
+   me bhi dikhta hai: "Tax (18%)". Extra fixes: CheckOut body ka
+   `variation_id` ab STRING (swagger CheckOutProducts.variation_id =
+   string; int bhejne par .NET model-binding 400 → preview hi fail);
+   response ka total+tax ab **recursive deep-walker** se (kisi bhi depth/
+   shape), 'taxable'/'tax_id' false-positive guard. Guest/tax-192 na ho
+   to row HIDE (no fake). Tax rates LocalStorage me cache — relogin se
+   pehle bhi row aa sakti hai. New: `services/tax_service.dart`,
+   `ProductApiModel.taxId`.
+2. **Review submit FAIL (7:13 toast) — BODY ROOT mila**: swagger live se
+   `POST /api/Review/AddReview` ka schema `AddReviewDto = {id:int,
+   product_id:int, rating:int(INT32!), description:string}`. Do jad:
+   (a) `rating` INT chahiye — hum 4.5 jaisa decimal bhej sakte the (UI
+   half-star deta hai) → model-binding 400. Ab `rating.round()` =
+   INT hamesha, body SABSE PEHLE exact-DTO (extra keys nikali —
+   consumer_id/title/stars DTO me hai hi nahi, strict validators reject
+   karte). (b) fail hone par generic "Review could not be sent" ki jagah
+   ab **SERVER KA ASLI message** toast hota hai (backend rule samajh
+   aaye — jaise sirf KHARIDE gaye product par review: product payload ka
+   `can_review:false` isi ka signal hai). Chain ke baaki variants sirf
+   fallback.
+3. **Order tracking — translated labels + current-step green**:
+   (a) ROOT: detail JSON me status drop parse na hone par controller
+   `status` KHAALI reh jata tha (entity `status:true` bool, naam embed
+   nahi) — isliye flow me 'pending' current match hi nahi hota tha
+   (grey dot) AUR activity ka naam "Order update" fallback par gira.
+   Fixes: numeric order_status (int id) → GetOrderStatus list se decode;
+   pure-digit status → decode; ye sab fail ho to **order history se
+   prefill kiya REAL status** (`_prefillStatus`) fallback. (b) Server-
+   flow steps ke raw names ('pending','out_for_delivery' lowercase
+   snake_case) view me seedha dikhte the — ab controller har entry me
+   `label` bhejta hai: steps ka label KHAALI → view canonical `key` se
+   TRANSLATED ("Pending"/"Out for delivery" ×4 langs); REAL activities
+   ("Order update" + note + date) ka label RAW (duplicate "Pending"
+   nahi). (c) Current status TAK ke saare steps ab done (rank compare:
+   pending→processing→shipped→outForDelivery→delivered) — pehle sirf
+   exact-current green hota tha, cancelled case untouched. (d) View ke
+   dots ab polished: ho chuka/current = green circle + white ✓,
+   aane wala = khokhla grey.
+4. **Search icon (user ask — "home search icon fix, category section
+   jaisa")**: (a) STYLE — magnifier ab brand-green (#044015) rounded
+   square button me white icon — home AUR category dono jagah same,
+   collection page ke filter button jaisa saaf bold look. (b) BUG —
+   tap karte hi code chupke se bottom-nav ka selection CATEGORY tab par
+   badal deta tha (`selectedIndex=1`): search page band karo to galti
+   se category tab khulti thi. Ab seedha REAL search page push hota
+   hai, wahi tab barkarar. Tap → real api-backed search page (verified
+   7:11 test: "heo" → 2 results).
+
+- Version 1.6.21+50, on-screen label "Al Furqan Book Shop  v1.6.21 (50)".
+- audits: deep_check 547 files 0 problems / audit2 en 366 keys parity ×4,
+  .tr 278 used 0 undefined, routeName 30/0 / audit3 CLEAN (41 controllers,
+  5 pre-existing template WARNs, 0 firstWhere).
+- **Backend/swagger notes (naya)**: `GET /api/Taxes/GetAllTaxes`
+  (login 401 guest), Tax schema {id,name,rate,status};
+  `POST /api/Review/AddReview` AddReviewDto (rating INT32 compulsary);
+  `GET /api/Review/GetProductReview?id=` (product reviews — future);
+  CheckOutPayloadDto me variation_id STRING; OrderPlace alag endpoint
+  (OrderSaveDto) — preview order NAHI banata (safe).
+
+### Test notes (v1.6.21)
+1. Cart/payment kholte hi **"Tax (18%)" row + Total = Bag + Tax** dikhe
+   (65 → 76.70, order #1078 jaisa). Pull-refresh par bhi barkarar.
+2. Order #1078 detail: timeline me "Pending" (translated, green ✓)
+   current, "Order update" event note ke saath, aage ke steps grey,
+   sab labels translated (koi lowercase 'out_for_delivery' nahi).
+3. Write Review: submit par ab FAIL ho to bhi toast me ASLI wajah
+   (server message) aayegi; 4.5★ dene par bhi crash nahi (int banta).
+4. Home/category top bar: green search button → real search page;
+   back aane par wahi tab (category tab jump nahi).

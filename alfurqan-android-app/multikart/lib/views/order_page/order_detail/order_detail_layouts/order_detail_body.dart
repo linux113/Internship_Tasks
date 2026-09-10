@@ -153,20 +153,43 @@ class OrderDetailBody extends StatelessWidget {
             ...ctrl.timeline.asMap().entries.map((e) {
               final t = e.value;
               final isLast = e.key == ctrl.timeline.length - 1;
+              final done = (t['done'] ?? true) == true;
+              // 10/09 deep-fix: server ke raw status names (lowercase
+              // snake_case jaise 'out_for_delivery') SEEDHA mat dikhao —
+              // controller canonical 'key' bhejta hai, usse TRANSLATED
+              // label banao. 'label' non-empty ho (real activities jaise
+              // "Order update") to wahi raw dikhna hai — translate NAHI.
+              final lbl = (t['label'] ?? '').toString();
+              final canonKey = (t['key'] ?? '').toString();
+              final title = lbl.isNotEmpty
+                  ? lbl
+                  : (canonKey.isNotEmpty
+                      ? canonKey.tr
+                      : (t['name'] ?? '').toString());
               return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Column(children: [
                       Container(
-                          width: AppScreenUtil().size(10),
-                          height: AppScreenUtil().size(10),
+                          width: AppScreenUtil().size(16),
+                          height: AppScreenUtil().size(16),
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              // dynamic flow ka pending step = grey,
-                              // complete/current step = primary
-                              color: (t['done'] ?? true) == false
-                                  ? appCtrl.appTheme.gray
-                                  : appCtrl.appTheme.primary)),
+                              // aane wale (pending) step = khokhla grey,
+                              // current/ho chuka step = green + check
+                              color: done
+                                  ? appCtrl.appTheme.primary
+                                  : Colors.transparent,
+                              border: Border.all(
+                                  color: done
+                                      ? appCtrl.appTheme.primary
+                                      : appCtrl.appTheme.gray,
+                                  width: 1.5)),
+                          child: done
+                              ? Icon(Icons.check,
+                                  size: AppScreenUtil().size(10),
+                                  color: appCtrl.appTheme.whiteColor)
+                              : null),
                       if (!isLast)
                         Container(
                             width: 1,
@@ -179,7 +202,7 @@ class OrderDetailBody extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             LatoFontStyle(
-                                text: (t['name'] ?? '').toString(),
+                                text: title,
                                 fontSize: FontSizes.f13,
                                 fontWeight: FontWeight.w600,
                                 color: appCtrl.appTheme.blackColor),

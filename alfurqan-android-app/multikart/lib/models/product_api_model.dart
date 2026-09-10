@@ -26,6 +26,9 @@ class ProductApiModel {
   final int? ratingCount;
   final int? reviewsCount;
   final bool? isWishlist;
+  /// tax_id (int) — rate is id ke against TaxService (Taxes/GetAllTaxes)
+  /// se milta hai. Cart/payment ke deterministic TAX row me use hota hai.
+  final int? taxId;
   final AssetImageModel? thumbnail;
   final List<CategoryApiModel> categories;
   /// created_at raw string — shop filter ka "What's New / Recommended" sort
@@ -56,6 +59,7 @@ class ProductApiModel {
     this.ratingCount,
     this.reviewsCount,
     this.isWishlist,
+    this.taxId,
     this.thumbnail,
     this.categories = const [],
     this.createdAt,
@@ -86,6 +90,7 @@ class ProductApiModel {
       ratingCount: jsonToInt(json['rating_count']),
       reviewsCount: jsonToInt(json['reviews_count']),
       isWishlist: jsonToBool(json['is_wishlist']),
+      taxId: jsonToInt(json['tax_id'] ?? json['taxId'] ?? json['Tax_Id']),
       createdAt: jsonToString(json['created_at']),
       thumbnail: json['product_thumbnail'] is Map<String, dynamic>
           ? AssetImageModel.fromJson(json['product_thumbnail'] as Map<String, dynamic>)
