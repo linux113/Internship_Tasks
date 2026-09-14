@@ -52,7 +52,14 @@ class _OrderDetailState extends State<OrderDetail> {
           // ki jagah green LOADER (prefill mil chuka ho to content seedha).
           body: (ctrl.isLoading && ctrl.orderNumber.isEmpty)
               ? const Center(child: LoadingBox(messageKey: 'loadingData'))
-              : const SingleChildScrollView(child: OrderDetailBody()),
+              // 10/09 user ask: pull-to-refresh = order status/timeline
+              // server se FRESH (guest/jaldi-status-check ke liye).
+              : RefreshIndicator(
+                  color: const Color(0xFF044015),
+                  onRefresh: () async => ctrl.fetchOrderDetail(),
+                  child: const SingleChildScrollView(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      child: OrderDetailBody())),
         ),
       ),
       );

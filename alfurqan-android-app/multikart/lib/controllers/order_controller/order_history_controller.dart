@@ -3,6 +3,9 @@ import '../../models/json_parse_utils.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../../services/order_status_service.dart';
+import '../../models/product_api_model.dart';
+import '../home_product_controllers/home_controller.dart';
+import '../pages_controller/shop_controller.dart';
 
 /// Order History — pehle STATIC demo orders dikhata tha (kapdon ke fake
 /// orders!). Ab api/Orders/GetUserOrders (login user ke real orders).
@@ -323,6 +326,52 @@ class OrderHistoryController extends GetxController {
       return '';
     }
 
+    /// Slim rows me image na ho to ASLI product catalog se nikaalo —
+    /// product_id (sabse strong) nahi to EXACT item-name match. Catalog
+    /// = Home sections + Shop ki poori list (paginate=500) — jo is session
+    /// me load ho chuki ho. Match na mile to '' (view neutral book icon
+    /// dikhayega — logo NAHI).
+    String _catalogImageFallback(dynamic item, String itemName) {
+      int pid = 0;
+      if (item is Map) {
+        final itm = Map<String, dynamic>.from(item);
+        pid = jsonToInt(
+                itm['product_id'] ?? itm['Product_Id'] ?? itm['productId']) ??
+            0;
+      }
+      final hit = _lookupCatalogProduct(pid: pid, name: itemName);
+      return hit?.thumbnail?.url ?? '';
+    }
+
+    /// Home + Shop catalogs me product dhundo (id pehle, phir exact name).
+    ProductApiModel? _lookupCatalogProduct({int pid = 0, String name = ''}) {
+      ProductApiModel? from(Iterable<ProductApiModel> pool) {
+        if (pid > 0) {
+          for (final p in pool) {
+            if (p.id == pid) return p;
+          }
+        }
+        final n = name.trim().toLowerCase();
+        if (n.isNotEmpty) {
+          for (final p in pool) {
+            if ((p.name ?? '').trim().toLowerCase() == n) return p;
+          }
+        }
+        return null;
+      }
+
+      if (Get.isRegistered<HomeController>()) {
+        final h = Get.find<HomeController>();
+        final hit = from([...h.homeApiProductsAll, ...h.newestApiProducts]);
+        if (hit != null) return hit;
+      }
+      if (Get.isRegistered<ShopController>()) {
+        final hit = from(Get.find<ShopController>().fullProducts);
+        if (hit != null) return hit;
+      }
+      return null;
+    }
+
     return OrderHistoryModel(
       // orderId = DISPLAY number (order_number PEHLE, PK fallback) —
       // card ka title bhi yahi dikhata hai aur GetOrder?id= bhi order_
@@ -355,8 +404,17 @@ class OrderHistoryController extends GetxController {
                       it['Quantity']) ??
                   1;
             }
+            // 10/09 user ask (DEEP FIX): history list me AL FURQAN LOGO
+            // dikhta tha product image ki jagah — server ki slim rows me
+            // thumbnail nahi aata, isliye empty -> noImageBanner(logo).
+            // Ab fallback: REAL catalog se match (product_id ya exact
+            // item name) -> us product ka asli thumbnail.
+            String img = itemImage(i);
+            if (img.isEmpty) {
+              img = _catalogImageFallback(items[i], itemName);
+            }
             return DaysWiseList(
-              image: buildMediaUrl(itemImage(i)),
+              image: buildMediaUrl(img),
               name: itemName,
               // PLAIN number (RAW AED) — currency symbol + rate conversion
               // view karti hai (pehle hardcoded "AED 76.70" banta tha isliye

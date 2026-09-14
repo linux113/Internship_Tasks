@@ -20,38 +20,100 @@ class CheckoutCouponBox extends StatelessWidget {
               fontSize: FontSizes.f16,
               fontWeight: FontWeight.w700),
           const Space(0, 12),
-          Container(
-            padding: EdgeInsets.symmetric(
-                horizontal: AppScreenUtil().screenWidth(12)),
-            decoration: BoxDecoration(
-                color: appCtrl.appTheme.greyLight25,
-                borderRadius:
-                    BorderRadius.circular(AppScreenUtil().borderRadius(6))),
-            child: Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: checkoutCtrl.txtCoupon,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    hintText: "couponHint".tr,
-                    border: InputBorder.none,
-                    hintStyle: TextStyle(
-                        fontSize: FontSizes.f13,
-                        color: appCtrl.appTheme.contentColor),
-                  ),
-                  style: TextStyle(
-                      fontSize: FontSizes.f14,
-                      color: appCtrl.appTheme.blackColor),
-                ),
-              ),
-              LatoFontStyle(
-                      text: "viewCoupons".tr,
+          Builder(builder: (_) {
+            // 10/09 user design: coupon REAL apply (CheckOut api dobara,
+            // amount backend) — applied state me chip + REMOVE; warna
+            // input + APPLY (pehle sirf dead text field tha, kuch nahi
+            // hota tha).
+            final applied =
+                checkoutCtrl.txtCoupon.text.trim().isNotEmpty &&
+                    (checkoutCtrl.storage.read('coupon_code')?.toString() ??
+                            '')
+                        .trim()
+                        .isNotEmpty;
+            if (applied) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: AppScreenUtil().screenWidth(12),
+                    vertical: AppScreenUtil().screenHeight(12)),
+                decoration: BoxDecoration(
+                    color: appCtrl.appTheme.greyLight25,
+                    borderRadius:
+                        BorderRadius.circular(AppScreenUtil().borderRadius(6)),
+                    border: Border.all(
+                        color: appCtrl.appTheme.primary, width: 1.2)),
+                child: Row(children: [
+                  Icon(Icons.check_circle,
                       color: appCtrl.appTheme.primary,
-                      fontSize: FontSizes.f13,
-                      fontWeight: FontWeight.w600)
-                  .gestures(onTap: () => Get.toNamed(routeName.coupons)),
-            ]),
-          ),
+                      size: AppScreenUtil().size(18)),
+                  const Space(10, 0),
+                  Expanded(
+                    child: LatoFontStyle(
+                        text: checkoutCtrl.txtCoupon.text.trim(),
+                        fontSize: FontSizes.f14,
+                        fontWeight: FontWeight.w700,
+                        color: appCtrl.appTheme.primary),
+                  ),
+                  LatoFontStyle(
+                          text: "remove".tr,
+                          color: appCtrl.appTheme.contentColor,
+                          fontSize: FontSizes.f13,
+                          fontWeight: FontWeight.w600)
+                      .gestures(onTap: () => checkoutCtrl.removeCoupon()),
+                ]),
+              );
+            }
+            return Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: AppScreenUtil().screenWidth(12)),
+              decoration: BoxDecoration(
+                  color: appCtrl.appTheme.greyLight25,
+                  borderRadius:
+                      BorderRadius.circular(AppScreenUtil().borderRadius(6))),
+              child: Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: checkoutCtrl.txtCoupon,
+                    textCapitalization: TextCapitalization.characters,
+                    onSubmitted: (v) => checkoutCtrl.applyCoupon(v),
+                    decoration: InputDecoration(
+                      hintText: "couponHint".tr,
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(
+                          fontSize: FontSizes.f13,
+                          color: appCtrl.appTheme.contentColor),
+                    ),
+                    style: TextStyle(
+                        fontSize: FontSizes.f14,
+                        color: appCtrl.appTheme.blackColor),
+                  ),
+                ),
+                if (checkoutCtrl.isApplyingCoupon)
+                  SizedBox(
+                    height: AppScreenUtil().size(16),
+                    width: AppScreenUtil().size(16),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: appCtrl.appTheme.primary),
+                  )
+                else ...[
+                  LatoFontStyle(
+                          text: "apply".tr,
+                          color: appCtrl.appTheme.primary,
+                          fontSize: FontSizes.f13,
+                          fontWeight: FontWeight.w700)
+                      .gestures(onTap: () => checkoutCtrl
+                          .applyCoupon(checkoutCtrl.txtCoupon.text)),
+                  const Space(12, 0),
+                  LatoFontStyle(
+                          text: "viewCoupons".tr,
+                          color: appCtrl.appTheme.primary,
+                          fontSize: FontSizes.f13,
+                          fontWeight: FontWeight.w600)
+                      .gestures(onTap: () => Get.toNamed(routeName.coupons)),
+                ],
+              ]),
+            );
+          }),
         ],
       ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15));
     });

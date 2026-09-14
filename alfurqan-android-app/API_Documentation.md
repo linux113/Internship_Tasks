@@ -1221,3 +1221,60 @@ review Customer Reviews me dikhta hai; reopen par bhi count bana rehta hai.
 2. Cart page par neeche **"View Details"** dabao — sheet khulni chahiye jisme
    Bag total / Tax (18%) / Delivery / Total Amount (payment page wale hi numbers).
 3. Payment page par bhi "View Details" wahi sheet kholega.
+
+---
+
+## v1.6.26+55 — 10/09/2026 (User ke 4 testing points: Tax label, sab pages refresh, coupon REAL-apply, order-history images)
+
+### 1. "Tax (18%)" -> sirf "Tax"
+`CartController._rebuildOrderDetail` me label hardcoded rate ke saath banta tha
+("Tax (18%)"). Ab label hamesha plain **"Tax"** (localized) — cart, payment
+breakup aur View Details sheet sab jagah. Rate backend ka data hai, UI par % mat dikhao.
+
+### 2. Sab pages par pull-to-refresh
+Pehle sirf home/wishlist/order-history/delivery/save-address/shop par tha. Ab ADD:
+**cart** (getCart silent), **category** (getData(force:true) — CategoryCache me naya
+force param, cache bypass fresh fetch), **inner-category** (CategoryCache force +
+HomeController.getData), **order detail** (fetchOrderDetail — status/timeline fresh),
+**coupons** (fetchCoupons), **search** (current query dobara), **notifications**
+(fetchNotifications). Sab green (#0xFF044015) spinner + AlwaysScrollableScrollPhysics.
+
+### 3. COUPON REAL-APPLY (user design: CheckOut api dobara, amount backend)
+Pehle APPLY = fake Hinglish toast "Coupon X selected — checkout par apply hoga" aur
+AAGE KUCH NAHI. Ab:
+- APPLY (coupons page ya payment box) => CheckoutController.applyCoupon(code) =>
+  **SAME Orders/CheckOut api DOBARA** — saare previous fields + 'coupon' field
+  (pehli baar coupon:null hit hoti thi). Backend ka discounted total deep-walker se
+  => CartController.applyServerTotals me COUPON DISCOUNT math: expected(bag+tax) −
+  serverTotal = discount (SIRF tab jab coupon active ho — false-discount guard).
+  Rows me "Coupon Discount -AED x" (negative render fix) + TotalAmount kam.
+- Backend ne discount NAHI diya (invalid/expired/min-amount) => coupon auto-hat jata
+  hai + REAL localized message "Coupon didn't apply..." (koi fake success nahi).
+- Remove coupon => storage+rows reset + SAME api coupon ke BINA dobara => totals normal.
+- Payment box ab stateful: applied = green chip (CODE ✓ + Remove), warna input +
+  APPLY button + spinner; coupons page se APPLY ke baad auto-WAPAS payment par.
+- fetchServerTax (cart ka silent preview) bhi ab active coupon ke saath hit karta
+  hai — cart page par bhi discount turant.
+- Place-order payload me coupon pehle se jata tha (barkarar).
+
+### 4. Order history = ab ASLI product image (logo kabhi nahi)
+Server ki slim GetUserOrders rows me product thumbnail nahi aata => empty image =>
+noImageBanner (Al Furqan LOGO) fallback. Deep fix: image na mile to REAL catalog se
+match — product_id (strong) ya EXACT item-name, Home(homeApiProductsAll+newest) +
+Shop poori list (naya public getter `fullProducts` = 500-fetch). Match na mile to
+neutral "book" icon box (logo ab KABHI nahi dikhega history me).
+
+### Lang +6 x4 = **377 parity**
+couponApplied, couponInvalid, couponsLoadFailed, noCouponsAvailable,
+notificationsLoadFailed, noNotifications. (Coupons/notifications ke purane hardcoded
+Hinglish strings bhi ab localized.)
+- Version 1.6.26+55, label "v1.6.26 (55)".
+
+### Test notes (v1.6.26)
+1. Payment page ke breakup aur View Details sheet me ab sirf "Tax" (no 18%).
+2. Cart/category/order-detail/coupons/search/notifications PULL-DOWN karo — green
+   spinner + fresh data.
+3. Payment page par coupon box me code likho → APPLY → total KAM hona chahiye +
+   "Coupon Discount" row; galat code par asli message; Remove se total normal.
+4. Coupons page se APPLY => payment par wapas, discount applied dikhe.
+5. Order HISTORY list me product ki asli photo (logo nahi).

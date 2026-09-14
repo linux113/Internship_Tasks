@@ -29,14 +29,27 @@ class _CategoryScreenState extends State<CategoryScreen> {
           backgroundColor: appCtrl.appTheme.whiteColor,
           body: appCtrl.isShimmer
               ? const CategoryShimmer()
-              : categoryCtrl.categoryList.isEmpty
-                  ? Center(
-                      child: LatoFontStyle(
-                          text: "Categories load nahi hui",
-                          color: appCtrl.appTheme.contentColor,
-                          fontSize: FontSizes.f14),
-                    )
-                  : GridView.builder(
+              // 10/09 user ask: pull-to-refresh = categories FRESH (cache
+              // bypass). Empty state par bhi pull kaam kare (ListView wrap).
+              : RefreshIndicator(
+                  color: const Color(0xFF044015),
+                  onRefresh: () async => categoryCtrl.getData(force: true),
+                  child: categoryCtrl.categoryList.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: AppScreenUtil().screenHeight(200),
+                            ),
+                            Center(
+                              child: LatoFontStyle(
+                                  text: "Categories load nahi hui",
+                                  color: appCtrl.appTheme.contentColor,
+                                  fontSize: FontSizes.f14),
+                            )
+                          ],
+                        )
+                      : GridView.builder(
                       padding: EdgeInsets.symmetric(
                           horizontal: AppScreenUtil().screenWidth(15),
                           vertical: AppScreenUtil().screenHeight(15)),
@@ -88,6 +101,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         );
                       },
                     ),
+        ),
         ),
       );
     });

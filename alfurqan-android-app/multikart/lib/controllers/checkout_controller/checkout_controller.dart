@@ -29,6 +29,13 @@ class CheckoutController extends GetxController {
   String paymentMethod = 'cod'; // default: Cash on Delivery
   final TextEditingController txtCoupon = TextEditingController();
 
+  /// Coupon apply chal raha hai (payment page Apply button par spinner).
+  bool isApplyingCoupon = false;
+
+  /// Last coupon-apply attempt ka result key ('couponInvalid' etc) ya
+  /// server message — UI/toast ke liye. '' = sab theek / kuch nahi.
+  String couponMessage = '';
+
   /// Orders/CheckOut ka server-computed grand total (RAW AED) — payment
   /// page ka bottom bar isko sabse UPAR prefer karta hai (backend 06/09:
   /// "Orders/CheckOut — use this api for check out"). null = preview na mila.
@@ -175,6 +182,63 @@ class CheckoutController extends GetxController {
     } catch (_) {}
   }
 
+  /// COUPON APPLY — 10/09 user design (deep/strict): coupon apply karte hi
+  /// SAME CheckOut api DOBARA hit karo — pehli baar coupon:null ke saath,
+  /// ab SAAARE previous fields + coupon field ke saath; amount/discount
+  /// poora BACKEND manage karega (app khud discount calculate NAHI karti).
+  /// Preview ka discounted total CartController.applyServerTotals se rows
+  /// me aa jata hai (Coupon Discount row + kam Total). Return true agar
+  /// backend ne asli DISCOUNT diya; warna coupon hata kar message set.
+  Future<bool> applyCoupon(String code) async {
+    final c = code.trim();
+    if (c.isEmpty || isApplyingCoupon) return false;
+    isApplyingCoupon = true;
+    couponMessage = '';
+    update();
+    txtCoupon.text = c; // CheckOut payload isi field se coupon uthata hai
+    await storage.write('coupon_code', c);
+    await loadCheckoutPreview(); // SAME api, ab coupon field ke saath
+    bool applied = false;
+    try {
+      applied = (_cartCtrl?.couponDiscountValue ?? 0) > 0.004;
+    } catch (_) {}
+    if (!applied && serverPreviewTotal != null) {
+      // Preview aaya par total kam NAHI hua => backend ne coupon accept
+      // nahi kiya (invalid/expired/min-amount). coupon mat rakho — user ko
+      // saaf batao (pehle sirf "selected" ka fake toast aata tha).
+      couponMessage = 'couponInvalid'.tr;
+      await removeCoupon(silent: true, skipPreview: true);
+      isApplyingCoupon = false;
+      update();
+      _toast(couponMessage);
+      return false;
+    }
+    isApplyingCoupon = false;
+    update();
+    if (applied) {
+      _toast('couponApplied'.tr);
+    } else {
+      // preview hi fail ho gaya (offline/flake) — coupon save rakho,
+      // place-order par backend phir validate karega.
+      _toast('couponApplied'.tr);
+    }
+    return true;
+  }
+
+  /// Coupon hatao — storage + input + discount rows reset, phir SAME
+  /// CheckOut api coupon ke BINA dobara (totals normal ho jayein).
+  Future<void> removeCoupon({bool silent = false, bool skipPreview = false}) async {
+    await storage.write('coupon_code', '');
+    txtCoupon.clear();
+    couponMessage = '';
+    try {
+      await _cartCtrl?.clearCoupon(silent: true);
+    } catch (_) {}
+    if (!skipPreview) await loadCheckoutPreview();
+    update();
+    if (!silent) _toast('couponRemoved'.tr);
+  }
+
   /// Payment screen khulne par Orders/CheckOut se server-computed grand
   /// total laao (shipping/tax/coupon sab samet — OrderSaveDto/CheckOut
   /// PayloadDto dono same shape ke hai, swagger se verify). Best-effort:
@@ -210,6 +274,10 @@ class CheckoutController extends GetxController {
       var coupon = txtCoupon.text.trim();
       if (coupon.isEmpty) {
         coupon = storage.read('coupon_code')?.toString() ?? '';
+        // UI sync: coupons page se saved code payment ke box me bhi dikhe
+        // (pehle payload me to jata tha par box khaali dikhta tha — user
+        // ko laga coupon apply nahi hua).
+        if (coupon.isNotEmpty) txtCoupon.text = coupon;
       }
       final res = await ApiService().request<Map<String, double>?>(
         endpoint: ApiEndpoints.checkout,

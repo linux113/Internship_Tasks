@@ -14,8 +14,20 @@ class Search extends StatelessWidget {
               ? TextDirection.rtl
               : TextDirection.ltr,
         child: Scaffold(
-          body: SingleChildScrollView(
-            child:
+          // 10/09 user ask: search page par bhi pull-to-refresh — current
+          // query ka result FRESH (query khaali ho to sirf UI rebuild).
+          body: RefreshIndicator(
+            color: const Color(0xFF044015),
+            onRefresh: () async {
+              if (searchCtrl.query.trim().isNotEmpty) {
+                await searchCtrl.onSearchChanged(searchCtrl.query);
+              } else {
+                searchCtrl.update();
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               SearchWidget().searchAndBackArrow(searchCtrl.controller),
               // Jab tak user type nahi karta -> purana (recent/recommended) layout,
@@ -96,6 +108,7 @@ class Search extends StatelessWidget {
                 // dikhata tha — bookstore app se hata diya gaya hai.
               ]
             ]),
+            ),
           ),
         ),
       );

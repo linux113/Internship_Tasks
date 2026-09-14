@@ -22,7 +22,12 @@ class CartOrderDetailLayout extends StatelessWidget {
         ...cartModelList!.orderDetail!.map((e) {
 
           String val;
-          if ((e.title == "Bag savings" || e.title == "बैग बचत" || e.title == "توفير الحقيبة" || e.title == "가방 절약")) {
+          // 10/09 (coupon REAL-apply): applied coupon ka row NEGATIVE number
+          // aata hai (-discount) — "-AED 10.00" jaisa dikhana chahiye,
+          // "AED -10.00" nahi.
+          if (e.value is num && (e.value as num) < 0) {
+            val = "-${appCtrl.priceSymbol}${((-(e.value as num)) * appCtrl.rateValue).toStringAsFixed(2)}";
+          } else if ((e.title == "Bag savings" || e.title == "बैग बचत" || e.title == "توفير الحقيبة" || e.title == "가방 절약")) {
             val = "-${appCtrl.priceSymbol}${(e.value * appCtrl.rateValue).toStringAsFixed(2)}";
           } else if ((e.value == "Apply Coupon" ||e.value == "कूपन लागू करें" ||e.value == "쿠폰 적용ं"  ||e.value == "تطبيق القسائم" )) {
             val = e.value;

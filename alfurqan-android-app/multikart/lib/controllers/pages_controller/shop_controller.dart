@@ -118,6 +118,11 @@ class ShopController extends GetxController {
   List<ProductApiModel> _filtered = []; // price+sort+search apply ke baad
   static const int _pageSize = 12;
 
+  /// POORI catalog list (500-fetch) — order-history jaise controllers image
+  /// lookup ke liye use karte hai (paged productList se zyada coverage).
+  List<ProductApiModel> get fullProducts =>
+      _fullList.isNotEmpty ? _fullList : productList;
+
   /// Shop page ke search box ka LIVE text (Issue #10 — 10/09).
   String searchQuery = '';
 

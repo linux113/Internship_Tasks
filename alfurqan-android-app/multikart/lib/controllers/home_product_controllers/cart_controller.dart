@@ -431,10 +431,14 @@ class CartController extends GetxController {
   /// ('coupon_code') — cart screen par chip + remove option dikhate hai.
   String get appliedCoupon => storage.read('coupon_code')?.toString() ?? '';
 
-  Future<void> clearCoupon() async {
+  Future<void> clearCoupon({bool silent = false}) async {
     await storage.write('coupon_code', '');
+    // 10/09: discount rows + totals bhi reset karo (pehle sirf storage
+    // saaf hota tha, breakup me discount atka rehta tha).
+    _couponDiscount = null;
+    if (cartModelList != null) _rebuildOrderDetail();
     update();
-    snackBar("couponRemoved".tr);
+    if (!silent) snackBar("couponRemoved".tr);
   }
 
   /// [silent] = true -> loading shimmer NAHI dikhta (background refresh).
@@ -620,8 +624,15 @@ class CartController extends GetxController {
     if (viewItems.isEmpty) {
       serverTax = null;
       _clientTax = null;
+      _couponDiscount = null;
       return null;
     }
+
+    // Cart refresh par purana coupon-discount STALE ho sakta hai (bag
+    // totals badal gaye) — dobara preview aane tak reset; coupon code
+    // (storage) barkarar hai, payment/cart ka silent preview discount
+    // waapas laga dega.
+    if (_couponDiscount != null) _couponDiscount = null;
 
     // Bag totals yaad rakho — tax row/total rebuild (_rebuildOrderDetail)
     // aur removeFromCart inhi par chalte hai (Issue #4).
@@ -662,6 +673,15 @@ class CartController extends GetxController {
   // tag: serverTax = authoritative, _clientTax = deterministic estimate.
   double? _clientTax;
 
+  /// CheckOut preview (coupon ke saath) se nikla coupon discount (RAW AED).
+  /// 10/09 user design: apply coupon => SAME CheckOut api dobara (ab coupon
+  /// field ke saath) => response ka total kam ho gaya => discount =
+  /// expected(bag+tax) − serverTotal. Poora hisaab BACKEND decide karta hai.
+  /// null = koi active coupon nahi.
+  double? _couponDiscount;
+
+  double get couponDiscountValue => _couponDiscount ?? 0;
+
   /// Effective tax jo UI me dikhega — server explicit pehle, warna client.
   double? get _effectiveTax {
     final s = serverTax;
@@ -685,24 +705,26 @@ class CartController extends GetxController {
       if (c != null && c > 0) _clientTax = c;
     }
     final tax = _effectiveTax;
-    // Ek hi rate wali dukkan me label ke saath rate bhi dikhao ("Tax (18%)")
-    // — jaise order detail page par server dikhata hai.
-    String taxTitle = "taxLabel".tr;
-    final r = TaxService.singleActiveRate;
-    if (tax != null && r != null) {
-      final rs = r == r.roundToDouble()
-          ? r.toStringAsFixed(0)
-          : r.toStringAsFixed(2);
-      taxTitle = '${"taxLabel".tr} ($rs%)';
-    }
+    // 10/09 user ask: label me percentage MAT dikhao — sirf "Tax"
+    // (rate backend ka hai, app hardcode na kare; pehle "Tax (18%)" banta
+    // tha jo user ne hatawaya).
+    const String taxTitleKey = "taxLabel";
     m.orderDetail = [
       OrderDetail(title: "Bag total".tr, value: _bagTotalMrp),
       if (savings > 0) OrderDetail(title: "Bag savings".tr, value: savings),
-      OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
-      if (tax != null) OrderDetail(title: taxTitle, value: tax),
+      // Coupon row: DISCOUNT applied ho to negative numeric row (breakup me
+      // "-AED x" dikhega), warna "Apply Coupon" text wala placeholder.
+      if (_couponDiscount != null && _couponDiscount! > 0.005)
+        OrderDetail(title: "Coupon Discount".tr, value: -_couponDiscount!)
+      else
+        OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
+      if (tax != null) OrderDetail(title: taxTitleKey.tr, value: tax),
       OrderDetail(title: "Delivery".tr, value: 0.0),
     ];
-    m.totalAmount = _bagTotalFinal + (tax ?? 0);
+    // FINAL payable = bag + tax − coupon discount (discount backend ne
+    // CheckOut preview se confirm kiya hota hai — 10/09 user design).
+    m.totalAmount = _bagTotalFinal + (tax ?? 0) - (_couponDiscount ?? 0);
+    if (m.totalAmount! < 0) m.totalAmount = 0;
     update();
   }
 
@@ -711,22 +733,42 @@ class CartController extends GetxController {
   /// (applyServerTotals), taaki payment page par bhi row aa jaye.
   void applyServerTotals(double serverTotal, double? explicitTax) {
     if (cartModelList == null) return;
-    final t = (explicitTax != null && explicitTax > 0)
-        ? explicitTax
-        : (serverTotal > _bagTotalFinal
-            ? serverTotal - _bagTotalFinal
-            : null);
-    if (t == null) return;
-    // Server ka value AUTHORITATIVE hai — client estimate (same bhi ho to)
-    // ab server par switch kar do. Same value par rebuild skip.
-    if (serverTax != null && (t - serverTax!).abs() < 0.001) return;
-    if (serverTax == null &&
-        _clientTax != null &&
-        (t - _clientTax!).abs() < 0.001) {
-      serverTax = t; // client estimate server se CONFIRM ho gaya
-      return;
+    // Tax: (1) explicit field, warna (2) total-bag ka fark (>0 tabhi),
+    // warna (3) pehle se known tax (coupon-negative totals me bhi kaam aaye).
+    double? t;
+    if (explicitTax != null && explicitTax > 0) {
+      t = explicitTax;
+    } else if (serverTotal > _bagTotalFinal) {
+      t = serverTotal - _bagTotalFinal;
     }
-    serverTax = t;
+    t ??= serverTax ?? _clientTax;
+
+    // 10/09 user design (coupon apply = CheckOut dobara, amount backend se):
+    // expected = bag + tax. Server total usase KAM => discount backend ne
+    // diya (coupon). Barabar/zyada => coupon ka koi asar nahi.
+    // GUARD: discount ka andaza SIRF tab jab coupon ACTIVE ho (storage me
+    // code) — warna "total me tax na ho" wala case galat discount banata.
+    final hasCoupon =
+        (storage.read('coupon_code')?.toString() ?? '').trim().isNotEmpty;
+    double? disc;
+    if (t != null && hasCoupon) {
+      final expected = _bagTotalFinal + t;
+      final d = expected - serverTotal;
+      if (d > 0.005) disc = d;
+    }
+    if (t == null && disc == null) return;
+    // Same values par rebuild skip (loop na bane).
+    final sameTax =
+        t == null || (serverTax != null && (t - serverTax!).abs() < 0.001);
+    final sameDisc =
+        ((_couponDiscount ?? 0) - (disc ?? 0)).abs() < 0.001;
+    if (sameTax && sameDisc) return;
+    if (t != null) {
+      // Server ka value AUTHORITATIVE hai — client estimate confirm ho to
+      // bhi server par switch (purana behavior barkarar).
+      serverTax = t;
+    }
+    _couponDiscount = (disc != null && disc > 0.005) ? disc : null;
     _rebuildOrderDetail();
   }
 
@@ -832,6 +874,12 @@ class CartController extends GetxController {
           'billing_address_id': addressId,
           'points_amount': false,
           'wallet_balance': false,
+          // 10/09 user design: ACTIVE coupon ho to preview me bhi bhejo —
+          // discount cart page par bhi turant dikhe (amount backend decide).
+          if ((storage.read('coupon_code')?.toString() ?? '')
+              .trim()
+              .isNotEmpty)
+            'coupon': storage.read('coupon_code').toString().trim(),
           'delivery_description': '',
           'delivery_interval': '',
           'payment_method': 'cod',

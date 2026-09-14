@@ -36,7 +36,15 @@ class _CartScreenState extends State<CartScreen> {
                 ? const CartShimmer()
                 : cartCtrl.cartModelList != null
                     ? Stack(alignment: Alignment.bottomCenter, children: [
-                        const SingleChildScrollView(child: CartBody()),
+                        // 10/09 user ask: "all pages should have refresh" —
+                        // pull-to-refresh = server se FRESH cart (silent).
+                        RefreshIndicator(
+                            color: const Color(0xFF044015),
+                            onRefresh: () async =>
+                                cartCtrl.getCart(silent: true),
+                            child: const SingleChildScrollView(
+                                physics: AlwaysScrollableScrollPhysics(),
+                                child: CartBody())),
                         if (cartCtrl.cartModelList != null)
                           CartBottomLayout(
                               desc: CartFont().viewDetail,

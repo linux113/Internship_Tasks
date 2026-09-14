@@ -97,12 +97,26 @@ class CouponsController extends GetxController {
     update();
   }
 
-  /// Card par APPLY tap — code textbox me bharo + checkout ke liye save.
-  void applyCode(String code) {
+  /// Card par APPLY tap — 10/09 user design (deep fix): pehle sirf ek
+  /// FAKE Hinglish toast aata tha ("Coupon X selected — checkout par apply
+  /// hoga") aur AAGE KUCH NAHI hota tha (discount kabhi dikhta hi nahi).
+  /// Ab TURANT real apply: CheckoutController zinda ho to wahi SAME
+  /// CheckOut api coupon field ke saath DOBARA hit hoti hai, backend ka
+  /// discounted amount payment ke rows/total me aa jata hai; phir is page
+  /// se WAPAS (user ko checkout continue karne ke liye back nahi dabana
+  /// pade). Checkout abhi tak nahi khula (cart page se aaya) to code save
+  /// karo — payment khulte hi apne aap apply hoga.
+  Future<void> applyCode(String code) async {
     if (code.isEmpty) return;
     controller.text = code;
-    storage.write('coupon_code', code);
+    await storage.write('coupon_code', code);
     update();
-    _toast('Coupon "$code" selected — checkout par apply hoga');
+    if (Get.isRegistered<CheckoutController>()) {
+      final ok = await Get.find<CheckoutController>().applyCoupon(code);
+      if (ok) Get.back(); // payment page wapas — discounted totals dikhenge
+    } else {
+      _toast('couponApplied'.tr);
+      Get.back();
+    }
   }
 }

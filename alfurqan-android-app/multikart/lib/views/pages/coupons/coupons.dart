@@ -25,8 +25,13 @@ class Coupons extends StatelessWidget {
           body: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              SingleChildScrollView(
-                child: SizedBox(
+              // 10/09 user ask: pull-to-refresh = coupons list FRESH.
+              RefreshIndicator(
+                color: const Color(0xFF044015),
+                onRefresh: () async => couponCtrl.fetchCoupons(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
                   height: MediaQuery.of(context).size.height,
                   child: Column(
                     children: [
@@ -53,8 +58,8 @@ class Coupons extends StatelessWidget {
                           child: Center(
                             child: LatoFontStyle(
                                 text: couponCtrl.loadFailed
-                                    ? "Coupons load nahi hue — dobara try karein"
-                                    : "Abhi koi coupon available nahi",
+                                    ? 'couponsLoadFailed'.tr
+                                    : 'noCouponsAvailable'.tr,
                                 color:
                                     couponCtrl.appCtrl.appTheme.contentColor,
                                 fontSize: FontSizes.f14),
@@ -64,6 +69,7 @@ class Coupons extends StatelessWidget {
                         CouponList(couponList: couponCtrl.couponList)
                     ],
                   ),
+                ),
                 ),
               ),
               // Niche wala demo "maximum saving" bar hataya — cart ka real

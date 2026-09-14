@@ -24,8 +24,14 @@ class Notification extends StatelessWidget {
             backgroundColor: notificationCtrl.appCtrl.appTheme.whiteColor,
             title: Text(NotificationFont().notification),
           ),
-          body: notificationCtrl.appCtrl.isShimmer ? const NotificationShimmer() : SingleChildScrollView(
-            child: Column(
+          // 10/09 user ask: notifications par bhi pull-to-refresh —
+          // server se FRESH list.
+          body: notificationCtrl.appCtrl.isShimmer ? const NotificationShimmer() : RefreshIndicator(
+            color: const Color(0xFF044015),
+            onRefresh: () async => notificationCtrl.fetchNotifications(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
               children: [
                 //notification type layout
                 const NotificationCategory(),
@@ -49,8 +55,8 @@ class Notification extends StatelessWidget {
                     child: Center(
                       child: LatoFontStyle(
                         text: notificationCtrl.loadFailed
-                            ? "Notifications load nahi ho payi — baad me dobara try karein"
-                            : "Abhi koi notification nahi hai",
+                            ? 'notificationsLoadFailed'.tr
+                            : 'noNotifications'.tr,
                         fontSize: FontSizes.f13,
                         textAlign: TextAlign.center,
                         color:
@@ -59,6 +65,7 @@ class Notification extends StatelessWidget {
                     ),
                   ),
               ],
+              ),
             ),
           ),
         ),

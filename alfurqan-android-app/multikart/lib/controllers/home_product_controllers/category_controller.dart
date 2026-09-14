@@ -19,11 +19,13 @@ class CategoryController extends GetxController {
 
   //get data list (NAYA home api ke Top_Category section se — purana
   // GetTopCategory api backend ne band kar diya hai)
-  getData() async {
+  // [force] = true (pull-to-refresh, 10/09 user ask) par cache bypass
+  // karke FRESH categories.
+  getData({bool force = false}) async {
     appCtrl.isShimmer = true;
     appCtrl.update();
 
-    await CategoryCache.ensureLoaded();
+    await CategoryCache.ensureLoaded(force: force);
     if (CategoryCache.items.isNotEmpty) {
       categoryList = CategoryCache.items;
     }

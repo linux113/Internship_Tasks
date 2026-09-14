@@ -20,6 +20,22 @@ class OrderHistoryWidget {
 
   //image layout
   Widget imageLayout(image) {
+    final String url = image?.toString() ?? '';
+    // 10/09 user ask (deep fix): khaali image par AL FURQAN LOGO
+    // (noImageBanner) mat dikhao — order history me wo product ki jagah
+    // logo lagta tha. Asli image na ho to neutral "book" icon box.
+    if (url.isEmpty) {
+      return Container(
+        height: AppScreenUtil().screenHeight(65),
+        width: AppScreenUtil().screenWidth(70),
+        decoration: BoxDecoration(
+          color: appCtrl.appTheme.greyLight25,
+          borderRadius: BorderRadius.circular(AppScreenUtil().borderRadius(5)),
+        ),
+        child: Icon(Icons.menu_book,
+            color: const Color(0xFF044015), size: AppScreenUtil().size(26)),
+      );
+    }
     return ClipRRect(
         borderRadius: BorderRadius.circular(AppScreenUtil().borderRadius(5)),
         child: FadeInImageLayout(

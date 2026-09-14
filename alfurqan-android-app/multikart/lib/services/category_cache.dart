@@ -21,7 +21,12 @@ class CategoryCache {
   /// Pehli baar call par api se categories load karta hai, baad me cached
   /// list hi use hoti hai. Api fail ho jaye to agli baar phir try karega
   /// (max 3 attempts — isse zyada nahi, taaki har tap par api call na chale).
-  static Future<void> ensureLoaded() async {
+  /// [force] = true (pull-to-refresh) par cache saaf karke FRESH fetch.
+  static Future<void> ensureLoaded({bool force = false}) async {
+    if (force && !_loading) {
+      items = [];
+      _attempts = 0;
+    }
     if (items.isNotEmpty || _loading || _attempts >= _maxAttempts) return;
     _loading = true;
     _attempts++;
