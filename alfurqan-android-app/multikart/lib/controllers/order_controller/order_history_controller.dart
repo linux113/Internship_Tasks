@@ -64,6 +64,30 @@ class OrderHistoryController extends GetxController {
   /// Jin par resolve FAIL ho chuka — bar-bar api NAHI (network bachao).
   static final Set<String> _imageMisses = {};
 
+  /// order_number -> GetOrder DETAIL se aayi item-photo urls (index order
+  /// me). v1.6.29 DEEP FIX: GetUserOrders ki slim rows me item ka naam/id/
+  /// thumbnail AATA HI NAHI (card ka "Order #N" fallback-title isi ka
+  /// saboot) — catalog/pid match kabhi possible hi nahi thi. Detail api
+  /// (Orders/GetOrder?id=<number>) hi wahin source hai jisme products[] +
+  /// product_thumbnail aata hai (order DETAIL page par photo isi se dikhti
+  /// hai) — ek order = ek chhota call, cache ke saath.
+  static final Map<String, List<String>> _detailImgCache = {};
+
+  /// MediaFiles {asset_url, original_url} — 'url' key hoti hi nahi (detail
+  /// ctrl ka private helper tha; yaha apna).
+  static String _mediaUrlOf(dynamic m) {
+    if (m is Map) {
+      final mm = Map<String, dynamic>.from(m);
+      return jsonToString(mm['asset_url'] ??
+              mm['original_url'] ??
+              mm['url'] ??
+              mm['image_Url'] ??
+              mm['ImageUrl']) ??
+          '';
+    }
+    return jsonToString(m) ?? '';
+  }
+
   /// Guest ho to true — view "Please login to see your orders" dikhayegi.
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
@@ -241,32 +265,40 @@ class OrderHistoryController extends GetxController {
         },
       );
       if (res.isSuccess && res.data != null) {
-        // ISSUE-FIX (06/09 — "bahut orders me SAME id dikhti hai"): server
-        // kabhi ek hi row do baar bhej deta hai (pagination overlap) —
-        // display-identity (number+date+total) se dedupe karo taaki ek
-        // order ki TWO cards na bane. orderId ab order_number-first hai
-        // (rows me PK kabhi 0/same fallback nahi), duplicates pakki.
-        final seen = <String>{};
-        orderHistoryList = res.data!.where((o) {
-          final first = (o.daysWiseList?.isNotEmpty == true)
-              ? o.daysWiseList!.first
-              : null;
-          final key =
-              '${o.orderId}|${o.orderDay}|${first?.size ?? ''}|${first?.qty ?? ''}';
-          return seen.add(key);
-        }).toList();
+        // 15/09 v1.6.29 (user screenshot — SAME order #1086 DO cards):
+        // server ek hi order ko DO alag shapes me bhej deta hai (ek row me
+        // total poora, dusri SLIM me total hi nahi) — purana key
+        // (number+date+total+qty) inhe ALAG samajh leta tha. Ab dedupe
+        // display-number + date par; do me se RICHER row (total / image /
+        // items zyada wali) rakho, doosri hata do.
+        DaysWiseList? firstOf(OrderHistoryModel m) =>
+            (m.daysWiseList?.isNotEmpty == true) ? m.daysWiseList!.first : null;
+        int rich(OrderHistoryModel m) {
+          final d = firstOf(m);
+          return ((d?.size ?? '').isNotEmpty ? 2 : 0) +
+              ((d?.image ?? '').isNotEmpty ? 1 : 0) +
+              (m.daysWiseList?.length ?? 0);
+        }
+
+        final byNo = <String, OrderHistoryModel>{};
+        for (final o in res.data!) {
+          final key = '${o.orderId}|${o.orderDay}';
+          // orderId==0 (parse fail) rows ko galti se ek-doosre me merge NA
+          final safeKey = o.orderId == 0 ? '$key|#${byNo.length}' : key;
+          final prevV = byNo[safeKey];
+          if (prevV == null || rich(o) > rich(prevV)) byNo[safeKey] = o;
+        }
+        orderHistoryList = byNo.values.toList();
       }
-      // 15/09: session-catalog miss hone par bhi photos lao — LIVE products
-      // api resolver (batch + naam search). Sirf display-image badalta hai;
-      // slow/fail ho to rows book-icon ke saath turant dikhti hai (block
-      // NAHI hota — 12 sec cap).
-      try {
-        await _resolveMissingImages()
-            .timeout(const Duration(seconds: 12), onTimeout: () {});
-      } catch (_) {}
     } catch (_) {}
     isLoadingOrders = false;
     update();
+    // 15/09 v1.6.29: photos ka resolve LIST KO BLOCK NAHI karega — rows
+    // turant dikhti hai; photos (GetOrder detail + catalog se) milte hi
+    // resolver khud update() kar deta hai. 20s cap, koi throw UI tak NAHI.
+    _resolveMissingImages()
+        .timeout(const Duration(seconds: 20), onTimeout: () {})
+        .catchError((_) {});
   }
 
   /// Server ka full ISO datetime ("2026-08-31T23:17:55.3435123") user ko
@@ -510,8 +542,28 @@ class OrderHistoryController extends GetxController {
       return urlFor(p) == null && !_imageMisses.contains(key);
     }
 
-    // Step 1 — full catalog scan (sirf ek baar per session).
-    if (pend.any(needsResolution) && !_catalogScanned) {
+    // Step 0 — SABSE BHROSEMAND source: hmmlo-order ka GetOrder DETAIL.
+    // (GetUserOrders slim rows me item naam/photo hi nahi aata, isliye
+    // pid=0 aur naam='Order #N' placeholder hota hai — catalog/naam match
+    // tab kabhi kaam nahi karti. Detail api me products[] + thumbnail hota
+    // hai.) Ek order = ek chhota call (cache ke saath).
+    final orderNos = <String>{};
+    for (final p in pend) {
+      final no = '${p['order'] ?? ''}';
+      if (no.isNotEmpty) orderNos.add(no);
+    }
+    final detailImgs = <String, List<String>>{};
+    for (final no in orderNos) {
+      detailImgs[no] = await _detailItemImages(no);
+    }
+
+    // Step 1 — full catalog scan (sirf ek baar per session) — SIRF tab jab
+    // koi pid>0 wala pending ho jo detail step se na mila ho. placeholder-
+    // naam (pid=0) items ke liye ye 3MB download BILKUL fazool hai —
+    // total 227 products (live verify), 500 paginate sab cover karta hai.
+    if (pend.any((p) =>
+            needsResolution(p) && (((p['pid'] as int?) ?? 0) > 0)) &&
+        !_catalogScanned) {
       _catalogScanned = true;
       try {
         final res = await ApiService().request(
@@ -533,10 +585,12 @@ class OrderHistoryController extends GetxController {
     }
 
     // Step 2 — naam-search fallback (catalog scan me bhi na mile ho).
+    // 'Order #N' placeholder naam par search BILKUL nahi (junk + misses
+    // pollute karta hai) — un items ko Step 0 (detail) cover karta hai.
     for (final p in pend) {
       if (!needsResolution(p)) continue;
       final name = '${p['name'] ?? ''}'.trim();
-      if (name.isEmpty) continue;
+      if (name.isEmpty || name.startsWith('Order #')) continue;
       try {
         final res = await ApiService().request(
           endpoint: ApiEndpoints.productList,
@@ -557,16 +611,9 @@ class OrderHistoryController extends GetxController {
       } catch (_) {}
     }
 
-    // Step 3 — models par apply.
+    // Step 3 — models par apply (DETAIL photo pehle, phir catalog cache).
     var changed = false;
     for (final p in pend) {
-      final url = urlFor(p);
-      final pid = (p['pid'] as int?) ?? 0;
-      if (url == null || url.isEmpty) {
-        _imageMisses.add(
-            pid > 0 ? 'id:$pid' : 'nm:${_normName('${p['name'] ?? ''}')}');
-        continue;
-      }
       final oid = int.tryParse('${p['order'] ?? ''}') ?? 0;
       final idx = (p['index'] as int?) ?? 0;
       OrderHistoryModel? target;
@@ -577,12 +624,28 @@ class OrderHistoryController extends GetxController {
         }
       }
       final list = target?.daysWiseList;
+      var applied = false;
       if (list != null && idx >= 0 && idx < list.length) {
         final cur = list[idx].image ?? '';
         if (cur.isEmpty || cur.contains('m_logo')) {
-          list[idx].image = buildMediaUrl(url);
-          changed = true;
+          // 1) GetOrder detail ka index-matched photo (sabse bharosemand)
+          final dlist = detailImgs['${p['order'] ?? ''}'] ?? const <String>[];
+          var url = idx < dlist.length ? dlist[idx] : '';
+          // 2) warna catalog pid / exact-naam cache
+          if (url.isEmpty) url = urlFor(p) ?? '';
+          if (url.isNotEmpty) {
+            list[idx].image = buildMediaUrl(url);
+            changed = true;
+            applied = true;
+          }
+        } else {
+          applied = true; // pehle se photo hai — miss mat likho
         }
+      }
+      if (!applied) {
+        final pid = (p['pid'] as int?) ?? 0;
+        _imageMisses.add(
+            pid > 0 ? 'id:$pid' : 'nm:${_normName('${p['name'] ?? ''}')}');
       }
     }
     // Resolve hone wale misses se hata do (agli baar direct cache hit);
@@ -596,6 +659,104 @@ class OrderHistoryController extends GetxController {
       });
       update();
     }
+  }
+
+  /// Ek order ka GetOrder DETAIL lao aur uske items ki photos INDEX order
+  /// me nikaalo. Slim row items unusable hai (naam/id nahi) — isliye row
+  /// item k ko detail product k se jodo (user ke orders 1-2 items ke hote
+  /// hai, counts match). Detail parse me mile pid/naam bhi caches me daal
+  /// do (agli baar catalog/free match).
+  Future<List<String>> _detailItemImages(String orderNo) async {
+    if (_detailImgCache.containsKey(orderNo)) return _detailImgCache[orderNo]!;
+    var urls = <String>[];
+    try {
+      final res = await ApiService().request<Map<String, dynamic>>(
+        endpoint: ApiEndpoints.getOrder,
+        method: ApiMethod.get,
+        queryParams: {'id': orderNo},
+        fromJson: (json) {
+          dynamic raw = json;
+          for (var i = 0; i < 3 && raw is Map; i++) {
+            final m = Map<String, dynamic>.from(raw as Map);
+            if (m.containsKey('products') ||
+                m.containsKey('Products') ||
+                m.containsKey('items') ||
+                m.containsKey('order_items') ||
+                m.containsKey('total') ||
+                m.containsKey('order_number') ||
+                m.containsKey('Order_Number')) {
+              return m;
+            }
+            raw = m['data'] ?? m['Data'] ?? m['order'] ?? m['Order'];
+            if (raw == null) return m;
+          }
+          return raw is Map
+              ? Map<String, dynamic>.from(raw as Map)
+              : <String, dynamic>{};
+        },
+      );
+      if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
+        urls = _itemImagesFromOrderDetail(res.data!);
+      }
+    } catch (_) {}
+    _detailImgCache[orderNo] = urls;
+    return urls;
+  }
+
+  /// Detail JSON ke products[] se photo urls (INDEX order me) + caches.
+  List<String> _itemImagesFromOrderDetail(Map<String, dynamic> j) {
+    var rawItems = j['products'] ??
+        j['Products'] ??
+        j['items'] ??
+        j['order_items'] ??
+        j['Order_Items'];
+    if (rawItems is! List || rawItems.isEmpty) {
+      final subs = j['sub_orders'] ?? j['subOrders'];
+      if (subs is List && subs.isNotEmpty && subs.first is Map) {
+        final s0 = Map<String, dynamic>.from(subs.first as Map);
+        rawItems = s0['products'] ?? s0['Products'] ?? s0['items'];
+      }
+    }
+    final out = <String>[];
+    if (rawItems is List) {
+      for (final e in rawItems) {
+        if (e is! Map) {
+          out.add('');
+          continue;
+        }
+        final it = Map<String, dynamic>.from(e);
+        final prod = it['product'] is Map
+            ? Map<String, dynamic>.from(it['product'] as Map)
+            : (it['Product'] is Map
+                ? Map<String, dynamic>.from(it['Product'] as Map)
+                : <String, dynamic>{});
+        var img = _mediaUrlOf(it['product_thumbnail']);
+        if (img.isEmpty) img = _mediaUrlOf(it['variation_image']);
+        if (img.isEmpty) img = _mediaUrlOf(prod['product_thumbnail']);
+        if (img.isEmpty) {
+          img = jsonToString(it['image'] ??
+                  it['Image'] ??
+                  it['image_url'] ??
+                  prod['image'] ??
+                  prod['ImageUrl'] ??
+                  prod['thumbnail']) ??
+              '';
+        }
+        out.add(img);
+        if (img.isNotEmpty) {
+          final pid = jsonToInt(it['product_id'] ??
+                  it['Product_Id'] ??
+                  prod['id'] ??
+                  prod['Id']) ??
+              0;
+          if (pid > 0) _pidImageCache[pid] = img;
+          final nm = _normName(
+              '${it['name'] ?? prod['name'] ?? prod['Name'] ?? ''}');
+          if (nm.isNotEmpty) _nameImageCache[nm] = img;
+        }
+      }
+    }
+    return out;
   }
 
   /// Arabic naam EXACT match ke liye normalize karo — alef ke roop

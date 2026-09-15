@@ -1379,3 +1379,39 @@ summary ke baad bar-height jitna bottom space.
    Discount+Tax+Subtotal ka sum Total ke barabar dikhega.
 4. Order success page par scroll karo — niche text buttons ke peeche "cut"
    nahi dikhega.
+
+---
+
+## v1.6.29+58 — 15/09/2026 (User: "deep fix" — history me photos ABHI BHI nahi + SAME order DO cards)
+
+### 1. Order HISTORY photos — ASLI root cause (v1.6.28 ke baad bhi fail tha)
+v1.6.28 ka resolver pid/exact-naam se match karta tha — par LIVE truth:
+**GetUserOrders ki slim rows me item ka NAAM/ID/THUMBNAIL AATA HI NAHI**
+(saboot: card ka title hamesha "Order #N" fallback rehta hai, asli book naam
+kabhi nahi) — pid=0 aur naam placeholder hone par catalog match kabhi possible
+hi nahi thi (total products sirf 227 — live verify — to 500-cap bhi problem
+nahi tha). GetOrder DETAIL api hi wahin reliable source hai jisme products[] +
+product_thumbnail aata hai (order DETAIL page par photo isi se dikhti hai).
+NAYA 3-step `_resolveMissingImages` (LIST KO BLOCK NAHI karta — rows turant,
+photos baad me fade-in apne update() se):
+- **Step 0 (naya, sabse bharosemand):** har pending order ka
+  `Orders/GetOrder?id=<order_number>` ek chhota call (session-cached) —
+  items ki photos INDEX-matched apply; detail parse se pid/naam bhi caches me.
+- **Step 1 (catalog scan):** SIRF jab pid>0 wala pending bache (3MB download
+  fazool nahi; v1.6.28 me ye hi call slow-net par 12s timeout kaati jati thi).
+- **Step 2 (naam search):** 'Order #N' placeholder naam par search BAND
+  (junk misses pollute nahi).
+- Miss tracking: pehle se photo wala item miss me NAHI.
+
+### 2. SAME order DO cards (screenshot: #1086 — ek Total ke saath, ek bina)
+Server ek hi order ko DO alag shapes me bhejta hai (rich + slim) — purana
+dedupe-key (number+date+total+qty) inhe ALAG samajh leta tha. Ab dedupe
+display-number + date par, RICHER row (total/image/items zyada) rakhte hue.
+
+- Version 1.6.29+58, label "v1.6.29 (58)".
+
+### Test notes (v1.6.29)
+1. Order HISTORY kholte hi cards turant aate hai; 1-2 sec me har card par
+   BOOK KI ASLI PHOTO aa jati hai (icon sirf tab jab server par photo hi na ho).
+2. Koi order DO BAAR nahi dikhta (#1086 jaise duplicate ab ek hi card).
+3. Baaki sab (coupon, sheets, discount-sum, tracking) v1.6.28 jaisa hi.
