@@ -1278,3 +1278,43 @@ Hinglish strings bhi ab localized.)
    "Coupon Discount" row; galat code par asli message; Remove se total normal.
 4. Coupons page se APPLY => payment par wapas, discount applied dikhe.
 5. Order HISTORY list me product ki asli photo (logo nahi).
+
+---
+
+## v1.6.27+56 — 10/09/2026 (HOTFIX: v1.6.26 RELEASE BUILD FAIL — "Local variable can't be referenced before it is declared")
+
+### Root cause (REAL, user build log se)
+`order_history_controller.dart` me v1.6.26 ka catalog-image fallback 2 LOCAL
+functions use karta hai: `_catalogImageFallback` aur `_lookupCatalogProduct`.
+Dono class methods NAHI, ek method ke andar ke LOCAL functions hain. Dart me
+local function ek variable hota hai — usse TEXTUALLY declare hone se PEHLE
+refer nahi kar sakte (class methods jaise forward-reference allowed nahi).
+`_catalogImageFallback` ke body me `_lookupCatalogProduct(...)` call tha, par
+`_lookupCatalogProduct` NEECHE declare tha — isliye release compile fail:
+`Local variable '_lookupCatalogProduct' can't be referenced before it is declared.`
+(Bracket-balance audit pass ho gaya tha kyunki braces balanced the — ye
+SEMANTIC ordering bug tha, syntax nahi.)
+
+### Fix
+- Dono local functions ka ORDER swap: ab `_lookupCatalogProduct` PEHLE declare
+  hota hai, `_catalogImageFallback` uske BAAD (use hamesha declaration ke baad).
+  Logic bilkul same, sirf order badla.
+- NOTE comment add: local functions ko use se pehle declare karna zaroori.
+
+### Naya permanent audit (taaki ye bug class KABHI wapas na aaye)
+- **audit5 — local-function forward-reference detector** (string/comment-aware):
+  har local func/funcvar ka declaration position track; kisi local func ke body
+  me baad-wale sibling local func ka reference ho to ERROR. Lambda params
+  suppress, `Map.from` jaise `.name` refs exclude. Negative test (synthetic
+  buggy snippet) par exit=1 ke saath catch verified.
+- Saari 4 audits ALL CLEAN: deep_check (549 files brackets), audit2 (lang
+  377x4 parity + .tr 288/0 + routeName 29/0), audit3 (Get-guards/orElse),
+  audit5 (549 files forward-refs 0).
+
+- Version 1.6.27+56, label "v1.6.27 (56)".
+
+### Test notes (v1.6.27)
+1. `flutter clean` → `flutter pub get` → `flutter run --release` — BUILD ab
+   PASS honi chahiye (koi Dart compile error nahi).
+2. Baaki v1.6.26 ke 4 points (Tax label, sab pages refresh, coupon REAL-apply,
+   order-history product image) same test karo — logic untouched.

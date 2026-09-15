@@ -326,24 +326,9 @@ class OrderHistoryController extends GetxController {
       return '';
     }
 
-    /// Slim rows me image na ho to ASLI product catalog se nikaalo —
-    /// product_id (sabse strong) nahi to EXACT item-name match. Catalog
-    /// = Home sections + Shop ki poori list (paginate=500) — jo is session
-    /// me load ho chuki ho. Match na mile to '' (view neutral book icon
-    /// dikhayega — logo NAHI).
-    String _catalogImageFallback(dynamic item, String itemName) {
-      int pid = 0;
-      if (item is Map) {
-        final itm = Map<String, dynamic>.from(item);
-        pid = jsonToInt(
-                itm['product_id'] ?? itm['Product_Id'] ?? itm['productId']) ??
-            0;
-      }
-      final hit = _lookupCatalogProduct(pid: pid, name: itemName);
-      return hit?.thumbnail?.url ?? '';
-    }
-
     /// Home + Shop catalogs me product dhundo (id pehle, phir exact name).
+    /// NOTE: local functions ko use se PEHLE declare karna zaroori hota
+    /// hai (class methods ki tarah nahi) — isliye ye pehle hai.
     ProductApiModel? _lookupCatalogProduct({int pid = 0, String name = ''}) {
       ProductApiModel? from(Iterable<ProductApiModel> pool) {
         if (pid > 0) {
@@ -370,6 +355,23 @@ class OrderHistoryController extends GetxController {
         if (hit != null) return hit;
       }
       return null;
+    }
+
+    /// Slim rows me image na ho to ASLI product catalog se nikaalo —
+    /// product_id (sabse strong) nahi to EXACT item-name match. Catalog
+    /// = Home sections + Shop ki poori list (paginate=500) — jo is session
+    /// me load ho chuki ho. Match na mile to '' (view neutral book icon
+    /// dikhayega — logo NAHI).
+    String _catalogImageFallback(dynamic item, String itemName) {
+      int pid = 0;
+      if (item is Map) {
+        final itm = Map<String, dynamic>.from(item);
+        pid = jsonToInt(
+                itm['product_id'] ?? itm['Product_Id'] ?? itm['productId']) ??
+            0;
+      }
+      final hit = _lookupCatalogProduct(pid: pid, name: itemName);
+      return hit?.thumbnail?.url ?? '';
     }
 
     return OrderHistoryModel(
