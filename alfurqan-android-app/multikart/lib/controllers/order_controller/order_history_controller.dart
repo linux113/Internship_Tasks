@@ -42,6 +42,28 @@ class OrderHistoryController extends GetxController {
 
   bool isLoadingOrders = false;
 
+  // 15/09 DEEP FIX (history list me product PHOTO nahi, sirf book icon):
+  // pehle fallback sirf SESSION me loaded catalogs (Home sections / Shop
+  // grid) par nirbhar tha — user shop page khole bina seedha product ->
+  // checkout kar le to catalog khaali hota hai aur photo kabhi resolve
+  // hi nahi hoti. Ab parse ke dauran jo item bina image ka raha wo
+  // _pendingImages me register hota hai aur fetchOrders ke baad LIVE
+  // products api (GetAllProductsFront — live verified) se resolve hota
+  // hai: pehle poora catalog ek baar scan, phir exact-naam search. Ye
+  // SESSION-free hai — kisi page par jane par depend NAHI karta.
+  final List<Map<String, dynamic>> _pendingImages = [];
+
+  /// product_id -> image url (session cache — ek baar mila to api dobara
+  /// NAHI). Naam-cache bhi exact-normalized Arabic naam par.
+  static final Map<int, String> _pidImageCache = {};
+  static final Map<String, String> _nameImageCache = {};
+
+  /// Poora catalog (paginate=500) ek baar scan ho chuka hai.
+  static bool _catalogScanned = false;
+
+  /// Jin par resolve FAIL ho chuka — bar-bar api NAHI (network bachao).
+  static final Set<String> _imageMisses = {};
+
   /// Guest ho to true — view "Please login to see your orders" dikhayegi.
   bool get isLoggedIn => (storage.read(Session.isLogin) ?? false) == true;
 
@@ -197,6 +219,7 @@ class OrderHistoryController extends GetxController {
     }
     isLoadingOrders = true;
     update();
+    _pendingImages.clear();
     try {
       final res = await ApiService().request<List<OrderHistoryModel>>(
         endpoint: ApiEndpoints.getUserOrders,
@@ -233,6 +256,14 @@ class OrderHistoryController extends GetxController {
           return seen.add(key);
         }).toList();
       }
+      // 15/09: session-catalog miss hone par bhi photos lao — LIVE products
+      // api resolver (batch + naam search). Sirf display-image badalta hai;
+      // slow/fail ho to rows book-icon ke saath turant dikhti hai (block
+      // NAHI hota — 12 sec cap).
+      try {
+        await _resolveMissingImages()
+            .timeout(const Duration(seconds: 12), onTimeout: () {});
+      } catch (_) {}
     } catch (_) {}
     isLoadingOrders = false;
     update();
@@ -360,9 +391,10 @@ class OrderHistoryController extends GetxController {
     /// Slim rows me image na ho to ASLI product catalog se nikaalo —
     /// product_id (sabse strong) nahi to EXACT item-name match. Catalog
     /// = Home sections + Shop ki poori list (paginate=500) — jo is session
-    /// me load ho chuki ho. Match na mile to '' (view neutral book icon
-    /// dikhayega — logo NAHI).
-    String _catalogImageFallback(dynamic item, String itemName) {
+    /// me load ho chuki ho. Match na mile to LIVE-api resolver ke liye
+    /// register karo (15/09 fix) aur '' do (view neutral book icon
+    /// dikhayega jab tak resolve na ho — logo NAHI).
+    String _catalogImageFallback(dynamic item, String itemName, int itemIndex) {
       int pid = 0;
       if (item is Map) {
         final itm = Map<String, dynamic>.from(item);
@@ -371,7 +403,16 @@ class OrderHistoryController extends GetxController {
             0;
       }
       final hit = _lookupCatalogProduct(pid: pid, name: itemName);
-      return hit?.thumbnail?.url ?? '';
+      final url = hit?.thumbnail?.url ?? '';
+      if (url.isEmpty) {
+        _pendingImages.add({
+          'order': orderNo,
+          'index': itemIndex,
+          'pid': pid,
+          'name': itemName,
+        });
+      }
+      return url;
     }
 
     return OrderHistoryModel(
@@ -413,7 +454,7 @@ class OrderHistoryController extends GetxController {
             // item name) -> us product ka asli thumbnail.
             String img = itemImage(i);
             if (img.isEmpty) {
-              img = _catalogImageFallback(items[i], itemName);
+              img = _catalogImageFallback(items[i], itemName, i);
             }
             return DaysWiseList(
               image: buildMediaUrl(img),
@@ -431,6 +472,140 @@ class OrderHistoryController extends GetxController {
           }()
       ],
     );
+  }
+
+  /// Slim order rows ki MISSING product photos LIVE products api se lao
+  /// (15/09 user report — "history me book ki photo nahi, sirf icon").
+  /// Step 1: poora catalog EK baar scan (shop wala paginate=500) + cache.
+  /// Step 2: tab bhi na mile to EXACT naam se search (Arabic ya/alef
+  /// spellings normalize karke) — sirf EXACT match accept, GALAT photo
+  /// kabhi nahi. Step 3: sirf display-image field update + update().
+  Future<void> _resolveMissingImages() async {
+    if (_pendingImages.isEmpty) return;
+    final pend = List<Map<String, dynamic>>.from(_pendingImages);
+    _pendingImages.clear();
+
+    void cacheProduct(ProductApiModel p) {
+      final url = p.thumbnail?.url ?? '';
+      if (url.isEmpty) return;
+      final id = p.id ?? 0;
+      if (id > 0) _pidImageCache[id] = url;
+      final nn = _normName(p.name ?? '');
+      if (nn.isNotEmpty) _nameImageCache[nn] = url;
+    }
+
+    String? urlFor(Map<String, dynamic> p) {
+      final pid = (p['pid'] as int?) ?? 0;
+      if (pid > 0 && _pidImageCache.containsKey(pid)) {
+        return _pidImageCache[pid];
+      }
+      final nn = _normName('${p['name'] ?? ''}');
+      if (nn.isNotEmpty) return _nameImageCache[nn];
+      return null;
+    }
+
+    bool needsResolution(Map<String, dynamic> p) {
+      final pid = (p['pid'] as int?) ?? 0;
+      final key = pid > 0 ? 'id:$pid' : 'nm:${_normName('${p['name'] ?? ''}')}';
+      return urlFor(p) == null && !_imageMisses.contains(key);
+    }
+
+    // Step 1 — full catalog scan (sirf ek baar per session).
+    if (pend.any(needsResolution) && !_catalogScanned) {
+      _catalogScanned = true;
+      try {
+        final res = await ApiService().request(
+          endpoint: ApiEndpoints.productList,
+          method: ApiMethod.get,
+          queryParams: const {
+            'page': 1, 'paginate': 500, 'status': 1, 'field': '',
+            'price': '', 'category': '', 'tag': '', 'sort': '',
+            'sortBy': '', 'rating': '', 'attribute': '',
+          },
+          fromJson: (json) => ProductListResponseModel.fromJson(json),
+        );
+        if (res.isSuccess && res.data != null) {
+          for (final p in res.data!.data) {
+            cacheProduct(p);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Step 2 — naam-search fallback (catalog scan me bhi na mile ho).
+    for (final p in pend) {
+      if (!needsResolution(p)) continue;
+      final name = '${p['name'] ?? ''}'.trim();
+      if (name.isEmpty) continue;
+      try {
+        final res = await ApiService().request(
+          endpoint: ApiEndpoints.productList,
+          method: ApiMethod.get,
+          queryParams: <String, dynamic>{
+            'page': 1,
+            'paginate': 20,
+            'status': 1,
+            'search': name,
+          },
+          fromJson: (json) => ProductListResponseModel.fromJson(json),
+        );
+        if (res.isSuccess && res.data != null) {
+          for (final prod in res.data!.data) {
+            cacheProduct(prod);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Step 3 — models par apply.
+    var changed = false;
+    for (final p in pend) {
+      final url = urlFor(p);
+      final pid = (p['pid'] as int?) ?? 0;
+      if (url == null || url.isEmpty) {
+        _imageMisses.add(
+            pid > 0 ? 'id:$pid' : 'nm:${_normName('${p['name'] ?? ''}')}');
+        continue;
+      }
+      final oid = int.tryParse('${p['order'] ?? ''}') ?? 0;
+      final idx = (p['index'] as int?) ?? 0;
+      OrderHistoryModel? target;
+      for (final o in orderHistoryList) {
+        if (o.orderId == oid) {
+          target = o;
+          break;
+        }
+      }
+      final list = target?.daysWiseList;
+      if (list != null && idx >= 0 && idx < list.length) {
+        final cur = list[idx].image ?? '';
+        if (cur.isEmpty || cur.contains('m_logo')) {
+          list[idx].image = buildMediaUrl(url);
+          changed = true;
+        }
+      }
+    }
+    // Resolve hone wale misses se hata do (agli baar direct cache hit);
+    // updated rows turant photo ke saath dikhao.
+    if (changed) {
+      _imageMisses.removeWhere((k) {
+        if (k.startsWith('id:')) {
+          return _pidImageCache.containsKey(int.tryParse(k.substring(3)) ?? 0);
+        }
+        return _nameImageCache.containsKey(k.substring(3));
+      });
+      update();
+    }
+  }
+
+  /// Arabic naam EXACT match ke liye normalize karo — alef ke roop
+  /// (أ/إ/آ→ا), farsi ya (ی→ي), alef-maqsura→ya, case/space collapse.
+  static String _normName(String s) {
+    var t = s.trim().toLowerCase();
+    t = t.replaceAll(RegExp('[أإآ]'), 'ا');
+    t = t.replaceAll('ی', 'ي').replaceAll('ى', 'ي');
+    t = t.replaceAll(RegExp(r'\s+'), ' ');
+    return t;
   }
 
   //common bottom sheet

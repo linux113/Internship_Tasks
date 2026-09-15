@@ -54,12 +54,17 @@ class CartBottomLayout extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // PRICE text ka tap bhi sheet khole (pehle YE bhi
+                      // Get.back() karta tha — price chhoo te hi page
+                      // wapas kud jata tha, bilkul galat).
                       LatoFontStyle(
                               text:
                                   "${appCtrl.priceSymbol} ${((double.tryParse(totalAmount ?? '') ?? 0) * appCtrl.rateValue).toStringAsFixed(2)}",
                               fontSize: FontSizes.f14,
                               textAlign: TextAlign.center)
-                          .gestures(onTap: () => Get.back()),
+                          .gestures(
+                              onTap: onDescTap ??
+                                  () => CartPriceDetailsSheet.show()),
                       LatoFontStyle(
                               text: desc,
                               fontSize: FontSizes.f12,
@@ -68,9 +73,14 @@ class CartBottomLayout extends StatelessWidget {
                                   ? appCtrl.appTheme.primary
                                   : appCtrl.appTheme.contentColor)
                           // "View Details" ab ASLI breakdown sheet kholta
-                          // hai (caller onDescTap deta hai); sirf wapas
-                          // mat jao — pehle yahi dead behavior tha.
-                          .gestures(onTap: onDescTap ?? () => Get.back())
+                          // hai. DEFAULT bhi sheet hai (pehle Get.back()
+                          // tha — 15/09 user report: Delivery page par desc
+                          // tap = page WAPAS, kyunki waha onDescTap pass
+                          // nahi hua tha; ab koi bhi caller bhoole to bhi
+                          // page kabhi wapas nahi kudega).
+                          .gestures(
+                              onTap: onDescTap ??
+                                  () => CartPriceDetailsSheet.show())
                     ])),
             CustomButton(
                 title: buttonName!,

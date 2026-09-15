@@ -69,7 +69,10 @@ class OrderSuccess extends StatelessWidget {
 
                 //order summary layout
                 const OrderSummary(),
-                const Space(0, 30)
+                // 15/09: neeche sticky Track/Continue bar ke PEECHE content
+                // chhup jata tha (summary text par bar ki divider-line
+                // "cut" hui dikhti thi) — bar ki height jitna space rakho.
+                const Space(0, 95)
               ],
             ).width(MediaQuery.of(context).size.width)),
             const OrderSuccessBottom()

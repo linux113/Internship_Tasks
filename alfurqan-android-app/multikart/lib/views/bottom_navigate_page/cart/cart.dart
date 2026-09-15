@@ -52,11 +52,9 @@ class _CartScreenState extends State<CartScreen> {
                               // "View Details" = ASLI price breakup sheet
                               // (Bag total / Tax / Delivery / Total) —
                               // pehle tap par sirf wapas chala jata tha.
-                              onDescTap: () => Get.bottomSheet(
-                                    const CartPriceDetailsSheet(),
-                                    backgroundColor: Colors.white,
-                                    isScrollControlled: true,
-                                  ),
+                              // Centralized opener (capped height — full-
+                              // screen khaali grey flash KABHI nahi).
+                              onDescTap: () => CartPriceDetailsSheet.show(),
                               // RAW AED (server currency) — conversion ab
                               // CartBottomLayout KHUD karta hai (delivery/
                               // payment ke saath unified; pehle sirf cart

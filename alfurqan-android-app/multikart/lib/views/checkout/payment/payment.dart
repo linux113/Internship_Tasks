@@ -68,12 +68,9 @@ class Payment extends StatelessWidget {
                       ? "placingOrder".tr
                       : "placeOrder".tr,
                   // Payment par bhi "View Details" tap = same price-breakup
-                  // sheet (dead text kahi nahi rehna chahiye).
-                  onDescTap: () => Get.bottomSheet(
-                        const CartPriceDetailsSheet(),
-                        backgroundColor: Colors.white,
-                        isScrollControlled: true,
-                      ),
+                  // sheet (dead text kahi nahi rehna chahiye). Centralized
+                  // opener (capped height — grey flash NAHI).
+                  onDescTap: () => CartPriceDetailsSheet.show(),
                   // TOTAL priority: (1) SERVER CheckOut preview (shipping/
                   // tax samet, RAW AED) → (2) LIVE cart total →
                   // (3) arguments fallback. Widget khud ×rateValue karta

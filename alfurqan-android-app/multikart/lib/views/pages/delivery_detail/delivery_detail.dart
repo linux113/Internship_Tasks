@@ -79,6 +79,12 @@ class DeliveryDetail extends StatelessWidget {
                 CartBottomLayout(
                   desc: CartFont().viewDetail,
                   buttonName: CartFont().proceedToPayment,
+                  // 15/09 user report: DELIVERY page par "View Details"
+                  // tap karne par page WAPAS kud jata tha — yaha onDescTap
+                  // pass hi nahi kiya tha aur default handler Get.back()
+                  // hota hai. Ab cart/payment jaisi hi REAL sheet khulti
+                  // hai (same centralized opener).
+                  onDescTap: () => CartPriceDetailsSheet.show(),
                   totalAmount: deliveryDetailCtrl.totalAmount.toString(),
                   onTap: () {
                     Get.toNamed(routeName.payment,

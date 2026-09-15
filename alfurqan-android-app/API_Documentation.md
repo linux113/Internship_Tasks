@@ -1318,3 +1318,64 @@ SEMANTIC ordering bug tha, syntax nahi.)
    PASS honi chahiye (koi Dart compile error nahi).
 2. Baaki v1.6.26 ke 4 points (Tax label, sab pages refresh, coupon REAL-apply,
    order-history product image) same test karo — logic untouched.
+
+---
+
+## v1.6.28+57 — 15/09/2026 (User testing round: history photos, View Details blank-throw, discount sum)
+
+### 1. Order HISTORY list me product PHOTO nahi (sirf neutral book icon) — DEEP FIX
+ROOT CAUSE (LIVE verify ke saath): v1.6.26 ka fallback sirf SESSION me loaded
+catalogs (Home sections / Shop grid) par nirbhar tha. User shop page khole bina
+seedha product -> cart -> checkout -> history jaye to catalog khaali hota hai —
+photo KABHI resolve nahi hoti. (Order DETAIL page par photo isliye dikhti hai
+kyunki GetOrder detail me thumbnail aata hai; GetUserOrders ki slim rows me NAHI.)
+FIX: parse ke dauran bina-image items ab `_pendingImages` me register hote hai
+aur `fetchOrders` ke baad `_resolveMissingImages()` LIVE products api
+(`GetAllProductsFront` — live probe verified) se resolve karta hai:
+- Step 1: poora catalog EK baar scan (`paginate=500`, shop wala shape) -> pid
+  aur normalized-naam caches (session-static; dobara api NAHI).
+- Step 2: tab bhi na mile to EXACT naam se `?search=` (Arabic alef roop
+  أ/إ/آ اور farsi ي/ی normalize karke client-side EXACT match — GALAT photo
+  kabhi nahi; match na mile to book icon hi rahe).
+- Step 3: sirf display-image field update (12 sec network cap; slow/fail par
+  rows turant dikhti hai, block NAHI).
+
+### 2. "View Details" kabhi-kabhi FULL-SCREEN khaali grey flash, phir content
+ROOT CAUSE: `Get.bottomSheet(isScrollControlled: true)` + unconstrained child —
+first frame poori grey screen. FIX: EK centralized opener
+`CartPriceDetailsSheet.show()` — height 80% par CAPPED (kabhi full-screen
+nahi), opaque white bg + rounded top + dark barrier, rows scrollable (chhoti
+screen overflow NAHI). Cart/Payment dono isi se jaate hai.
+
+### 3. DELIVERY page par "View Details" tap = page WAPAS ("throwing back")
+ROOT CAUSE (asli): `delivery_detail.dart` ke `CartBottomLayout` me `onDescTap`
+PASS hi nahi kiya tha aur widget ka default handler `() => Get.back()` hai —
+tap karte hi page pop! FIX: delivery par bhi same sheet wire ki + SAFETY:
+widget ka DEFAULT ab bhi `CartPriceDetailsSheet.show()` (koi caller bhoole to
+bhi page kabhi wapas nahi kudega) — aur PRICE text ka tap bhi sheet kholta hai
+(pehle YE bhi Get.back() karta tha!).
+
+### 4. Order DETAIL "Price Details" ka sum Total se match nahi karta (polish)
+GetOrder kabhi `discount` field inconsistent bhejta hai (order #1085: coupon
+-18.90 laga, grand total 75.60 = 90+4.50-18.90 sahi, par discount field 15.12
+=> rows ka sum 79.38 dikhta). Ab clear mismatch (>0.5) par display-discount
+server ke HI totals (subtotal+shipping+tax-total) se derive (rows hamesha
+sum-consistent; koi number invent NAHI).
+
+### 5. Order SUCCESS page — sticky bar ke peeche content "cut" (polish)
+Track/Continue bar transparent tha; scroll content peeche se dikhta tha
+(summary text par divider-line strikethrough jaisi). Ab bar OPAQUE white aur
+summary ke baad bar-height jitna bottom space.
+
+- Version 1.6.28+57, label "v1.6.28 (57)".
+
+### Test notes (v1.6.28)
+1. Order HISTORY kholke har order card par BOOK KI ASLI PHOTO dekho (book
+   icon sirf tab jab server par photo hi na ho).
+2. Cart me "View Details" dabao — seedha white sheet (blank grey NAHI); wahi
+   DELIVERY page par bhi dabao — AB PAGE WAPAS NAHI JAANA CHAHIYE, sheet
+   khulni chahiye.
+3. Payment par coupon laga ke order do — Order detail ke Price Details me
+   Discount+Tax+Subtotal ka sum Total ke barabar dikhega.
+4. Order success page par scroll karo — niche text buttons ke peeche "cut"
+   nahi dikhega.

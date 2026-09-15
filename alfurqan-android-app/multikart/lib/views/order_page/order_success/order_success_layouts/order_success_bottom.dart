@@ -8,7 +8,12 @@ class OrderSuccessBottom extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<AppController>(
       builder: (appCtrl) {
-        return BottomLayout(
+        // 15/09: bar transparent tha — scroll hota content uske PEECHE se
+        // dikhta tha (text par "line cut" jaisa lagta tha). Opaque white
+        // background diya taaki neeche ka content kabhi na chhupe/dikhe.
+        return Container(
+            color: appCtrl.appTheme.whiteColor,
+            child: BottomLayout(
             firstButtonText: OrderSuccessFont().trackOrder,
             // FIX (06/09 — "Track Order par order page khulta hai, woh
             // SPECIFIC order nahi"): ab placed order ka REAL number ho to
@@ -42,7 +47,7 @@ class OrderSuccessBottom extends StatelessWidget {
               appCtrl.update();
               Get.offAllNamed(routeName.dashboard);
             },
-            secondButtonText: OrderSuccessFont().continueShopping);
+            secondButtonText: OrderSuccessFont().continueShopping));
       }
     );
   }

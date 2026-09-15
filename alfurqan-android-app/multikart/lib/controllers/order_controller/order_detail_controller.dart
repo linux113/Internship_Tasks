@@ -403,6 +403,21 @@ class OrderDetailController extends GetxController {
             j['grand_total'] ??
             j['Grand_Total']) ??
         (subtotal + shipping + tax - discount);
+    // 15/09 user round (order #1085): payment par coupon -18.90 laga aur
+    // server ka grand TOTAL bhi 75.60 = 90+4.50-18.90 hai, par GetOrder ka
+    // 'discount' field 15.12 bhejta hai — Price Details ki rows ka sum
+    // Total se MILNA chahiye warna user ko galat lagta hai. Clear mismatch
+    // ho to display-discount ko server ke HI totals (subtotal+shipping+tax
+    // - total) se derive karo. Naya number invent nahi — sab server data.
+    if (total > 0 && discount > 0) {
+      final expected = subtotal + shipping + tax - discount;
+      if ((expected - total).abs() > 0.5) {
+        final derived = subtotal + shipping + tax - total;
+        if (derived > 0) {
+          discount = double.parse(derived.toStringAsFixed(2));
+        }
+      }
+    }
     walletUsed = jsonToDouble(j['wallet_balance'] ??
             j['walletBalance'] ??
             j['wallet_amount']) ??
