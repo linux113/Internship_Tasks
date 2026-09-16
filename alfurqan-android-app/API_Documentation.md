@@ -1415,3 +1415,109 @@ display-number + date par, RICHER row (total/image/items zyada) rakhte hue.
    BOOK KI ASLI PHOTO aa jati hai (icon sirf tab jab server par photo hi na ho).
 2. Koi order DO BAAR nahi dikhta (#1086 jaise duplicate ab ek hi card).
 3. Baaki sab (coupon, sheets, discount-sum, tracking) v1.6.28 jaisa hi.
+
+---
+
+## v1.6.30+59 — 16/09/2026 (User ke NAYE 9 points — coupon refresh/state, coupon T&C, orders tax, delivery charge, profile photo, card add, SEARCH الحدیث END-TO-END)
+
+### 8+9. SEARCH bilkul kaam nahi karta — "الحدیث" pe 0 result (SABSE BADA deep fix)
+**END-TO-END root cause LIVE se pakda:** user ne query FARSI/URDU keyboard
+wali **ی (U+06CC)** se type ki thi, jabki alfurqan.ae ka catalog Arabic
+**ي (U+064A)** use karta hai. Live probe: server ka search FARSI ye wali
+query pe `{"data":[],"total":0}` deta hai (Arabic ي se wahi kitabe milti
+hai) — matlab SERVER bhi exact-raw match karta hai, aur app ki client-side
+search bhi. Match hone ka koi chance hi nahi tha.
+**Fix (app-end, end-to-end):** `_normSearch()` — query AUR product ke har
+compare field (name/short/long description, SKU, slug, saari categories)
+DONO sides ko ek canonical form me laata hai, phir `contains()`:
+Farsi ye(U+06CC)/Urdu bari ye(U+06D2)/alef-maqsura(U+0649)→Arabi ي(064A);
+Farsi ke(U+06A9)→ك; alef roop(أإآٱ)→ا; taa-marbuta/Urdu he(ة ہ ھ)→ه;
+tashkeel/harakat(064B-0652), dagger alef, Quranic marks, tatweel, ZWNJ/ZWJ/
+bidi marks strip; Arabic-Indic digits→latin; lowercase+space collapse.
+Saare 13 mappings Python se codepoint-verify ki gayi. Pool poora 227
+products cover karta hai (paginate=50×≤6 — total live verify 227).
+Ab "الحدیث", "الحديث", "حديث", "hadith" — sab se ASLI books aati hai.
+
+### 1. Coupon apply karne par value TURANT refresh nahi hoti thi
+Cart→coupons page se APPLY karne par sirf code save hoke `Get.back()` ho
+jata tha; cart ke totals tab tak purane jab tak user khud refresh na kare.
+Ab apply ke saath hi `CartController.fetchServerTax()` DOBARA chalta hai
+(coupon ke SAATH CheckOut preview) — wapas aate hi discount/total updated.
+Remove par bhi fresh preview chalta hai.
+
+### 2. Applied coupon ka card state — "Applied" + REMOVE
+Coupons page par har card pehle HAMESHA "APPLY" dikhata tha (applied ka pata
+hi nahi chalta tha). Ab active coupon ke card par green **"Applied"**
+(disabled) + red **"Remove"** button; Remove tap = code storage+checkout+cart
+teeno se saaf + totals normal.
+
+### 4. Coupons ki TERMS enforce (min order / validity / first-order)
+Swagger `Coupons` schema ke hisaab se `min_spend/start_date/end_date/
+is_expired/is_first_order` parse hote hai. Dead "View T&C" text hata diya —
+terms ab card par INLINE dikhti hai ("Minimum order: AED X • Valid till
+YYYY-MM-DD • Valid on first order only"). APPLY tap pe client-side GATE:
+expire/not-started/min-order-kam/first-order-nahi => code save hi NAHI
+hota + saaf reason toast (server preview bhi aakhiri check rakhta hai —
+galat coupon kisi haalat me apply nahi hota).
+
+### 5. Delivery Charge app me nahi aa raha tha
+**Root cause:** backend `ShippingRule` ka koi READ endpoint deta hi nahi
+(swagger verify — sirf admin create/update/delete) aur cart ka "Delivery"
+row **0.0 hardcode** tha. Ab delivery charge SIRF authoritative source —
+CheckOut preview response — se deep-walk se nikalta hai (shipping/delivery
+charge family ke keys, address/description/method exclude; cart AUR payment
+dono walkers me). "Delivery" row + final total dono shipping-aware
+(bag + tax + delivery − coupon). Tax/coupon math bhi ab shipping-aware hai
+(warna delivery charge galat TAX ya DISCOUNT ban jata tha).
+
+### 3. Orders ke Price Details me Tax galat dikhta tha
+Kuch orders me server `tax_total` 0/khaali bhejta hai jabki grand total me
+VAT included hota hai — tab rows ka sum Total se match hi nahi karta tha.
+Ab tax 0 ho aur total-(subtotal+shipping-discount) bacha positive ho to
+wahin server-implied tax row dikhti hai (rows hamesha Total se sum-matched;
+app khud koi rate invent NAHI karti — saare numbers server ke hi).
+
+### 6. Profile settings me photo set nahi ho pati thi
+**SERVER TRUTH (live swagger v2 verify):** `PUT Core/UpdateUserProfile` ka
+`UpdateProfileDto` SIRF {name,email,phone,country_code,_method} accept karta
+hai (additionalProperties:false) — profile image ka KOI field hi nahi; aur
+backend me user-media upload endpoint bhi NAHI (`api/Media` sirf
+GetAllMediaFiles/DeleteAllMedia; upload sirf admin BulkUpload). Matlab
+SERVER par photo save karna possible hi nahi — isliye photo ab DEVICE me
+(gallery se pick → app documents me copy → per-user storage) save hoti hai
+aur profile setting/profile tab/drawer teeno jagah dikhti hai (local >
+server profileImage > neutral icon). Edit badge pehle sirf dikhawa tha —
+ab tap = gallery picker. Naye packages: image_picker, path_provider.
+**Backend team agar profile_image_id support kare to server-sync laga denge.**
+
+### 7. Payment option me CARD add nahi ho pata
+**Backend me saved-cards feature HAI HI NAHI** (poori swagger paths me koi
+Card/SavedCards endpoint nahi — sirf Wallet/Points hai). Isliye card-add
+ka koi REAL flow app me possible nahi; payment COD hi backend-supported
+tareeqa hai. Jab backend card/payment-gateway jodega tab app me wire karenge.
+(User se call par confirm kar liya jayega agar koi alag expectation ho.)
+
+- Version 1.6.30+59, label "v1.6.30 (59)". Naye lang keys (10×4=387 parity):
+  applied, couponExpired, couponNotStarted, couponMinOrder, couponMinOrderMsg,
+  firstOrderOnly, firstOrderCouponMsg, validTill, profilePhotoUpdated,
+  photoPickFailed.
+- NOTE: is round me 2 naye packages aye hai — **flutter pub get ZAROORI**
+  (user apna standard: flutter clean → flutter pub get → flutter run --release).
+
+### Test notes (v1.6.30)
+1. SEARCH me "الحدیث" likho (ya "الحديث" / "hadith") — ab ASLI hadees books
+   ke results aane chahiye (pehle "no result" tha).
+2. Cart me item rakho → Coupons kholo → coupon APPLY → WAPAS aate hi cart
+   me Coupon Discount row + naya total TURANT dikhe (refresh nahi karna).
+3. Wapas Coupons kholo — applied card par green "Applied" + "Remove" dikhe;
+   Remove dabao → cart ka total normal ho jata hai.
+4. Coupon card ke NEECHE uski terms dikhte hai (minimum order/validity/
+   first-order). Expire/short-order coupon APPLY karo — reason wala toast
+   aayega, apply NAHI hoga.
+5. Cart/payment ke Price Details me "Delivery" row ab server ka REAL
+   delivery charge dikhata hai (0 dikhe to server free shipping bhej raha).
+6. Profile setting → photo ke edit (pencil) icon dabao → gallery se photo
+   chuno → wahi photo profile setting + profile tab + drawer teeno jagah
+   dikhti hai (app band karke kholne par bhi).
+7. Order detail → Price Details: Tax+Discount+Subtotal+Delivery rows ka sum
+   hamesha grand Total ke barabar dikhe.
