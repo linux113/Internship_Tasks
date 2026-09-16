@@ -13,6 +13,10 @@ class UserImage extends StatelessWidget {
             UserIcon(
               height: AppScreenUtil().screenHeight(80)
             ),
+            // 15/09 (point 6): edit badge ab KAAM karta hai — tap par
+            // gallery se photo pick hoti hai (device me save; backend
+            // photo support nahi karta — ProfileController comment dekho).
+            // Pehle badge sirf DIKHAWA tha (koi tap handler hi nahi tha).
             Positioned(
               bottom: 0,
               right: 15,
@@ -32,7 +36,11 @@ class UserImage extends StatelessWidget {
                     ],
                     color: appCtrl.appTheme.whiteColor),
                 child: SvgPicture.asset(svgAssets.editSquare),
-              )
+              ).gestures(onTap: () {
+                if (Get.isRegistered<ProfileController>()) {
+                  Get.find<ProfileController>().pickProfileImage();
+                }
+              }),
             )
           ],
         );

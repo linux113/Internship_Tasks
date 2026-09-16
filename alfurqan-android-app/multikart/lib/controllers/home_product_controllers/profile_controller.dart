@@ -1,4 +1,9 @@
+import 'dart:io';
+
+import 'package:image_picker/image_picker.dart';
+import 'package:multikart/models/json_parse_utils.dart';
 import 'package:multikart/views/pages/currency.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../config.dart';
 import '../../services/api_endpoints.dart';
@@ -91,6 +96,19 @@ class ProfileController extends GetxController {
           }
         }
         if (userEmail.isEmpty && email.isNotEmpty) userEmail = email;
+        // Server ka profileImage (Core_Users.profileImage -> MediaFiles)
+        // ho to uska URL rakho — local photo nahi tabhi ye dikhta hai.
+        final img = m['profile_image'] ??
+            m['profileImage'] ??
+            m['profile_img'] ??
+            m['avatar'];
+        if (img is Map) {
+          final u = jsonToString(img['asset_url'] ??
+              img['original_url'] ??
+              img['Asset_Url'] ??
+              img['url']);
+          if (u != null && u.isNotEmpty) serverImageUrl = u;
+        }
         update();
       }
     } catch (_) {}
@@ -148,9 +166,81 @@ class ProfileController extends GetxController {
     update();
   }
 
+  // ------------- PROFILE PHOTO (15/09 point 6 — DEEP root cause) -------------
+  /// SERVER TRUTH (live swagger v2 verify): `PUT api/Core/UpdateUserProfile`
+  /// ka `UpdateProfileDto` SIRF {name, email, phone, country_code, _method}
+  /// accept karta hai (additionalProperties:false) — PROFILE IMAGE ka koi
+  /// field hi NAHI. Saath hi backend me user-media UPLOAD endpoint bhi
+  /// NAHI hai (`api/Media` sirf GetAllMediaFiles + DeleteAllMedia deta
+  /// hai; upload sirf admin `BulkUpload/UploadBulkMedia`). Matlab server
+  /// par photo SAVE karna techically possible hi nahi — isliye photo ab
+  /// DEVICE me (app documents folder) per-user save hoti hai aur profile
+  /// setting / profile tab / drawer — teeno jagah wahi dikhti hai. Jab
+  /// backend profile_image_id support karega to upload wiring chhoti hai.
+  String profileImagePath = ''; // device-local picked photo ka path
+  String serverImageUrl = ''; // server ka profileImage (ho to — rare)
+
+  /// Per-user storage key (doosre account login par purani photo nahi).
+  String get _photoKey => 'profile_image_path_${storage.read('id') ?? 0}';
+
+  /// Saved photo ka path load karo (file delete ho chuki ho to reset).
+  void loadProfileImage() {
+    try {
+      final p = storage.read(_photoKey)?.toString() ?? '';
+      if (p.isNotEmpty && File(p).existsSync()) {
+        profileImagePath = p;
+      } else {
+        profileImagePath = '';
+      }
+    } catch (_) {
+      profileImagePath = '';
+    }
+  }
+
+  bool isPickingImage = false;
+
+  /// Gallery se photo chuno -> app documents me copy (+ purani replace)
+  /// -> storage save -> teeno jagah (UserIcon har jagah yahi padhta hai)
+  /// turant update.
+  Future<void> pickProfileImage() async {
+    if (!isLoggedIn) {
+      Get.toNamed(routeName.login);
+      return;
+    }
+    if (isPickingImage) return;
+    isPickingImage = true;
+    update();
+    try {
+      final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery, maxWidth: 512, imageQuality: 85);
+      if (picked == null) {
+        isPickingImage = false;
+        update();
+        return;
+      }
+      final dir = await getApplicationDocumentsDirectory();
+      final target =
+          File('${dir.path}/profile_photo_${storage.read('id') ?? 0}.jpg');
+      if (await target.exists()) {
+        try {
+          await target.delete();
+        } catch (_) {}
+      }
+      await File(picked.path).copy(target.path);
+      profileImagePath = target.path;
+      await storage.write(_photoKey, profileImagePath);
+      _toast('profilePhotoUpdated'.tr);
+    } catch (_) {
+      _toast('photoPickFailed'.tr);
+    }
+    isPickingImage = false;
+    update();
+  }
+
   /// login_controller.dart me jo 'name'/'email' storage me save hue the,
   /// wahi yaha se read karke profile page pr dikha rahe hai.
   loadUserData() {
+    loadProfileImage(); // photo bhi har baar fresh (delete/check samet)
     userName = storage.read('name')?.toString() ?? "";
     userEmail = storage.read('email')?.toString() ?? "";
     // Profile Setting form bhi prefill kar do (name ko first/last me todo)

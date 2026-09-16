@@ -144,6 +144,50 @@ class SearchScreenController extends GetxController {
   /// "No products found" ki jagah sahi error dikhayega.
   bool loadFailed = false;
 
+  /// Arabic/Urdu/Farsi text NORMALIZATION (point 8/9 root fix).
+  /// Query aur product fields DONO isi se guzarte hai, phir plain
+  /// contains() kaam kar jata hai. Latin lowercase bhi (SKU/slug).
+  /// NOTE: code points Python se VERIFY kiye hue hai — FARSI ye (U+06CC)
+  /// -> Arabi ye (U+064A) waghera saare 13 roop mappings exact hai.
+  String _normSearch(String? s) {
+    var t = (s ?? '').toLowerCase();
+    // harakat/tashkeel (064B-0652), dagger alef (0670), Quranic marks
+    // (06D6-06ED), tatweel (0640), zero-width/bidi marks hatao
+    t = t.replaceAll(
+        RegExp(
+            '[\u0640-\u0652\u0670\u06D6-\u06ED\u200C\u200D\u200E\u200F\uFEFF]'),
+        '');
+    // keyboard roop -> ek canonical Arabi rup (dono sides same hote hai):
+    // \u0623 \u0625 \u0622 \u0671 -> \u0627 (alef ke roop)
+    // \u06CC FARSI ye / \u0649 / \u06D2 URDU bari ye / \u0626 -> \u064A
+    // \u06A9 FARSI ke -> \u0643 | \u0624 -> \u0648
+    // \u0629 taa-marbuta / \u06C1 / \u06BE -> \u0647
+    const roop = {
+      '\u0623': '\u0627',
+      '\u0625': '\u0627',
+      '\u0622': '\u0627',
+      '\u0671': '\u0627',
+      '\u06CC': '\u064A',
+      '\u0649': '\u064A',
+      '\u06D2': '\u064A',
+      '\u0626': '\u064A',
+      '\u06A9': '\u0643',
+      '\u0624': '\u0648',
+      '\u0629': '\u0647',
+      '\u06C1': '\u0647',
+      '\u06BE': '\u0647',
+    };
+    roop.forEach((from, to) {
+      t = t.replaceAll(from, to);
+    });
+    // Arabic-Indic + Extended digits -> latin (Arabic keyboard se SKU)
+    for (var i = 0; i < 10; i++) {
+      t = t.replaceAll(String.fromCharCode(0x0660 + i), '$i');
+      t = t.replaceAll(String.fromCharCode(0x06F0 + i), '$i');
+    }
+    return t.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   /// Textfield me type karte hi call hota hai — name/description me filter.
   Future<void> onSearchChanged(String text) async {
     final q = text.trim();
@@ -165,23 +209,33 @@ class SearchScreenController extends GetxController {
       // "no products" mat dikhao)
       loadFailed = true;
     }
-    final lower = query.toLowerCase();
+    final nq = _normSearch(query);
     // FIX (Issue #1): pehle SIRF naam + short_description me match hota tha
     // — English queries (quran/seerah/fiqh) ya SKU code (F0010069) type
     // karne par kuch NAHI milta tha, kyunki book names Arabic me hai.
     // Ab SKU, slug (English hota hai), description aur CATEGORY names bhi
     // match hote hai — English/Arabic dono queries kaam karengi.
+    //
+    // FIX (15/09 user points 8/9 — END-TO-END deep root cause LIVE se):
+    // user "الحدیث" search ki — usme ye FARSI/URDU keyboard wali ی
+    // (U+06CC) hai jabki catalog Arabic ي (U+064A) use karta hai. Live
+    // probe: alfurqan.ae ka search FARSI ye pe total:0 deta hai, Arabic
+    // ي se sahi results. Matlab SERVER bhi FARSI ye pe khaali tha aur app
+    // ki client-side search bhi exact-raw match karti thi — match kabhi
+    // nahi hota. Ab DONO sides (query AUR product fields) _normSearch se
+    // ek hi canonical form me aane ke BAAD compare hote hai (Farsi ye/ke,
+    // Urdu bari ye/do-chashmi he, alef roop, taa-marbuta, tashkil,
+    // tatweel, zero-width marks — sab normalize). Ab الحدیث/الحديث
+    // dono likhne par الحديث ki books milengi.
     searchResultApi = _allApiProducts.where((p) {
-      if ((p.name ?? '').toLowerCase().contains(lower)) return true;
-      if ((p.shortDescription ?? '').toLowerCase().contains(lower)) {
-        return true;
-      }
-      if ((p.description ?? '').toLowerCase().contains(lower)) return true;
-      if ((p.sku ?? '').toLowerCase().contains(lower)) return true;
-      if ((p.slug ?? '').toLowerCase().contains(lower)) return true;
+      if (_normSearch(p.name).contains(nq)) return true;
+      if (_normSearch(p.shortDescription).contains(nq)) return true;
+      if (_normSearch(p.description).contains(nq)) return true;
+      if (_normSearch(p.sku).contains(nq)) return true;
+      if (_normSearch(p.slug).contains(nq)) return true;
       for (final c in p.categories) {
-        if ((c.name ?? '').toLowerCase().contains(lower)) return true;
-        if ((c.slug ?? '').toLowerCase().contains(lower)) return true;
+        if (_normSearch(c.name).contains(nq)) return true;
+        if (_normSearch(c.slug).contains(nq)) return true;
       }
       return false;
     }).toList();

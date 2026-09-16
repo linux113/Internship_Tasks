@@ -418,6 +418,19 @@ class OrderDetailController extends GetxController {
         }
       }
     }
+    // 15/09 (point 3 — tax row): kuch orders me server tax_total 0/khaali
+    // bhejta hai jabki grand total me VAT INCLUDED hota hai — tab Price
+    // Details ke rows ka sum Total se match hi nahi hota (tax "galat"
+    // lagta hai). Rows hamesha server ke HI numbers se sum-consistent
+    // rakhne ke liye: tax 0 ho AUR (total - subtotal - shipping +
+    // discount) bacha positive ho to wahi server-implied tax hai —
+    // app khud koi VAT rate invent NAHI karti.
+    if (total > 0 && tax <= 0) {
+      final implied = total - subtotal - shipping + discount;
+      if (implied > 0.5) {
+        tax = double.parse(implied.toStringAsFixed(2));
+      }
+    }
     walletUsed = jsonToDouble(j['wallet_balance'] ??
             j['walletBalance'] ??
             j['wallet_amount']) ??

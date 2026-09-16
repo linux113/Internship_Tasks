@@ -682,6 +682,17 @@ class CartController extends GetxController {
 
   double get couponDiscountValue => _couponDiscount ?? 0;
 
+  // ---------------- DELIVERY/SHIPPING CHARGE (15/09 point 5) ----------------
+  /// Server (CheckOut preview) se aaya DELIVERY/SHIPPING charge. Backend
+  /// me ShippingRule ka KOI read endpoint nahi hai (swagger verify: sirf
+  /// admin Create/Update/DeleteShippingRule) — isliye charge SIRF server
+  /// ke CheckOut preview response se deep-walk se nikalta hai. null = abhi
+  /// server se kuch nahi mila (tab row 0 hi dikhegi — app khud local
+  /// charge invent NAHI karta, ZERO demo rule).
+  double? serverShipping;
+
+  double get serverShippingValue => serverShipping ?? 0;
+
   /// Effective tax jo UI me dikhega — server explicit pehle, warna client.
   double? get _effectiveTax {
     final s = serverTax;
@@ -705,6 +716,7 @@ class CartController extends GetxController {
       if (c != null && c > 0) _clientTax = c;
     }
     final tax = _effectiveTax;
+    final ship = serverShipping ?? 0;
     // 10/09 user ask: label me percentage MAT dikhao — sirf "Tax"
     // (rate backend ka hai, app hardcode na kare; pehle "Tax (18%)" banta
     // tha jo user ne hatawaya).
@@ -719,27 +731,44 @@ class CartController extends GetxController {
       else
         OrderDetail(title: "Coupon Discount".tr, value: "Apply Coupon".tr),
       if (tax != null) OrderDetail(title: taxTitleKey.tr, value: tax),
-      OrderDetail(title: "Delivery".tr, value: 0.0),
+      // 15/09 (point 5): Delivery pehle HAMESHA 0.0 hardcode tha. Ab
+      // server CheckOut preview se aaya shipping/delivery charge dikhta
+      // hai (serverShipping — applyServerTotals set karta hai).
+      OrderDetail(title: "Delivery".tr, value: ship),
     ];
-    // FINAL payable = bag + tax − coupon discount (discount backend ne
-    // CheckOut preview se confirm kiya hota hai — 10/09 user design).
-    m.totalAmount = _bagTotalFinal + (tax ?? 0) - (_couponDiscount ?? 0);
+    // FINAL payable = bag + tax + delivery − coupon discount (discount/
+    // delivery dono backend ke CheckOut preview se confirm hote hai).
+    m.totalAmount =
+        _bagTotalFinal + (tax ?? 0) + ship - (_couponDiscount ?? 0);
     if (m.totalAmount! < 0) m.totalAmount = 0;
     update();
   }
 
-  /// Server (CheckOut preview) se tax nikaal kar cart/payment me dikhao.
+  /// Server (CheckOut preview) se tax (+ 15/09 se SHIPPING bhi — point 5)
+  /// nikaal kar cart/payment me dikhao.
   /// CheckoutController ka preview bhi isi ko apply karta hai
   /// (applyServerTotals), taaki payment page par bhi row aa jaye.
-  void applyServerTotals(double serverTotal, double? explicitTax) {
+  void applyServerTotals(double serverTotal, double? explicitTax,
+      [double? explicitShipping]) {
     if (cartModelList == null) return;
-    // Tax: (1) explicit field, warna (2) total-bag ka fark (>0 tabhi),
-    // warna (3) pehle se known tax (coupon-negative totals me bhi kaam aaye).
+    // Shipping: explicit field aaye to authoritative save; warna purana
+    // rakho (preview is baar shipping key de hi nahi saka ho — stale 0 par
+    // girne se totals galt dikhne lagenge).
+    final newShip =
+        (explicitShipping != null && explicitShipping >= 0.0)
+            ? explicitShipping
+            : null;
+    final sameShip =
+        newShip == null || ((serverShipping ?? 0) - newShip).abs() < 0.001;
+    final ship = newShip ?? (serverShipping ?? 0);
+    // Tax: (1) explicit field, warna (2) total-bag-SHIPPING ka fark (>0
+    // tabhi — shipping ko fark se ALAG rakho warna delivery charge TAX ban
+    // jata tha), warna (3) pehle se known tax.
     double? t;
     if (explicitTax != null && explicitTax > 0) {
       t = explicitTax;
-    } else if (serverTotal > _bagTotalFinal) {
-      t = serverTotal - _bagTotalFinal;
+    } else if (serverTotal > _bagTotalFinal + ship) {
+      t = serverTotal - _bagTotalFinal - ship;
     }
     t ??= serverTax ?? _clientTax;
 
@@ -752,17 +781,20 @@ class CartController extends GetxController {
         (storage.read('coupon_code')?.toString() ?? '').trim().isNotEmpty;
     double? disc;
     if (t != null && hasCoupon) {
-      final expected = _bagTotalFinal + t;
+      // expected ab SHIPPING-aware hai (point 5) — warna delivery charge
+      // ko bhi coupon discount samajh liya jata.
+      final expected = _bagTotalFinal + t + ship;
       final d = expected - serverTotal;
       if (d > 0.005) disc = d;
     }
-    if (t == null && disc == null) return;
+    if (t == null && disc == null && newShip == null) return;
     // Same values par rebuild skip (loop na bane).
     final sameTax =
         t == null || (serverTax != null && (t - serverTax!).abs() < 0.001);
     final sameDisc =
         ((_couponDiscount ?? 0) - (disc ?? 0)).abs() < 0.001;
-    if (sameTax && sameDisc) return;
+    if (sameTax && sameDisc && sameShip) return;
+    if (newShip != null) serverShipping = newShip;
     if (t != null) {
       // Server ka value AUTHORITATIVE hai — client estimate confirm ho to
       // bhi server par switch (purana behavior barkarar).
@@ -811,12 +843,14 @@ class CartController extends GetxController {
     _taxFetching = true;
     try {
       // DEEP walker: response kisi bhi depth par ho (data/data/order/...),
-      // total aur tax DONO nikaal lo. tax keys: name me 'tax' ho (tax,
-      // Tax, tax_total, Tax_Total, tax_amount ...) par tax_id NAHI.
-      // total keys: total/Total/grand_total/payable/amount_payable — pehla
-      // (sabse upar wala) candidate valid. Depth 8, Map+List dono.
+      // total, tax AUR SHIPPING teeno nikaal lo (15/09 point 5 — delivery
+      // charge sirf isi response me aata hai; backend ShippingRule read
+      // endpoint deta hi nahi). tax keys: name me 'tax' ho par tax_id
+      // NAHI. shipping keys: shipping/delivery charge family par address/
+      // description/interval/status/date/method wali keys NAHI.
       double? deepTotal;
       double? deepTax;
+      double? deepShipping;
       bool taxKeyOk(String k) {
         final l = k.toLowerCase();
         return l.contains('tax') &&
@@ -835,9 +869,35 @@ class CartController extends GetxController {
             l == 'final_total';
       }
 
+      bool shippingKeyOk(String k) {
+        final l = k.toLowerCase();
+        if (l.contains('address') ||
+            l.contains('description') ||
+            l.contains('interval') ||
+            l.contains('status') ||
+            l.contains('date') ||
+            l.contains('method') ||
+            l.contains('note') ||
+            l.contains('free')) {
+          return false;
+        }
+        return l == 'shipping' ||
+            l.contains('shipping_total') ||
+            l.contains('shipping_cost') ||
+            l.contains('shipping_amount') ||
+            l.contains('shipping_charge') ||
+            l.contains('shipping_fee') ||
+            l.contains('delivery_charge') ||
+            l.contains('delivery_cost') ||
+            l.contains('delivery_fee') ||
+            l.contains('delivery_amount');
+      }
+
       void walk(dynamic node, int depth) {
         if (depth > 8 || node == null) return;
-        if (deepTax != null && deepTotal != null) return;
+        if (deepTax != null && deepTotal != null && deepShipping != null) {
+          return;
+        }
         if (node is Map) {
           node.forEach((k, v) {
             final key = k.toString();
@@ -849,17 +909,30 @@ class CartController extends GetxController {
               final n = jsonToDouble(v);
               if (n != null && n > 0) deepTotal = n;
             }
+            if (deepShipping == null && shippingKeyOk(key)) {
+              final n = jsonToDouble(v);
+              // 0.0 bhi valid charge hai (free shipping) — >= 0 accept.
+              if (n != null && n >= 0) deepShipping = n;
+            }
           });
-          if (deepTax == null || deepTotal == null) {
+          if (deepTax == null || deepTotal == null || deepShipping == null) {
             for (final v in node.values) {
               if (v is Map || v is List) walk(v, depth + 1);
-              if (deepTax != null && deepTotal != null) return;
+              if (deepTax != null &&
+                  deepTotal != null &&
+                  deepShipping != null) {
+                return;
+              }
             }
           }
         } else if (node is List) {
           for (final v in node) {
             walk(v, depth + 1);
-            if (deepTax != null && deepTotal != null) return;
+            if (deepTax != null &&
+                deepTotal != null &&
+                deepShipping != null) {
+              return;
+            }
           }
         }
       }
@@ -887,22 +960,29 @@ class CartController extends GetxController {
         fromJson: (json) {
           deepTotal = null;
           deepTax = null;
+          deepShipping = null;
           walk(json, 0);
           final out = <String, double>{};
           if (deepTax != null && deepTax! > 0) out['tax'] = deepTax!;
           if (deepTotal != null && deepTotal! > 0) out['total'] = deepTotal!;
+          if (deepShipping != null && deepShipping! >= 0) {
+            out['shipping'] = deepShipping!;
+          }
           return out.isEmpty ? null : out;
         },
       );
       if (res.isSuccess && res.data != null) {
         final t = res.data!['tax'] ?? 0;
         final tot = res.data!['total'] ?? 0;
+        // 15/09 (point 5): shipping bhi walker se nikli ho to saath pass
+        // karo — Delivery row + tax-fallback dono isse sahi bante hai.
+        final sh = res.data!['shipping'];
         if (t > 0) {
           // explicit tax mil gaya — authoritative
-          applyServerTotals(tot, t);
+          applyServerTotals(tot, t, sh);
         } else if (tot > 0) {
-          // fallback: server total - bag total = server add-on (tax)
-          applyServerTotals(tot, null);
+          // fallback: server total - bag - shipping = server add-on (tax)
+          applyServerTotals(tot, null, sh);
         }
         // Preview me tax nahi (tot ≈ bag) to client-computed tax hi rahega.
       }

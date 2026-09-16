@@ -301,11 +301,42 @@ class CheckoutController extends GetxController {
           // Tax_Total, tax_amount...), tax_id NAHI. Pehle sirf 4-level
           // unwrap + 4 fixed keys the — shape tb preview se tax row
           // kabhi nahi banti thi.
+          // 15/09 (point 5): SHIPPING/DELIVERY charge bhi walk karo —
+          // backend ShippingRule ka read endpoint deta hi nahi (swagger
+          // verify), delivery charge SIRF isi preview response me aata
+          // hai. address/description/interval/status/method wali keys
+          // exclude (wo charge nahi hoti).
           double? deepTotal;
           double? deepTax;
+          double? deepShipping;
+          bool shippingKeyOk(String key) {
+            if (key.contains('address') ||
+                key.contains('description') ||
+                key.contains('interval') ||
+                key.contains('status') ||
+                key.contains('date') ||
+                key.contains('method') ||
+                key.contains('note') ||
+                key.contains('free')) {
+              return false;
+            }
+            return key == 'shipping' ||
+                key.contains('shipping_total') ||
+                key.contains('shipping_cost') ||
+                key.contains('shipping_amount') ||
+                key.contains('shipping_charge') ||
+                key.contains('shipping_fee') ||
+                key.contains('delivery_charge') ||
+                key.contains('delivery_cost') ||
+                key.contains('delivery_fee') ||
+                key.contains('delivery_amount');
+          }
+
           void walk(dynamic node, int depth) {
             if (depth > 8 || node == null) return;
-            if (deepTax != null && deepTotal != null) return;
+            if (deepTax != null && deepTotal != null && deepShipping != null) {
+              return;
+            }
             if (node is Map) {
               node.forEach((k, v) {
                 final key = k.toString().toLowerCase();
@@ -327,15 +358,27 @@ class CheckoutController extends GetxController {
                   final n = jsonToDouble(v);
                   if (n != null && n > 0) deepTotal = n;
                 }
+                if (deepShipping == null && shippingKeyOk(key)) {
+                  final n = jsonToDouble(v);
+                  if (n != null && n >= 0) deepShipping = n;
+                }
               });
               for (final v in node.values) {
                 if (v is Map || v is List) walk(v, depth + 1);
-                if (deepTax != null && deepTotal != null) return;
+                if (deepTax != null &&
+                    deepTotal != null &&
+                    deepShipping != null) {
+                  return;
+                }
               }
             } else if (node is List) {
               for (final v in node) {
                 walk(v, depth + 1);
-                if (deepTax != null && deepTotal != null) return;
+                if (deepTax != null &&
+                    deepTotal != null &&
+                    deepShipping != null) {
+                  return;
+                }
               }
             }
           }
@@ -344,6 +387,9 @@ class CheckoutController extends GetxController {
           final out = <String, double>{};
           if (deepTax != null && deepTax! > 0) out['tax'] = deepTax!;
           if (deepTotal != null && deepTotal! > 0) out['total'] = deepTotal!;
+          if (deepShipping != null && deepShipping! >= 0) {
+            out['shipping'] = deepShipping!;
+          }
           return out.isEmpty ? null : out;
         },
       );
@@ -357,8 +403,11 @@ class CheckoutController extends GetxController {
         try {
           final t = res.data!['tax'];
           final tot = res.data!['total'] ?? 0;
-          if ((t ?? 0) > 0 || tot > 0) {
-            _cartCtrl?.applyServerTotals(tot, (t ?? 0) > 0 ? t : null);
+          // 15/09 (point 5): shipping bhi cart model tak pahunchao —
+          // payment/cart dono ke "Delivery" row + total isi se bante hai.
+          final sh = res.data!['shipping'];
+          if ((t ?? 0) > 0 || tot > 0 || sh != null) {
+            _cartCtrl?.applyServerTotals(tot, (t ?? 0) > 0 ? t : null, sh);
           }
         } catch (_) {}
         update();
