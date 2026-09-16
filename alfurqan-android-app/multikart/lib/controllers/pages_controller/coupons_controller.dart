@@ -199,7 +199,13 @@ class CouponsController extends GetxController {
         _toast('couponNotStarted'.tr);
         return;
       }
-      final bag = double.tryParse(totalAmount) ?? 0;
+      // deep-review fix: server min_spend SUBTOTAL se toolta hai — Cart
+      // zinda ho to uska RAW bag lo (arguments me final payable aata tha,
+      // tax samet — borderline par galat gate). Payment se khule bina
+      // arguments wale case me bhi ab gate KAAM karta hai.
+      final bag = Get.isRegistered<CartController>()
+          ? Get.find<CartController>().bagSubtotalRaw
+          : (double.tryParse(totalAmount) ?? 0);
       if (c.minSpend != null && c.minSpend! > 0 && bag > 0) {
         if (bag + 0.001 < c.minSpend!) {
           _toast(

@@ -693,6 +693,13 @@ class CartController extends GetxController {
 
   double get serverShippingValue => serverShipping ?? 0;
 
+  /// Raw bag subtotal (sale prices ka sum — TAX/SHIPPING/DISCOUNT ke
+  /// BINA). Coupons page ka min-order gate isi se compare karta hai (deep
+  /// review 16/09): pehle coupons page ko FINAL payable milta tha
+  /// (tax samet) — server min_spend ko subtotal se toolta hai, isliye
+  /// borderline orders (98 vs min 100) me gate galat faisla karta tha.
+  double get bagSubtotalRaw => _bagTotalFinal;
+
   /// Effective tax jo UI me dikhega — server explicit pehle, warna client.
   double? get _effectiveTax {
     final s = serverTax;

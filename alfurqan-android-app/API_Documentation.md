@@ -1521,3 +1521,58 @@ tareeqa hai. Jab backend card/payment-gateway jodega tab app me wire karenge.
    dikhti hai (app band karke kholne par bhi).
 7. Order detail → Price Details: Tax+Discount+Subtotal+Delivery rows ka sum
    hamesha grand Total ke barabar dikhe.
+
+---
+
+## v1.6.30+59 (addendum) — 16/09/2026 DEEP self-review round ("check in deep, find bug, fix root cause, end-to-end test each thing")
+
+User ne ishi release ki deep end-to-end review maangi. Teen ASLI bugs nikle
+— teeno FIXED (is release se PEHLE wali zip v1670 MAT use karo; nayi v1671):
+
+### BUG-1 (CRITICAL): search normalization ki tashkeel range ASLI HAROOF
+kaat rahi thi — LIVE-data e2e test ne pakda
+Strip regex `[\u0640-\u0652...]` ko contiguous range likhi gayi thi —
+U+0641..U+064A (ف ق ك ل م ن ه و ى ي) ASLI letters usme aa jate the. Natija
+(live catalog par simulate karne par pakra gaya): server ki category
+"الحديث" normalize hokar "احدث" ban rahi thi (lam+ye kaat gaye), user ki
+FARSI query "الحدیث" -> "احديث" (Farsi ye baad me hi map hota, to wo बच
+jata) — DO taraf se ALAG-alag output => "الحدیث" FIR SE 0 results deta.
+FIX: tatweel (0640) ALAG + tashkeel block (064B-0652) ALAG.
+**End-to-end PROOF (live alfurqan.ae data par 14/14 PASS):** LIVE products
+id 490 (عون الباري) + id 483 (مجموعة رسائل حديثية) ke ACTUAL server fields
+par Dart jaisa EXACT matcher chalaya: user ki exact query "الحدیث"
+(FARSI U+06CC) ab dono books match karti hai (via short_description);
+"الحديث"/"حدیث"/"حديث"/"hadith"/"بخاري"/SKU sab PASS; junk query match
+NAHI karti (false-positive guard PASS); root-cause demo PASS (bina
+normalization ke FARSI query genuinely fail thi).
+
+### BUG-2: coupon ka min-spend gate FINAL PAYABLE se compare karta tha
+Coupons page ko arguments me cart ka FINAL payable (tax samet, ~105%)
+milta tha, jabki server min_spend SUBTOTAL se toolta hai — borderline
+order (subtotal 98, min 100) par app allow karti, server reject karta
+(confusing silent-fail). Payment se khulne par arguments HI nahi the
+(bag=0 => gate skip). FIX: CartController ka RAW bag getter
+(`bagSubtotalRaw`) — gate ab authoritative subtotal se, dono entry points
+(cart + payment) par kaam karta hai.
+
+### BUG-3 (pre-existing, isi round expose hua): Coupons page ka TEXT BOX
+bilkul dead tha
+Koi TextEditingController hi attached nahi tha; code likh kar Enter/DONE
+dabane par KUCH nahi hota tha ("apply kaam nahi kar raha" lagta). Ab box
+CouponsController.controller se juda + keyboard DONE = wahi REAL apply
+flow (terms gate + storage + turant refresh). Cart pages par (controller
+registered nahi) behavior pehle jaisa hi.
+
+- Audits ALL CLEAN (550 files deep 0; a2 lang 387×4 parity + .tr 348/0;
+  a5 fwd-ref 0; a3 5 pre-existing warns hi).
+- Nayi zip: alfurqan-book-shop-app-v1671.zip (v1670 se SIRF in 3 bug-fixes
+  ka farak hai; app version same 1.6.30+59, label v1.6.30 (59)).
+
+### Test notes (addendum)
+1. Search me "الحدیث" (Farsi keyboard) likho — ab hadees books aati hai;
+   category haroof kaate nahi jaate (teek "الحديث" ka saara spelling kaam
+   karta hai).
+2. Coupons page par code TYPE karke keyboard ka DONE/✓ dabao — wahi REAL
+   apply hota hai (box ab dead nahi).
+3. Minimum-order wala coupon usi hisaab se allow/reject hota hai jo
+   subtotal hai (tax jod kar nahi).

@@ -152,10 +152,16 @@ class SearchScreenController extends GetxController {
   String _normSearch(String? s) {
     var t = (s ?? '').toLowerCase();
     // harakat/tashkeel (064B-0652), dagger alef (0670), Quranic marks
-    // (06D6-06ED), tatweel (0640), zero-width/bidi marks hatao
+    // (06D6-06ED), tatweel (0640), zero-width/bidi marks hatao.
+    // !!! 16/09 deep-review BUG CATCH: range ko "[0640-0652]" EK saath NAHI
+    // likhna — U+0641..U+064A Asli HAROOF hai (ف ق ك ل م ن ه و ى ي) —
+    // contiguous range unhe bhi kaat deti thi (LIVE-data e2e test ne pakdi:
+    // category "الحديث" -> "احدث" ban rahi thi, user ki FARSI query
+    // "الحدیث" -> "احديث" — kabhi match nahi hoti). Isliye tatweel (0640)
+    // ALAG, tashkeel block (064B-0652) ALAG.
     t = t.replaceAll(
         RegExp(
-            '[\u0640-\u0652\u0670\u06D6-\u06ED\u200C\u200D\u200E\u200F\uFEFF]'),
+            '[\u0640\u064B-\u0652\u0670\u06D6-\u06ED\u200C\u200D\u200E\u200F\uFEFF]'),
         '');
     // keyboard roop -> ek canonical Arabi rup (dono sides same hote hai):
     // \u0623 \u0625 \u0622 \u0671 -> \u0627 (alef ke roop)

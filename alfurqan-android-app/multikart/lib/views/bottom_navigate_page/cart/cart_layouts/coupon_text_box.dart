@@ -10,6 +10,23 @@ class CouponTextBox extends StatelessWidget {
       return SizedBox(
         height: AppScreenUtil().screenHeight(40),
         child: TextFormField(
+          // 16/09 deep-review catch (points 1/4 round): COUPONS page par ye
+          // box bilkul DEAD tha — koi controller hi nahi, Enter dabane par
+          // KUCH nahi hota tha (user ko lagta "apply kaam nahi kar raha").
+          // Ab coupons page par CouponsController share karta hai:
+          // type karke keyboard DONE dabao -> wahi REAL apply flow (terms
+          // gate + storage + turant refresh). Cart pages par (jaha
+          // CouponsController hota hi nahi) behavior bilkul pehle jaisa.
+          controller: Get.isRegistered<CouponsController>()
+              ? Get.find<CouponsController>().controller
+              : null,
+          textInputAction: Get.isRegistered<CouponsController>()
+              ? TextInputAction.done
+              : null,
+          onSubmitted: Get.isRegistered<CouponsController>()
+              ? (txt) =>
+                  Get.find<CouponsController>().applyCode(txt.trim())
+              : null,
           decoration: InputDecoration(
             filled: true,
             hintText: CartFont().applyCoupons,
