@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart' show MultipartFile;
+
 import 'package:image_picker/image_picker.dart';
 import 'package:multikart/models/json_parse_utils.dart';
 import 'package:multikart/views/pages/currency.dart';
@@ -183,8 +185,97 @@ class ProfileController extends GetxController {
   /// Per-user storage key (doosre account login par purani photo nahi).
   String get _photoKey => 'profile_image_path_${storage.read('id') ?? 0}';
 
+  /// 16/09 SERVER-SYNC (user ne backend DTO me add karwaya — LIVE swagger
+  /// v2 verify): `POST api/Media/UploadMedia` (multipart, field 'files')
+  /// se mila media ID local me save hota hai, phir `PUT UpdateUserProfile`
+  /// par `profile_image_id` ke roop me bheja jata hai (UpdateProfileDto me
+  /// ab `profile_image_id` int32 nullable HAI — pehle nahi tha).
+  int uploadedMediaId = 0;
+
+  String get _photoIdKey => 'profile_image_id_${storage.read('id') ?? 0}';
+
+  void _loadUploadedId() {
+    uploadedMediaId =
+        int.tryParse('${storage.read(_photoIdKey) ?? 0}') ?? 0;
+  }
+
+  /// Upload response se media ID — shape jaanne ke bina lenient deep-walk:
+  /// pehle 'id'/'media_id' naam ki keys (kisi depth par), warna raw int /
+  /// numeric-string / single-element list. 'size' jaise doosre numbers ko
+  /// ID mat samjho (isliye plain int sirf LIST ke andar ya root par liya).
+  static int _mediaIdFrom(dynamic raw) {
+    int? found;
+    void walk(dynamic n, int depth) {
+      if (depth > 6 || n == null || found != null) return;
+      if (n is int && n > 0) {
+        found = n;
+        return;
+      }
+      if (n is String) {
+        final v = int.tryParse(n);
+        if (v != null && v > 0) found = v;
+        return;
+      }
+      if (n is Map) {
+        n.forEach((k, v) {
+          if (found != null) return;
+          final kk = k.toString().toLowerCase();
+          if (kk == 'id' || kk == 'media_id' || kk == 'mediaid') {
+            if (v is int && v > 0) {
+              found = v;
+            } else if (v is String) {
+              final pv = int.tryParse(v);
+              if (pv != null && pv > 0) found = pv;
+            }
+          }
+        });
+        if (found == null) {
+          for (final v in n.values) {
+            if (v is Map || v is List) walk(v, depth + 1);
+            if (found != null) return;
+          }
+        }
+      } else if (n is List) {
+        for (final v in n) {
+          walk(v, depth + 1);
+          if (found != null) return;
+        }
+      }
+    }
+
+    walk(raw, 0);
+    return found ?? 0;
+  }
+
+  /// Local picked photo server par upload karo, media ID save karo.
+  /// Best-effort: offline/permission fail par 0 (photo device me save hi
+  /// rehti hai; saveProfile phir se try karega).
+  Future<int> _uploadCurrentPhoto() async {
+    if (!isLoggedIn || profileImagePath.isEmpty) return 0;
+    try {
+      final f = File(profileImagePath);
+      if (!f.existsSync()) return 0;
+      final mf = await MultipartFile.fromFile(f.path,
+          filename: 'profile_${storage.read('id') ?? 0}.jpg');
+      final res = await ApiService().request<int>(
+        endpoint: ApiEndpoints.uploadMedia,
+        method: ApiMethod.post,
+        isFormData: true,
+        data: <String, dynamic>{'files': mf},
+        fromJson: (raw) => _mediaIdFrom(raw),
+      );
+      if (res.isSuccess && (res.data ?? 0) > 0) {
+        uploadedMediaId = res.data!;
+        await storage.write(_photoIdKey, uploadedMediaId);
+        return uploadedMediaId;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
   /// Saved photo ka path load karo (file delete ho chuki ho to reset).
   void loadProfileImage() {
+    _loadUploadedId();
     try {
       final p = storage.read(_photoKey)?.toString() ?? '';
       if (p.isNotEmpty && File(p).existsSync()) {
@@ -229,6 +320,11 @@ class ProfileController extends GetxController {
       await File(picked.path).copy(target.path);
       profileImagePath = target.path;
       await storage.write(_photoKey, profileImagePath);
+      update(); // photo turant dikhe — upload uske BAAD background-wait
+      // Server par bhi upload karo -> media ID save (saveProfile isi ko
+      // profile_image_id me bhejega). Fail ho to bhi local photo kaam
+      // karti hai, sync agle save par dobara try hoga.
+      await _uploadCurrentPhoto();
       _toast('profilePhotoUpdated'.tr);
     } catch (_) {
       _toast('photoPickFailed'.tr);
@@ -277,6 +373,13 @@ class ProfileController extends GetxController {
     isSavingProfile = true;
     update();
     try {
+      // Photo pick ke waqt upload na ho paya ho (offline tha) to ab karo
+      // — user ne bataya: upload api ka ID UpdateUserProfile ke naye
+      // field `profile_image_id` me jana hai (swagger verify int32 null).
+      var imgId = uploadedMediaId;
+      if (imgId <= 0 && profileImagePath.isNotEmpty) {
+        imgId = await _uploadCurrentPhoto();
+      }
       final res = await ApiService().request(
         endpoint: ApiEndpoints.updateUserProfile,
         method: ApiMethod.put,
@@ -286,6 +389,9 @@ class ProfileController extends GetxController {
           'phone': int.tryParse(phoneDigits) ?? 0,
           'country_code': 0,
           '_method': 'PUT',
+          // naya backend field — id ho tabhi bhejo (null na chipkaye,
+          // purani accounts/DTO builds safe rahenge).
+          if (imgId > 0) 'profile_image_id': imgId,
         },
         fromJson: (json) => json,
       );
@@ -299,6 +405,9 @@ class ProfileController extends GetxController {
         _toast(res.message.isNotEmpty
             ? res.message
             : 'Profile updated successfully');
+        // server se taze profile (profileImage URL samet) — dusre devices
+        // par bhi wahi photo dikhegi.
+        fetchServerProfile();
         Get.back();
       } else {
         _toast(res.message.isNotEmpty

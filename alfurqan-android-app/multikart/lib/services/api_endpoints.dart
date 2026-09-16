@@ -6,6 +6,9 @@ class ApiEndpoints {
   static const String register = 'Core/AddUser';
   // Profile update (PUT) — body: {name, email, phone, country_code, _method:"PUT"}
   static const String updateUserProfile = 'Core/UpdateUserProfile';
+  // MEDIA UPLOAD (16/09 — live swagger v2 VERIFY): multipart/form-data,
+  // form field EXACT 'files', response ResultResponse (media id andar).
+  static const String uploadMedia = 'Media/UploadMedia';
   static const String getUserDetail = 'Core/GetUserDetail';
   // Orders (login ke baad, token se)
   static const String getUserOrders = 'Orders/GetUserOrders';

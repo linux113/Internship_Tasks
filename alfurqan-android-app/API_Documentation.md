@@ -1576,3 +1576,47 @@ registered nahi) behavior pehle jaisa hi.
    apply hota hai (box ab dead nahi).
 3. Minimum-order wala coupon usi hisaab se allow/reject hota hai jo
    subtotal hai (tax jod kar nahi).
+
+---
+
+## v1.6.31+60 — 16/09/2026 (PROFILE PHOTO ab SERVER par bhi — user ne backend me support add karwaya)
+
+User ne `POST /api/Media/UploadMedia` diya aur backend `UpdateProfileDto` me
+naya field `profile_image_id` (int?) add karwaya. **Dono cheezein LIVE
+swagger v2 par verify ki (chunk 12 path + chunk 55 schema):**
+- Path: `POST /api/Media/UploadMedia` — `multipart/form-data`, form field
+  ka EXACT naam **`files`** (binary array), response `ResultResponse`.
+- Schema: `UpdateProfileDto` = {name, email, phone, country_code, _method,
+  **profile_image_id: int32 nullable**} ✓.
+
+### Flow (app me ab):
+1. Photo pick (gallery) → device-local copy (turant display + offline safe).
+2. Turant `UploadMedia` par multipart upload (ApiService ka pehle se maujood
+   `isFormData` — `FormData.fromMap({'files': MultipartFile})`) → response
+   se media ID lenient deep-walk se nikalte hai (pehli 'id'/'media_id' key
+   kisi bhi depth par; 'size' jaise number ID nahi bante) → per-user
+   storage me save (`profile_image_id_<uid>`).
+3. **Profile SAVE (submit)** par `PUT Core/UpdateUserProfile` ka body ab
+   `profile_image_id: <id>` bhi bhejta hai (id ho tabhi — purane accounts
+  /DTO builds ke saath fully backward compatible). Pick ke waqt upload fail
+   ho gaya tha (offline) to SAVE par dobara try hota hai.
+4. Save ke baad `fetchServerProfile()` refresh — server ka `profileImage`
+   (MediaFiles.asset_url) bhi ab parse hota hai: **dusre device/new install
+   par bhi wahi photo Website jaisi dikhegi.** Display precedence unchanged:
+   local photo > server profileImage > neutral icon.
+
+- Local photo feature (v1.6.30) kharab nahi hua — server-sync uske UPAR
+  layer hai (offline par bhi photo dikhti hai).
+- dev_audit/ folder ab repo me (4 audits + negative test) — sandbox wipe
+  par bhi verification scripts barkarar.
+- Version 1.6.31+60, label "v1.6.31 (60)".
+
+### Test notes (v1.6.31)
+1. Profile setting → pencil icon → gallery se photo chuno → photo turant
+   dikhe + background me server par UPLOAD bhi (internet on rakho).
+2. Name/phone badal kar SAVE dabao — submit ke saath photo ka
+   profile_image_id bhi server ko gaya. Ab alfurqan.ae WEBSITE ke account
+   par bhi wahi photo aani chahiye (backend ne field save kiya to).
+3. Agar photo Website/app ke dusre device par nahi dikhti to batao —
+   server ka GetUserDetail `profileImage.asset_url` de raha hai ya nahi,
+   main uska live trace nikalunga.
