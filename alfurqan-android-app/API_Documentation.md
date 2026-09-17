@@ -1620,3 +1620,57 @@ swagger v2 par verify ki (chunk 12 path + chunk 55 schema):**
 3. Agar photo Website/app ke dusre device par nahi dikhti to batao —
    server ka GetUserDetail `profileImage.asset_url` de raha hai ya nahi,
    main uska live trace nikalunga.
+
+---
+
+## v1.6.32+61 (17/09/2025) — BUILD-BREAK FIXES (Lalit ke PC ke 2 compile errors)
+
+Lalit ne v1672 ka pehla build chalaya to 2 compile errors aaye. Dono MERE
+code ke slip the (sandbox me Flutter SDK nahi hota, isliye verify sirf
+static audits par depends karta hai — ye dono pattern audits ka blind-spot
+the; ab dono ke liye naya audit likh diya). Root-cause fixes:
+
+1. **`coupon_text_box.dart` — `onSubmitted` → `onFieldSubmitted`.**
+   Flutter ke `TextFormField` me `onSubmitted` naam ka parameter hota hi
+   nahi (wo sirf `TextField` par hota hai, isliye payment page ka
+   `checkout_layout.dart` wala box pehle se sahi tha — wahan `TextField`
+   hai). `TextFormField` ka submit callback `onFieldSubmitted` hai —
+   signature same (`ValueChanged<String>`), isliye behavior bilkul wahi:
+   coupons page par code type karke keyboard DONE dabao → REAL apply flow
+   (terms gate + storage + turant totals refresh).
+
+2. **`profile_controller.dart` — dio `MultipartFile` vs GetX
+   `MultipartFile` ambiguity.** `import 'package:dio/dio.dart' show
+   MultipartFile;` kaafi NAHI tha — `config.dart` barrel → `get.dart` →
+   `get_connect` ka apna `MultipartFile` bhi scope me rehta hai (`show`
+   sirf dio import ko filter karta hai, dusre import ko nahi hata sakta) →
+   compiler: "'MultipartFile' is imported from both dio and get_connect".
+   SOLID FIX: `import 'package:dio/dio.dart' as dio;` + har use par
+   `dio.MultipartFile.fromFile(...)`. Alias-qualified naam kabhi ambiguous
+   nahi hota. (`api_service.dart` ka bare `FormData` pehle se safe hai —
+   wo file get/config import karti hi nahi.)
+
+3. **Naya `dev_audit/audit6.py` (+ `_case/_buggy6.dart` negative test)**
+   taaki ye do compile-risk patterns aage kabhi ship na hon:
+   - RULE-A: har `TextFormField` block me bare `onSubmitted:` pakdo
+     (real app: 5 blocks scanned, 0 issues).
+   - RULE-B: jis file me `dio` + (`get`/`config.dart` barrel) DONO imports
+     hon, wahan `MultipartFile`/`FormData` sirf `dio.`-qualified ho
+     (real app: 0 issues; case file: exactly 3 planted bugs pakdi —
+     MultipartFile bare, FormData bare, onSubmitted).
+   - Side-find: `strip_dart` import-path strings bhi blank karta hai,
+     isliye import-detection RAW text par kiya (pehle silencent misfire).
+
+- Full audit suite CLEAN: deep 550 files 0 problems, a2 lang 387x4 +
+  .tr 348/0, a3 5 pre-existing warns (unchanged), a5 fwd-ref 0 (731
+  bodies), a6 compile-risk 0.
+- Version 1.6.32+61, label "Al Furqan Book Shop  v1.6.32 (61)".
+- **Koi feature change NAHI** — sirf build-fix + naya audit. v1672 ke saare
+  features (profile photo server-sync, search normalizer, coupon fixes,
+  delivery charge, orders tax) as-is hain.
+
+### Test notes (v1.6.32)
+1. `flutter clean` → `flutter pub get` → `flutter run --release` — build
+   ab CLEAN chalna chahiye (dono compile errors gaye).
+2. Build chalne par PROFILE PHOTO ka poora test (v1.6.31 notes wale 3
+   steps) + search test (`الحدیث` Farsi ye se bhi) karna hai.

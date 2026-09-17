@@ -23,7 +23,14 @@ class CouponTextBox extends StatelessWidget {
           textInputAction: Get.isRegistered<CouponsController>()
               ? TextInputAction.done
               : null,
-          onSubmitted: Get.isRegistered<CouponsController>()
+          // 17/09 BUILD-FIX (Lalit ke PC par compile error): Flutter ke
+          // TextFormField me `onSubmitted` naam ka param NAHI hota —
+          // TextFormField par sahi naam `onFieldSubmitted` hai (bare
+          // `onSubmitted` sirf TextField par hota hai, isliye payment
+          // page wala checkout_layout TextField pehle se hi sahi tha).
+          // Signature dono ka same (ValueChanged<String>), isliye
+          // behavior bilkul same: keyboard DONE -> REAL apply flow.
+          onFieldSubmitted: Get.isRegistered<CouponsController>()
               ? (txt) =>
                   Get.find<CouponsController>().applyCode(txt.trim())
               : null,

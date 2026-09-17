@@ -1,6 +1,13 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart' show MultipartFile;
+// 17/09 BUILD-FIX (Lalit ke PC par compile error): dio ka `MultipartFile`
+// aur GetX (config.dart barrel -> get.dart -> get_connect) ka
+// `MultipartFile` DONO same naam se scope me aa rahe the — `show
+// MultipartFile` sirf dio import ko filter karta hai, get ke export ko
+// nahi hata sakta => "imported from both" ambiguity. SOLID FIX: dio ko
+// `as dio` alias se import karo aur har jagah `dio.MultipartFile` likho —
+// alias-qualified naam kabhi ambiguous nahi hota.
+import 'package:dio/dio.dart' as dio;
 
 import 'package:image_picker/image_picker.dart';
 import 'package:multikart/models/json_parse_utils.dart';
@@ -255,7 +262,7 @@ class ProfileController extends GetxController {
     try {
       final f = File(profileImagePath);
       if (!f.existsSync()) return 0;
-      final mf = await MultipartFile.fromFile(f.path,
+      final mf = await dio.MultipartFile.fromFile(f.path,
           filename: 'profile_${storage.read('id') ?? 0}.jpg');
       final res = await ApiService().request<int>(
         endpoint: ApiEndpoints.uploadMedia,
