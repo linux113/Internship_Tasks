@@ -33,6 +33,13 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
+            // 17/09 R8-FIX: image_cropper 11.0.0 me consumer proguard rules
+            // MISSING hain (upstream ka known bug — unhone master par baad
+            // me fix kiya). Hamari keep-rules alag proguard-rules.pro file me hain;
+            // default base config ko IMPORTANT: chhedna nahi hai (optimize
+            // base add karne se doosre plugins ke naye R8 issues aa sakte
+            // the) — isliye sirf apna rules file APPEND karte hain.
+            proguardFiles 'proguard-rules.pro'
         }
     }
 }
@@ -55,4 +62,15 @@ configurations.all {
         force 'androidx.activity:activity:1.12.4'
         force 'androidx.activity:activity-ktx:1.12.4'
     }
+}
+
+dependencies {
+    // 17/09 R8-FIX (LIVE-verified): image_cropper 11.0.0 → uCrop 2.2.11
+    // (jitpack) apni BitmapLoadTask me okhttp3.* use karta hai par jitpack
+    // POM se okhttp APP ke classpath par NAHI utarta → release R8
+    // "Missing class okhttp3.*" fail. uCrop 2.2.11 khud okhttp 5.1.0 par
+    // compile/test hota hai (uske root build.gradle, tag 2.2.11 verified)
+    // — wahi EXACT version yahan pin kar rahe hain taaki classes waqai
+    // classpath par hon (sirf dontwarn chhupaane se zyada solid fix).
+    implementation 'com.squareup.okhttp3:okhttp:5.1.0'
 }

@@ -1918,3 +1918,57 @@ Version 1.6.37+66, label "v1.6.37 (66)", zip v1678.
 2. Profile photo CROP & CIRCLE — (v1.6.36 feature) crop screen aaye.
 3. PEHLI baar ADD TO BAG → cart blank nahi.
 4. GALAT coupon Apply par message aaye.
+
+---
+
+## v1.6.38+67 (17/09/2026) — BUILD-FIX 2: release R8 "Missing class okhttp3.*" (uCrop)
+
+Lalit ka report: v1678 RELEASE build fail —
+`ERROR: R8: Missing class okhttp3.OkHttpClient (referenced from:
+com.yalantis.ucrop.task.BitmapLoadTask...)` — 4 minute ki build ke
+aakhir me. (Dart debug compile pehle se hi CLEAN hai; ye sirf release
+minify stage ka issue tha.)
+
+### ROOT CAUSE (LIVE-verified, GitHub sources se)
+1. `image_cropper 11.0.0` (pub.dev) Android side `implementation
+   'com.github.Yalantis:ucrop:2.2.11'` jitpack se laati hai (repo
+   hnvn/flutter_image_cropper, android/build.gradle — commit 8e75dc17
+   "upgrade ucrop to 2.2.11", 17/09/2025).
+2. uCrop 2.2.11 apni `BitmapLoadTask.downloadFile` me `okhttp3.*` use
+   karta hai par usko `implementation` scope me declare karta hai (tag
+   2.2.11 ka ucrop/build.gradle verified) — jitpack ke published POM se
+   okhttp APP ke R8 classpath par NAHI utarta.
+3. **Maloom upstream bug**: hnvn/flutter_image_cropper ne 25/09/2025 ko
+   commit 058c878b me `consumer-proguard-rules.pro` add kiya jisme
+   okhttp3+ucrop keep/dontwarn hain — par ye fix v11.0.0 ke BAAD aaya,
+   isliye published 11.0.0 me ye rules NAHI hain.
+4. Net: release R8 ko okhttp3 classes "referenced but absent" mile →
+   hard error + missing_rules.txt ka ishara.
+
+### FIX (hamari app side — plugin republish kiye bina hi poori tarah solve)
+1. `android/app/build.gradle` me EXPLICIT pin:
+   `implementation 'com.squareup.okhttp3:okhttp:5.1.0'` — **5.1.0 uCrop
+   2.2.11 ka apna compile version hai** (uske root build.gradle ke ext
+   block se verified) — classes classpath par WAQAI maujood hoti hain
+   (sirf dontwarn se chhupane se zyada solid fix).
+2. NAYA `android/app/proguard-rules.pro`: upstream fix jaisi hi rules —
+   okhttp3, okio (okhttp ka companion), com.yalantis.ucrop keep/dontwarn.
+3. `release` buildType me `proguardFiles 'proguard-rules.pro'` — sirf
+   APPEND, default base config/optimize ko NAHI chheda (warna doosre
+   plugins ke naye R8 issues ka khatra tha).
+4. Naya `dev_audit/audit8.py`: image_cropper ho to okhttp3 impl +
+   proguard rules + reference — teeno zaroori; negative case 3 flags.
+
+Note: okhttp 5.1.0 pehli release build me ek chhota gradle download
+karega (~1MB) — normal.
+
+Audits: deep 551/0, a2 388x4+349/0, a3 5 pre-existing, a5/a6/a7/a8 = 0,
+negatives expected. Zip v1679 content asserts ALL PASS.
+
+Version 1.6.38+67, label "v1.6.38 (67)", zip v1679.
+
+### Test notes (v1.6.38)
+1. `flutter run --release` — build ab R8 stage tak jaake FAIL nahi hogi,
+   APK ban ke install hoga.
+2. Phir wahi 3 tests: profile photo CROP/CIRCLE, pehli ADD TO BAG cart,
+   GALAT coupon message.

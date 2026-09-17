@@ -1,0 +1,9 @@
+// NEGATIVE CASE (audit8): jaan-boojhkar GALAT — okhttp3 impl nahi,
+// proguard-rules refer nahi, rules file bhi nahi. Expect: 3 issues, exit 1.
+android {
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+}

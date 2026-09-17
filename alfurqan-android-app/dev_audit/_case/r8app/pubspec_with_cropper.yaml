@@ -1,0 +1,6 @@
+# negative-case pubspec (image_cropper present -> guard active hona chahiye)
+name: multikart
+dependencies:
+  flutter:
+    sdk: flutter
+  image_cropper: ^11.0.0
