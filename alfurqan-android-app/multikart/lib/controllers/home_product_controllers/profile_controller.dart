@@ -9,6 +9,7 @@ import 'dart:io';
 // alias-qualified naam kabhi ambiguous nahi hota.
 import 'package:dio/dio.dart' as dio;
 
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:multikart/models/json_parse_utils.dart';
 import 'package:multikart/views/pages/currency.dart';
@@ -310,8 +311,35 @@ class ProfileController extends GetxController {
     update();
     try {
       final picked = await ImagePicker().pickImage(
-          source: ImageSource.gallery, maxWidth: 512, imageQuality: 85);
+          source: ImageSource.gallery, imageQuality: 95);
       if (picked == null) {
+        isPickingImage = false;
+        update();
+        return;
+      }
+      // 17/09 user ask (CROP option): pick ke baad crop screen khulti hai
+      // — CIRCLE style mask + SQUARE ratio locked + title "Crop & Save",
+      // user zoom/drag karke save karta hai. Cancel kar de to kuch nahi
+      // hota (purani photo waise hi). Cropped SQUARE file hi aage copy/
+      // upload hoti hai — isliye avatar kabhi oval nahi dikh sakta.
+      // NOTE (API): image_cropper v7+ me cropStyle + aspectRatioPresets
+      // AndroidUiSettings ke ANDAR aate hai (top-level cropImage() params
+      // se hataye gaye — v8+ par top-level likhna compile-error hai).
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        maxWidth: 512,
+        maxHeight: 512,
+        compressQuality: 85,
+        uiSettings: [
+          AndroidUiSettings(
+              toolbarTitle: 'Crop & Save',
+              cropStyle: CropStyle.circle,
+              aspectRatioPresets: const [CropAspectRatioPreset.square],
+              lockAspectRatio: true,
+              hideBottomControls: false),
+        ],
+      );
+      if (cropped == null) {
         isPickingImage = false;
         update();
         return;
@@ -324,7 +352,7 @@ class ProfileController extends GetxController {
           await target.delete();
         } catch (_) {}
       }
-      await File(picked.path).copy(target.path);
+      await File(cropped.path).copy(target.path);
       profileImagePath = target.path;
       await storage.write(_photoKey, profileImagePath);
       update(); // photo turant dikhe — upload uske BAAD background-wait

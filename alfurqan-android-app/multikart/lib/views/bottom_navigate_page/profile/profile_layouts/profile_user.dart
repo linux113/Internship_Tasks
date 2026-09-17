@@ -13,10 +13,11 @@ class ProfileUser extends StatelessWidget {
           height: AppScreenUtil().screenHeight(110),
           width: MediaQuery.of(context).size.width,
           child: Row(children: [
-            Container(
-                height: AppScreenUtil().screenHeight(75),
-                decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: const UserIcon()),
+            // 17/09 (user: "photo circle me nahi"): ye wrapper sirf HEIGHT
+            // deta tha (75) — width child (55) se milti thi, matlab box
+            // 55x75 ka hota tha (ellipse!). UserIcon khud square+circular
+            // hai, bekaar wrapper hata diya — ab sach me CIRCLE dikhega.
+            const UserIcon(),
             const Space(20, 0),
             Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

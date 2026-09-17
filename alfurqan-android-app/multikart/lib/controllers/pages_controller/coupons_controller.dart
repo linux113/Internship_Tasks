@@ -231,13 +231,41 @@ class CouponsController extends GetxController {
       // point 1 (15/09): cart se aaya user — apply karte hi cart ka server
       // preview DOBARA (coupon ke SAATH) chalao taaki wapas jaate hi
       // refreshed totals/discount dikhe ("refresh karna padta tha" bug).
+      var applied = false;
+      var previewAnswered = false;
       if (Get.isRegistered<CartController>()) {
         try {
-          await Get.find<CartController>().fetchServerTax();
+          final cc = Get.find<CartController>();
+          previewAnswered = await cc.fetchServerTax();
+          applied = cc.couponDiscountValue > 0.004;
         } catch (_) {}
       }
-      _toast('couponApplied'.tr);
-      Get.back();
+      if (applied) {
+        _toast('couponApplied'.tr);
+        Get.back();
+      } else if (previewAnswered) {
+        // 17/09 user report ("galat coupon type karne par kuch nahi
+        // dikhta"): server ne jawab to diya par discount ZERO diya =>
+        // code invalid/expired/min-order fail. Purana flow phir bhi coupon
+        // SAVE karke 'applied' toast deta tha (jhooth). Ab coupon HATA kar
+        // saaf message do — user page par hi rahe, dobara try kar sake.
+        await storage.write('coupon_code', '');
+        controller.text = '';
+        update();
+        if (Get.isRegistered<CartController>()) {
+          try {
+            final cc = Get.find<CartController>();
+            await cc.clearCoupon(silent: true);
+            await cc.fetchServerTax();
+          } catch (_) {}
+        }
+        _toast('couponInvalid'.tr);
+      } else {
+        // preview hi fail (offline/flake) — pehle jaisa optimistic rakho,
+        // place-order par backend dobara validate karega.
+        _toast('couponApplied'.tr);
+        Get.back();
+      }
     }
   }
 

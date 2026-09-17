@@ -404,6 +404,14 @@ class CartController extends GetxController {
     isCartLoading = false;
 
     if (ok) {
+      _lastAddSuccess = DateTime.now();
+      // 17/09 (Lalit — "pehli baar add-to-cart ke baad View Detail blank"):
+      // add success ke TURANT baad server se FRESH cart lao — warna cart/
+      // step pages (aur Price Details sheet) server replication lag tak
+      // blank dikhti thi.
+      try {
+        await getCart(silent: true);
+      } catch (_) {}
       if (firstMsg.isNotEmpty) socialLoginToast(firstMsg);
       update();
       return true;
@@ -463,12 +471,42 @@ class CartController extends GetxController {
 
     if (res.isSuccess && res.data != null) {
       cartApiModel = res.data;
-      cartModelList = _mapApiCartToViewModel(res.data!);
+      var mapped = _mapApiCartToViewModel(res.data!);
+      // 17/09 (Lalit — first-add blank har step): server replication lag se
+      // AddToCart ke TURANT baad GetCart kabhi-kabhi EMPTY jawab deta hai.
+      // Ek empty-read par visible cart KHAMOSHI se blank ho jata tha. Ab:
+      // non-empty expect ho (abhi add kiya ho <25s, ya screen par visible
+      // non-empty cart ho) to badhte gaps (0.5/1/1.5s) me dobara confirm
+      // karo; tab bhi empty aaye tabhi accept karo.
+      if (mapped == null) {
+        final expectNonEmpty =
+            (cartModelList?.cartList.isNotEmpty ?? false) ||
+                (_lastAddSuccess != null &&
+                    DateTime.now().difference(_lastAddSuccess!).inSeconds <
+                        25);
+        if (expectNonEmpty) {
+          for (var attempt = 1;
+              attempt <= 3 && mapped == null;
+              attempt++) {
+            await Future.delayed(Duration(milliseconds: 500 * attempt));
+            final retry = await ApiService().request<CartApiModel>(
+              endpoint: ApiEndpoints.getCart,
+              method: ApiMethod.get,
+              fromJson: (json) => CartApiModel.fromJson(json),
+            );
+            if (retry.isSuccess && retry.data != null) {
+              cartApiModel = retry.data;
+              mapped = _mapApiCartToViewModel(retry.data!);
+            }
+          }
+        }
+      }
+      cartModelList = mapped;
       // SNAPSHOT: verified non-empty cart persist karo (empty par chhoo
       // mat — wo FLAKY ho sakta hai; placeOrder isi snapshot se bachta
-      // hai). 
+      // hai). Latest response se (retry ho to wahi).
       try {
-        await _persistIfNonEmpty(res.data!);
+        await _persistIfNonEmpty(cartApiModel!);
       } catch (_) {}
       // Issue #4: cart/payment me TAX row — (a) tax RATES lao (Taxes/
       // GetAllTaxes, login ke saath) taaki deterministic client tax bane,
@@ -667,6 +705,8 @@ class CartController extends GetxController {
   double? serverTax;
   double _bagTotalMrp = 0;
   double _bagTotalFinal = 0;
+  DateTime? _lastAddSuccess;
+
   bool _taxFetching = false;
   // Product tax-rate se computed tax (server preview ke BINA bhi row).
   // serverTax (server explicit) isko OVERRIDE karta hai — dono ka source
@@ -813,15 +853,15 @@ class CartController extends GetxController {
 
   /// Cart page khulte hi (logged-in + saved address ho to) ek silent
   /// preview call se tax fetch — payment page se PEHLE hi row dikh jaye.
-  Future<void> fetchServerTax() async {
-    if (_taxFetching) return;
-    if (cartModelList == null) return;
-    if ((storage.read(Session.isLogin) ?? false) != true) return;
+  Future<bool> fetchServerTax() async {
+    if (_taxFetching) return false;
+    if (cartModelList == null) return false;
+    if ((storage.read(Session.isLogin) ?? false) != true) return false;
     final rawUid = storage.read('id');
     final uid = rawUid is num
         ? rawUid.toInt()
         : (int.tryParse(rawUid?.toString() ?? '') ?? 0);
-    if (uid <= 0) return;
+    if (uid <= 0) return false;
     final lines = (cartApiModel?.items ?? const <CartItemModel>[])
         .where((l) => (l.quantity ?? 0) > 0 && (l.productId ?? 0) > 0)
         .map((l) => <String, dynamic>{
@@ -835,9 +875,9 @@ class CartController extends GetxController {
               'quantity': l.quantity ?? 1,
             })
         .toList();
-    if (lines.isEmpty) return;
+    if (lines.isEmpty) return false;
     final addrs = AddressStore.load();
-    if (addrs.isEmpty) return;
+    if (addrs.isEmpty) return false;
     int addressId = 0;
     final sel = int.tryParse('${storage.read('selected_address_id') ?? ''}') ?? -1;
     for (final a in addrs) {
@@ -846,7 +886,8 @@ class CartController extends GetxController {
         if (a.id == sel) break;
       }
     }
-    if (addressId <= 0) return;
+    if (addressId <= 0) return false;
+    var previewOk = false;
     _taxFetching = true;
     try {
       // DEEP walker: response kisi bhi depth par ho (data/data/order/...),
@@ -979,6 +1020,7 @@ class CartController extends GetxController {
         },
       );
       if (res.isSuccess && res.data != null) {
+        previewOk = true;
         final t = res.data!['tax'] ?? 0;
         final tot = res.data!['total'] ?? 0;
         // 15/09 (point 5): shipping bhi walker se nikli ho to saath pass
@@ -996,6 +1038,9 @@ class CartController extends GetxController {
     } catch (_) {} finally {
       _taxFetching = false;
     }
+    // true = server preview ANSWER diya (coupon validate karne wale flows
+    // ko pata chale "invalid" hai ya sirf "offline").
+    return previewOk;
   }
 
   /// Cart item tap ke liye real product (detail page kholne ke liye).

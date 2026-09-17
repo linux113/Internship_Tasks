@@ -1827,3 +1827,55 @@ Version 1.6.35+64, label "v1.6.35 (64)", zip v1676.
    ho jayega (payment page wali value hi ab PEHLE se dikhegi).
 3. Unchanged: #1098 order Price Details −6.00/45.50 + hadith category test
    (v1675 wala) bhi saath verify kar lena.
+
+---
+
+## v1.6.36+65 (17/09/2025) — Lalit ke 3 naye reports (photo crop/circle, first-add blank, galat coupon silent)
+
+### 1. Profile photo — CROP option + sach me CIRCLE
+- User ask: "photo circle me nahi, crop+save ka option nahi". Pehle pick
+  karte hi photo seedha save ho jati thi (koi crop nahi) aur profile page
+  ke header me ek bekaar non-square wrapper (55x75) tha.
+- Ab: pick ke baad **crop screen** khulti hai — CIRCLE mask + SQUARE ratio
+  LOCKED + "Crop & Save" (image_cropper ^11.0.0 — latest; UCropActivity
+  manifest me add kiya — bina iske crop UI crash karti). Cropped SQUARE
+  file hi copy/upload hoti hai. Web-verify: v7+ me cropStyle/
+  aspectRatioPresets AndroidUiSettings ke andar aate hai — API sahi likhi.
+  Profile header ka oval wrapper bhi hata diya (UserIcon khud square+circle).
+
+### 2. FIRST add-to-cart ke baad "View Detail" blank (har step)
+- ROOT CAUSE: AddToCart success ke TURANT baad server replication lag se
+  GetCart kabhi-kabhi EMPTY jawab deta tha — ek empty-read par cart silent
+  blank; home→back par sahi (Lalit report se exact match).
+- Fixes: (a) add success ke baad turant `getCart(silent:true)`; (b) getCart
+  me EMPTY-read guard — recent-add (<25s) ya visible non-empty cart ho to
+  0.5/1/1.5s gaps me 3× confirm, tabhi empty accept; snapshot latest
+  response se persist.
+
+### 3. Galat coupon type karne par kuch nahi dikhta
+- ROOT CAUSE: coupons page (cart se khuli) applyCode cart-path par preview
+  ka result dekhe BINA hi coupon SAVE karke 'applied' toast deta tha —
+  galat code par server discount 0 deta hai par app jhooth bolti thi.
+- FIX: fetchServerTax ab Future<bool> (preview answered?). applied hone par
+  hi 'applied' + back; server ne answer diya par discount 0 => coupon HATA
+  kar **'couponInvalid'** toast (user page par hi rahe, dobara try kare);
+  offline/flake par pehle jaisa optimistic (place-order par backend validate).
+- Payment box path pehle se couponInvalid dikhata tha — unchanged.
+
+### Build-safety (naya plugin!)
+- image_cropper ^11.0.0 (min Flutter 3.28 — hum 3.38.5 ✅), manifest me
+  UCropActivity (AppCompat theme UCrop ke saath bundled aati hai).
+- Sandbox me Flutter SDK nahi — audits: deep_check 551 files 0, a2 388x4 +
+  .tr 349/0, a3 5 pre-existing warns, a5 0 (732 bodies), a6 0, a7 0.
+- ⚠️ Lalit: pehli `flutter pub get` me image_cropper AUR build me UCrop
+  native download hoga — pehli build thodi der, normal hai.
+
+Version 1.6.36+65, label "v1.6.36 (65)", zip v1677.
+
+### Test notes (v1.6.36)
+1. Profile Setting → pencil → photo chuno → **CROP screen** aaye (drag/
+   zoom karo) → Save → CIRCLE photo har jagah (profile page bhi).
+2. PEHLI baar (cart khali ho to) product ADD TO BAG → cart kholo →
+   "View Details" — blank nahi, rows dikhen (har step par).
+3. Coupons page par GALAT code (jaise XYZ123) type karke Apply/done karo —
+   ab message aaye "Coupon didn't apply...". HPY20 waise hi chale.
