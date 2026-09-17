@@ -42,8 +42,14 @@ class _CartScreenState extends State<CartScreen> {
                             color: const Color(0xFF044015),
                             onRefresh: () async =>
                                 cartCtrl.getCart(silent: true),
+                            // 17/09: bottom bar (Price/PLACE ORDER) content ke
+                            // UPAR float karta hai — bina bottom padding ke
+                            // aakhri section (Coupons/View Coupons) uske
+                            // peeche CHHUP jata tha (Lalit ke screenshot me
+                            // "View Coupons" aadha kata dikh raha tha).
                             child: const SingleChildScrollView(
                                 physics: AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.only(bottom: 110),
                                 child: CartBody())),
                         if (cartCtrl.cartModelList != null)
                           CartBottomLayout(

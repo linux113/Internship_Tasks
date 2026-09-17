@@ -1793,3 +1793,37 @@ Version 1.6.34+63, label "v1.6.34 (63)", zip v1675.
 2. Orders → #1098 open karo — Price Details ab **Discount: AED−6.00 /
    Total: AED45.50** dikhana chahiye (payment page jaisa).
 3. Baaki regression: photo/coupon/delivery/search pehle jaisa hi.
+
+---
+
+## v1.6.35+64 (17/09/2025) — Screenshots se 3 UI/polish fixes (waiting-time proactive round)
+
+Lalit ke v1675 test ka wait karte hue screenshots dobara dekhe — 3 chhote
+(visible) issues mile, sab root-cause samajh ke fix:
+
+1. **"View Coupons" / aakhri section bottom bar ke peeche kat-ta tha**
+   (cart + delivery-detail): dono pages `Stack(bottomCenter)` + bottom bar
+   use karte hai aur scroll content ke neeche koi padding nahi thi — isliye
+   aakhri content bar ke peeche chhup jata tha. Dono SingleChildScrollView
+   ko `padding: bottom: 110` diya.
+2. **Delivery charge step-1/2 par AED0.00, payment par AED20.00 (confusing)**
+   — ROOT CAUSE samajhna: ye bug nahi, SERVER TRUTH thi — shipping address
+   ke hisaab se hota hai! Pehla saved address (Na, 7664) ka charge 0, dusra
+   (Algeria +213, 49494) ka 20. Problem ye thi ki step-2 par address SELECT
+   karne ke baad bhi preview PURANE address ka rehta tha (sirf ID save hota
+   tha, refresh nahi). Ab `selectAddress` ke turant baad
+   `CartController.fetchServerTax()` (CheckOut preview naye address se) —
+   Delivery/Tax/Total step-2 sheet par bhi turant sahi dikhega.
+3. Purane fixes sab regression-checked (audits CLEAN: deep 551/0, a2 388x4 +
+   .tr 349/0, a3 5 pre-existing warns, a5/a6/a7 0).
+
+Version 1.6.35+64, label "v1.6.35 (64)", zip v1676.
+
+### Test notes (v1.6.35)
+1. Cart page: neeche scroll karo — "View Coupons" ab POORA dikhega (bar ke
+   peeche nahi katega).
+2. Delivery step (step 2): dusra address SELECT karo — 1-2 second me neeche
+   sheet (View Details) ka Delivery charge naye address ke hisaab se update
+   ho jayega (payment page wali value hi ab PEHLE se dikhegi).
+3. Unchanged: #1098 order Price Details −6.00/45.50 + hadith category test
+   (v1675 wala) bhi saath verify kar lena.

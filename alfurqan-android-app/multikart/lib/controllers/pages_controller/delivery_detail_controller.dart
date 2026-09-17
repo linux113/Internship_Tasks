@@ -57,6 +57,19 @@ class DeliveryDetailController extends GetxController {
         storage.write('selected_address_id', list[index].id);
       }
     } catch (_) {}
+    // 17/09 DEEP FIX (Lalit ke screenshots): DELIVERY/SHIPPING charge
+    // ADDRESS ke hisaab se badalta hai — pehla address UAE-local AED0.00
+    // (Na, 7664), usne jo SELECT kiya (Algeria +213, 49494) uska AED20.00.
+    // Purana code sirf ID save karta tha — preview PURANE address ka rehta
+    // tha, isliye step-2/cart sheet par "Delivery AED0.00" aata tha jabki
+    // payment par AED20.00 dikhta tha (user ke liye confusing). Ab select
+    // karte hi CheckOut preview NAYE address se dobara aata hai —
+    // Delivery/Tax/Total turant sahi.
+    try {
+      if (Get.isRegistered<CartController>()) {
+        Get.find<CartController>().fetchServerTax();
+      }
+    } catch (_) {}
   }
 
   @override

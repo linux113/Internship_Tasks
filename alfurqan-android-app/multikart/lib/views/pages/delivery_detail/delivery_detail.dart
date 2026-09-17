@@ -29,6 +29,9 @@ class DeliveryDetail extends StatelessWidget {
                 color: const Color(0xFF044015),
                 onRefresh: () async => deliveryDetailCtrl.syncFromServer(),
                 child: SingleChildScrollView(
+                // 17/09: yaha bhi bottom bar content ke UPAR float karta
+                // hai — aakhri address card uske peeche na chhupe.
+                padding: const EdgeInsets.only(bottom: 110),
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
