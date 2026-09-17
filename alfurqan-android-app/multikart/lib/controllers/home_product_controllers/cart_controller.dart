@@ -465,7 +465,10 @@ class CartController extends GetxController {
       fromJson: (json) => CartApiModel.fromJson(json),
     );
 
-    isCartLoading = false;
+    // 17/09 (Lalit — pehli ADD blank): isCartLoading ko yahan OFF mat karo
+    // — neeche replication-lag RETRY (0.5/1/1.5s) abhi baaki ho sakta hai.
+    // Loading sirf sab kuch settle hone par (function ke aakhir me) off
+    // hoga, warna beech me EmptyCart (green button wala) flash hota tha.
     appCtrl.isShimmer = false;
     appCtrl.update();
 
@@ -520,6 +523,7 @@ class CartController extends GetxController {
       } catch (_) {}
     }
 
+    isCartLoading = false; // retry samet sab settle — ab hi loader band
     update();
   }
 

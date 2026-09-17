@@ -641,6 +641,8 @@ final dynamic ar = {
   "reviewSubmitted": "تم إرسال المراجعة! ستظهر بعد الموافقة.",
   "reviewFailed": "تعذر إرسال المراجعة. حاول مرة أخرى.",
   "loadingAddresses": "جاري تحميل عناوينك...",
+  "gender": "الجنس",
+  "deliveryChargeUpdated": "تم تحديث رسوم التوصيل لهذا العنوان",
   "shopLoadFailed": "تعذر تحميل المنتجات. يرجى التحقق من الإنترنت وإعادة المحاولة.",
   "applied": "تم التطبيق",
   "couponExpired": "انتهت صلاحية هذه القسيمة",

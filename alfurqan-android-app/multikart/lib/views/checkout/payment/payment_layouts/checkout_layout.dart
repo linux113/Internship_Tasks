@@ -20,6 +20,17 @@ class CheckoutCouponBox extends StatelessWidget {
               fontSize: FontSizes.f16,
               fontWeight: FontWeight.w700),
           const Space(0, 12),
+          // 17/09 (Lalit — "galat coupon par kuch nahi dikhta"): wrong-code
+          // ka message ab sirf 2.5s ka toast NAHI — box ke NEECHE red me
+          // tabela (persistent) rahega jab tak user nayi koshish na kare.
+          if (checkoutCtrl.couponMessage.isNotEmpty) ...[
+            LatoFontStyle(
+                text: checkoutCtrl.couponMessage,
+                fontSize: FontSizes.f12,
+                fontWeight: FontWeight.w600,
+                color: Colors.red),
+            const Space(0, 8),
+          ],
           Builder(builder: (_) {
             // 10/09 user design: coupon REAL apply (CheckOut api dobara,
             // amount backend) — applied state me chip + REMOVE; warna
@@ -76,6 +87,14 @@ class CheckoutCouponBox extends StatelessWidget {
                     controller: checkoutCtrl.txtCoupon,
                     textCapitalization: TextCapitalization.characters,
                     onSubmitted: (v) => checkoutCtrl.applyCoupon(v),
+                    // naya code type karte hi purana red message hata do —
+                    // warna user ko lagega wahi message atka hua hai.
+                    onChanged: (v) {
+                      if (checkoutCtrl.couponMessage.isNotEmpty) {
+                        checkoutCtrl.couponMessage = '';
+                        checkoutCtrl.update();
+                      }
+                    },
                     decoration: InputDecoration(
                       hintText: "couponHint".tr,
                       border: InputBorder.none,

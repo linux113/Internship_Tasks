@@ -77,7 +77,18 @@ class _CartScreenState extends State<CartScreen> {
                                         cartCtrl.cartModelList!.totalAmount);
                               })
                       ])
-                    : const EmptyCart()),
+                    // 17/09 (Lalit — pehli ADD ke baad "blank GREEN screen"):
+                    // pehli baar cart kholne par getCart (retry samet) chal
+                    // raha hota hai par cartModelList abhi NULL — tab ye
+                    // turant EmptyCart (bada GREEN "START SHOPPING" button
+                    // wala) dikha deta tha, user ko lagta cart hi gayab.
+                    // Ab loading ke dauraan proper LOADER dikhega; EmptyCart
+                    // sirf tab jab load poora + cart sach me khaali ho.
+                    : cartCtrl.isCartLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: Color(0xFF044015)))
+                        : const EmptyCart()),
       );
     });
   }

@@ -644,6 +644,8 @@ final dynamic hi = {
   "reviewSubmitted": "समीक्षा भेज दी गई! स्वीकृति के बाद दिखेगी।",
   "reviewFailed": "समीक्षा नहीं भेजी जा सकी। फिर प्रयास करें।",
   "loadingAddresses": "आपके पते लोड हो रहे हैं...",
+  "gender": "लिंग",
+  "deliveryChargeUpdated": "इस पते के लिए डिलीवरी शुल्क अपडेट हो गया",
   "shopLoadFailed": "प्रोडक्ट्स लोड नहीं हो सके। कृपया इंटरनेट जाँचें और फिर कोशिश करें।",
   "applied": "लागू",
   "couponExpired": "यह कूपन समाप्त हो गया है",

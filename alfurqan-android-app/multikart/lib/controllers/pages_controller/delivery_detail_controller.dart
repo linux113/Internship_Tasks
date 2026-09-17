@@ -67,7 +67,23 @@ class DeliveryDetailController extends GetxController {
     // Delivery/Tax/Total turant sahi.
     try {
       if (Get.isRegistered<CartController>()) {
-        Get.find<CartController>().fetchServerTax();
+        // 17/09 (Lalit — "har address par delivery same"): preview ka
+        // result USER KO DIKHNA chahiye — pehle silently refresh hota tha
+        // aur charge same nikla to koi feedback nahi. Ab charge BADLA to
+        // turant toast: server ne delivery charge update kar diya. (Dono
+        // addresses ka charge same ho to server ka jawab hi same hai —
+        // shipping charge server ke zones se aata hai, app invent nahi
+        // karti.)
+        final cc = Get.find<CartController>();
+        final before = cc.serverShippingValue;
+        cc.fetchServerTax().then((ok) {
+          try {
+            final after = cc.serverShippingValue;
+            if (ok && (after - before).abs() > 0.004) {
+              snackBar('deliveryChargeUpdated'.tr);
+            }
+          } catch (_) {}
+        });
       }
     } catch (_) {}
   }

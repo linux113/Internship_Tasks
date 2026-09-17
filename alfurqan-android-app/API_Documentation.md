@@ -1972,3 +1972,73 @@ Version 1.6.38+67, label "v1.6.38 (67)", zip v1679.
    APK ban ke install hoga.
 2. Phir wahi 3 tests: profile photo CROP/CIRCLE, pehli ADD TO BAG cart,
    GALAT coupon message.
+
+---
+
+## v1.6.39+68 (17/09/2026) — v1679 TEST-REPORT: 4 deep fixes (LIVE swagger verify)
+
+Lalit ka report (screenshots samet): build ab RELEASE me ban gayi ✓ (R8
+fix kaam kiya), photo circle+crop ✓, HPY20 −63 ✓, order #1099 sab sahi ✓.
+Par 4 issues:
+
+### 1. DOB save karke Edit kholne par NULL dikhta tha
+- **SERVER TRUTH (live swagger v2 chunk 55, 17/09/2026 verify):**
+  `UpdateProfileDto` me `date_of_birth`/`gender` fields **HOTE HI NAHI**,
+  aur `additionalProperties:false` hai — extra field bhejo to request
+  REJECT (400). Website bhi profile me DOB save/show nahi karti.
+- PURANA code DOB/gender kahin save hi nahi karta tha (na server, na
+  local) — Edit kholte hi field blank.
+- FIX: photo jaisi PER-USER LOCAL persistence — `dob_<uid>` /
+  `gender_<uid>` storage keys. saveProfile par persist + loadUserData
+  par prefill (Edit/app-restart dono par dikhega). Server ko kabhi ye
+  fields NAHI bhejte (backend reject karega).
+
+### 2. Gender dropdown ka label "Country/Region" likha aata tha (usme "Male")
+- Template bug: `gender_layout.dart` me `AddAddressFont().countryRegion`
+  label laga tha. FIX: naya lang key `"gender"` (×4) label.
+
+### 3. Pehli baar ADD TO BAG ke baad cart "blank GREEN screen"
+- ROOT: cart khulne par getCart chal raha hota hai par `cartModelList`
+  abhi NULL — page turant **EmptyCart** (bada GREEN "START SHOPPING"
+  button) dikha deta tha; server replication-lag retry ke dauraan bhi
+  (`isCartLoading` flag pehle se tha par UI use hi nahi karta tha +
+  flag zyada jaldi off ho jata tha).
+- FIX: (a) flag ab RETRY samet sab settle hone par off hota hai
+  (function end); (b) cart.dart loading ke dauraan proper loader
+  (green CircularProgressIndicator) — EmptyCart SIRF tab jab load poora
+  ho + cart sach me khaali ho.
+
+### 4. Payment box par GALAT coupon "kuch nahi" dikhata tha + sahi coupon ud jata tha
+- ROOT-A: sirf 2.5s ka toast aata tha (miss ho jata tha); screen par
+  kuch nahi rehta tha.
+- ROOT-B (bura): galat code par `removeCoupon` PURANA VALID coupon
+  (HPY20) bhi hata deta tha — user ka discount chhin jata tha.
+- FIX: (a) apply se pehle purana code yaad; galat nikle to **purana
+  coupon + uska discount WAPAS** (server preview dobara); (b) message
+  ab coupon box ke **neeche red me persistent** dikhta hai jab tak
+  user type kare/apply kare; (c) toast bhi bana rehta hai.
+
+### 5. Delivery "har address par same" — visible feedback
+- Preview ab bhi address-select par refresh hota hi hai (Code already);
+  ab charge **BADLA** to turant toast `deliveryChargeUpdated` (×4).
+  Same aaye to — server zones dono junk test-addresses ke liye same
+  charge bhejta hai (app charge invent nahi karti; CheckOut POST live
+  probe possible nahi — login wall + POST-only).
+
+Audits: deep 551/0, a2 390×4 + 349/0 .tr, a3 5 pre-existing, a5/a6/
+a7/a8 = 0, negatives expected-fail ✓. Zip v1680 asserts ALL PASS.
+
+Version 1.6.39+68, label "v1.6.39 (68)", zip v1680.
+
+### Test notes (v1.6.39)
+1. Profile Setting → DOB pick karo → SAVE → back → phir Edit kholne
+   par DOB dikhe; app band karke kholne par bhi dikhe. Gender label ab
+   "Gender" (Country/Region nahi).
+2. Cart KHAALI karke → product PEHLI baar Add → turant cart kholo →
+   green loader ghoomenga, phir items; EmptyCart+START SHOPPING flash
+   NAHI aayega.
+3. Payment page: HPY20 lagao → Remove → GALAT code APPLY → red message
+   box ke neeche dikhe ("Coupon didn't apply...") + toast; phir HPY20
+   wapas lagao — discount −63 wapas aaye.
+4. Step-2: doosra address select karo — charge BADLA to toast aaye
+   ("Delivery charge updated...").

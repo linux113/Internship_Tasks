@@ -382,6 +382,19 @@ class ProfileController extends GetxController {
         txtLastName.text = parts.sublist(1).join(' ');
       }
     }
+    // 17/09 (Lalit — "DOB save ki, edit par null dikhta hai"): backend ke
+    // UpdateProfileDto me date_of_birth/gender fields HOTE HI NAHI (live
+    // swagger v2 verify 17/09/2026 — additionalProperties:false, bhejoge
+    // to 400). Website bhi profile me DOB save/show nahi karti. Isliye
+    // photo ki tarah PER-USER LOCAL save (dob_<uid>/gender_<uid>) —
+    // Edit kholo to waapas prefill dikhega.
+    final uid = storage.read('id')?.toString() ?? '0';
+    if (txtDob.text.trim().isEmpty) {
+      final d = storage.read('dob_$uid')?.toString().trim() ?? '';
+      if (d.isNotEmpty) txtDob.text = d;
+    }
+    final g = storage.read('gender_$uid')?.toString().trim() ?? '';
+    if (g.isNotEmpty && gender.contains(g)) genderSelectedValue = g;
     update();
   }
 
@@ -436,6 +449,12 @@ class ProfileController extends GetxController {
         // naya naam har jagah (storage/profile page/drawer) update ho jaye
         await storage.write('name', fullName);
         userName = fullName;
+        // 17/09: DOB + gender LOCAL persist (backend DTO me fields nahi —
+        // additionalProperties:false). Edit kholne par loadUserData isi ko
+        // waapas prefill karega.
+        final uid = storage.read('id')?.toString() ?? '0';
+        await storage.write('dob_$uid', txtDob.text.trim());
+        await storage.write('gender_$uid', genderSelectedValue);
         update();
         _toast(res.message.isNotEmpty
             ? res.message

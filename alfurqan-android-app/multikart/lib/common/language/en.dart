@@ -641,6 +641,8 @@ final dynamic en = {
   "reviewSubmitted": "Review submitted! It will appear after approval.",
   "reviewFailed": "Review could not be sent. Please try again.",
   "loadingAddresses": "Loading your addresses...",
+  "gender": "Gender",
+  "deliveryChargeUpdated": "Delivery charge updated for this address",
   "shopLoadFailed": "Products could not be loaded. Please check your internet and retry.",
   "applied": "Applied",
   "couponExpired": "This coupon has expired",

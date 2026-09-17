@@ -11,7 +11,10 @@ class GenderLayout extends StatelessWidget {
         child: FormField<String>(builder: (FormFieldState<String> state) {
           return InputDecorator(
               decoration: InputDecoration(
-                  labelText: AddAddressFont().countryRegion,
+                  // 17/09 (Lalit screenshot): ye GENDER dropdown hai par
+                  // template bug se label "Country/Region" likha aata tha
+                  // (isliye usme "Male" dikhta tha — confusing).
+                  labelText: "gender".tr,
                   labelStyle: TextStyle(
                       color: profileCtrl.appCtrl.appTheme.contentColor,
                       fontSize: AppScreenUtil().fontSize(16),

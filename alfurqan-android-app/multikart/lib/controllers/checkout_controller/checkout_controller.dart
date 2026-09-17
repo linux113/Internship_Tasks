@@ -195,6 +195,15 @@ class CheckoutController extends GetxController {
     isApplyingCoupon = true;
     couponMessage = '';
     update();
+    // 17/09 (Lalit — galat code report): GALAT code daalne par pehle se
+    // laga SAHI coupon (jaise HPY20) bhi ud jata tha + toast 2.5s me
+    // gayab ho jata tha isliye "kuch nahi hua" lagta tha. Ab:
+    //  (a) purana code pehle yaad rakho — galat nikla to WAPAS laga do
+    //      (uska discount bhi server preview se phir se aayega);
+    //  (b) message box ke neeche RED me PERSISTENT likha rahe (screen par
+    //      dikhta rahega, sirf toast nahi).
+    final prevCode = (storage.read('coupon_code')?.toString() ?? '').trim();
+    final sameAsPrev = prevCode.isNotEmpty && prevCode.toUpperCase() == c.toUpperCase();
     txtCoupon.text = c; // CheckOut payload isi field se coupon uthata hai
     await storage.write('coupon_code', c);
     await loadCheckoutPreview(); // SAME api, ab coupon field ke saath
@@ -204,10 +213,17 @@ class CheckoutController extends GetxController {
     } catch (_) {}
     if (!applied && serverPreviewTotal != null) {
       // Preview aaya par total kam NAHI hua => backend ne coupon accept
-      // nahi kiya (invalid/expired/min-amount). coupon mat rakho — user ko
-      // saaf batao (pehle sirf "selected" ka fake toast aata tha).
+      // nahi kiya (invalid/expired/min-amount).
       couponMessage = 'couponInvalid'.tr;
-      await removeCoupon(silent: true, skipPreview: true);
+      if (prevCode.isNotEmpty && !sameAsPrev) {
+        // PURANA valid coupon wapas lao — galat try se user ka discount
+        // chhinna NAHI chahiye tha.
+        txtCoupon.text = prevCode;
+        await storage.write('coupon_code', prevCode);
+        await loadCheckoutPreview(); // purane code ka discount restore
+      } else {
+        await removeCoupon(silent: true, skipPreview: true);
+      }
       isApplyingCoupon = false;
       update();
       _toast(couponMessage);
