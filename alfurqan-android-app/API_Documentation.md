@@ -1721,3 +1721,75 @@ plugin 8.9.1 or higher. This build currently uses 8.7.3").
    hota hai) — ye normal hai, fail nahi.
 2. Build chale to baki tests wahi: profile photo (pick→SAVE→website),
    search `الحدیث`, coupon Applied/Remove, delivery charge.
+
+---
+
+## v1.6.34+63 (17/09/2025) — Lalit ke v1674 TEST-REPORT ke 2 deep fixes
+
+Lalit ne v1674 chalaya — BUILD OK 🎉 (photo, coupon, delivery, order,
+search sab test kiye). Screenshots se 2 naye bugs pakde, dono LIVE server
+probe + code analysis ke baad root-cause fix kiye:
+
+### FIX-A: "hadith Collection" category page = 0 Products (+ uske andar search bhi khaali)
+**Deep probe (live server):**
+- `?category=hadith` (SLUG) → products theek aate hai (id 490, 487...)
+- `?category=119` (ID) → total:0 (server slug hi chahta hai — slug sahi tha)
+- App ke EXACT params (paginate=500 + sab empty fields + category=hadith) →
+  server theek deta hai (18 chunks!). Matlab server sach me theek hai.
+**Root cause (app side):** Shop page EK hi request me paginate:500 maangta
+tha (~2-4MB ek response). Us device/network par ye bada response pura nahi
+aata (main Search page 50-item ×≤6 chhote chunks use karti hai — WAHAN
+sab chal raha tha — isi ne prove kiya issue payload nahi, SIZE/timeouts ka
+tha). Purana code bilkul SILENT tha — na error, na Retry, bas "0 Products".
+Sath me in-page search RAW lowercase contains() thi — main Search page ko
+v1.6.30 me normalizer mila tha, ye jagah reh gayi thi (الحدیث FARSI ye
+category page ke ANDAR bhi match nahi hoti thi).
+**Fixes:**
+1. Shop fetch ab **Search-wali PROVEN strategy**: 50/page sequential chunks
+   (≤10 pages) + pehli-page-fail par 1 auto-retry (700ms baad) + AADHE pages
+   aa jayein to jo aaya wo dikhaye.
+2. **loadFailed** state → ab fail par khamosh empty nahi: wifi-off icon +
+   naya key `shopLoadFailed` (×4) + **Retry button** (`retryLabel` reuse).
+3. Header count ab server ka REAL total (paginator meta `total`).
+4. In-page search ab **shared normalizer** (`utilities/search_normalizer.dart`)
+   — FARSI ye/ke, tashkeel strip (range-split wala historic bug note ke
+   saath), alef roop, Arabic digits — SearchController ab yahi delegate
+   karta hai (ek hi source of truth, teen jagah duplicate nahi).
+
+### FIX-B: Order #1098 Price Details → Discount −27.50 / Total 24.00 GALAT
+**Root cause (deep reverse-engineer + server semantics):** GetOrder ka
+`total` field **dono tarah ka hota hai** — website-orders par GRAND
+(subtotal+shipping+tax−discount = 75.60 jaise #1087), par APP se place kiye
+orders ke liye PARTIAL (sirf subtotal−coupon = 24.00; shipping 20 + tax 1.5
+ALAG rows me). Purana derive ek hi formula (grand) maanta tha → partial
+total par discount = 30+20+1.5−24 = **27.50** dikhaya (server ka asli
+discount field me 6 THA hi!). 
+**Naya reconciler (sum-consistency first):**
+- Pehle DETECT: grand-consistent (|S+Sh+T−D−total|≤0.5) ya partial-
+  consistent (|S−D−total|≤0.5) — jo match kare wahi.
+- Server-discount junk ho (#1087 ka 15.12 dono se mismatch) → grand-derive.
+- Discount missing ho → grand ya partial derive (shipping>0 + total<subtotal
+  → partial: S−total).
+- **FINAL RULE: display Total = subtotal+shipping+tax−discount HAMESHA**
+  (rows ka sum jo payment page ne bhi dikhaya tha — kabhi sum-mismatch nahi).
+- Hidden-tax orders (tax=0, VAT total me chhupa) ka purana behavior preserve
+  (pre-step: raw se implied tax).
+**E2E proof (Python mirror): 9/9 scenarios PASS** — #1098 → −6.00/45.50,
+#1087 → −18.90/75.60, web/API no-coupon, missing-discount, hidden-tax,
+free-delivery, grand-coupon, raw-missing — sab exact.
+
+### Verification this round
+- Audits: deep_check ne mera UI paren off-by-one PAKDA (fix ke baad 551
+  files 0 problems — sandbox me Flutter SDK nahi, audits hi safety-net).
+- a2: 388 keys ×4 (naya `shopLoadFailed`) + .tr 349/0. a3/a5/a6/a7 sab
+  CLEAN (negative tests expected counts: 1/3/2).
+- Live probes: category slug/id/500-params — 3x verify.
+
+Version 1.6.34+63, label "v1.6.34 (63)", zip v1675.
+
+### Test notes (v1.6.34)
+1. Category tile (hadith) kholo — products + REAl count aana chahiye;
+   andar ke search box me `الحدیث` bhi kaam karega.
+2. Orders → #1098 open karo — Price Details ab **Discount: AED−6.00 /
+   Total: AED45.50** dikhana chahiye (payment page jaisa).
+3. Baaki regression: photo/coupon/delivery/search pehle jaisa hi.

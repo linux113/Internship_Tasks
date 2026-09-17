@@ -38,7 +38,10 @@ class ShopPage extends StatelessWidget {
                 title: "${shopCtrl.displayName.isNotEmpty ? shopCtrl.displayName.tr : shopCtrl.name.tr} ${ShopFont().collection}",
                 // pehle "2050 products" hardcoded tha — ab loaded list ka
                 // REAL count dikhta hai (scroll par aur load hote hai)
-                desc: "${shopCtrl.productList.length} ${ShopFont().products}",
+                desc:
+                // 17/09: sirf loaded-slice count nahi, server ka REAL total
+                // (paginator meta) dikhao — "0 Products" confusion khatam.
+                "${shopCtrl.totalCount > 0 ? shopCtrl.totalCount : shopCtrl.productList.length} ${ShopFont().products}",
               ),
             ),
             body: RefreshIndicator(
@@ -86,20 +89,48 @@ class ShopPage extends StatelessWidget {
                           ? SizedBox(
                               height: AppScreenUtil().screenHeight(320),
                               child: Center(
-                                  child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                    Icon(Icons.inventory_2_outlined,
-                                        size: AppScreenUtil().size(40),
-                                        color: shopCtrl
-                                            .appCtrl.appTheme.contentColor),
-                                    const Space(0, 12),
-                                    LatoFontStyle(
-                                        text: 'noProductsFound'.tr,
-                                        fontSize: FontSizes.f14,
-                                        color: shopCtrl
-                                            .appCtrl.appTheme.contentColor),
-                                  ])))
+                                  child: shopCtrl.loadFailed
+                                      // 17/09: api/network fail par khamosh
+                                      // "0 Products" NAHI — sahi baat + Retry.
+                                      ? Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                              Icon(Icons.wifi_off_rounded,
+                                                  size: AppScreenUtil().size(40),
+                                                  color: shopCtrl.appCtrl
+                                                      .appTheme.contentColor),
+                                              const Space(0, 12),
+                                              LatoFontStyle(
+                                                  text: 'shopLoadFailed'.tr,
+                                                  fontSize: FontSizes.f14,
+                                                  color: shopCtrl.appCtrl
+                                                      .appTheme.contentColor),
+                                              const Space(0, 12),
+                                              ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                      backgroundColor:
+                                                          const Color(0xFF044015)),
+                                                  onPressed: () => shopCtrl
+                                                      .getProducts(reset: true),
+                                                  child: LatoFontStyle(
+                                                      text: 'retryLabel'.tr,
+                                                      fontSize: FontSizes.f14,
+                                                      color: Colors.white)),
+                                            ])
+                                      : Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.inventory_2_outlined,
+                                                size: AppScreenUtil().size(40),
+                                                color: shopCtrl
+                                                    .appCtrl.appTheme.contentColor),
+                                            const Space(0, 12),
+                                            LatoFontStyle(
+                                                text: 'noProductsFound'.tr,
+                                                fontSize: FontSizes.f14,
+                                                color: shopCtrl
+                                                    .appCtrl.appTheme.contentColor),
+                                          ])))
                           : const ShopListLayout()
             ]))),
             bottomNavigationBar: CommonBottomNavigation(

@@ -2,6 +2,7 @@ import 'package:multikart/models/product_api_model.dart';
 import 'package:multikart/services/api_endpoints.dart';
 import 'package:multikart/services/api_service.dart';
 import 'package:multikart/services/category_cache.dart';
+import 'package:multikart/utilities/search_normalizer.dart';
 
 import '../../config.dart';
 import '../../views/pages/filter/filter.dart';
@@ -126,6 +127,13 @@ class ShopController extends GetxController {
   /// Shop page ke search box ka LIVE text (Issue #10 — 10/09).
   String searchQuery = '';
 
+  /// 17/09: catalog load FAIL hua (network/api) — UI "No products" ki jagah
+  /// sahi error + Retry button dikhayega. Silent empty user ko dhokha tha.
+  bool loadFailed = false;
+
+  /// Server ka REAL total (paginator meta) — header count ke liye.
+  int totalCount = 0;
+
   /// Loaded catalog ki max price (filter slider ki range isi se banti hai —
   /// 08/09; min 100, 50 ke steps me rounded-up).
   double get catalogMaxPrice {
@@ -176,18 +184,21 @@ class ShopController extends GetxController {
     // match (English+Arabic dono). Client-side kyunki backend ke
     // field/sort/price params server-side IGNORE hote hai (live verify).
     if (searchQuery.isNotEmpty) {
-      final lower = searchQuery.toLowerCase();
+      // 17/09 DEEP FIX: pehle RAW lowercase contains() tha — FARSI keyboard
+      // ki ye (الحدیث U+06CC) category page ke ANDAR bhi match nahi hoti thi
+      // (main Search page to v1.6.30 me theek hua tha, ye jagah reh gayi
+      // thi — Lalit ke screenshots ne pakdi). Ab shared normSearchText
+      // DONO sides par (13 roop mappings, live-data verified).
+      final nq = normSearchText(searchQuery);
       list = list.where((p) {
-        if ((p.name ?? '').toLowerCase().contains(lower)) return true;
-        if ((p.shortDescription ?? '').toLowerCase().contains(lower)) {
-          return true;
-        }
-        if ((p.description ?? '').toLowerCase().contains(lower)) return true;
-        if ((p.sku ?? '').toLowerCase().contains(lower)) return true;
-        if ((p.slug ?? '').toLowerCase().contains(lower)) return true;
+        if (normSearchText(p.name).contains(nq)) return true;
+        if (normSearchText(p.shortDescription).contains(nq)) return true;
+        if (normSearchText(p.description).contains(nq)) return true;
+        if (normSearchText(p.sku).contains(nq)) return true;
+        if (normSearchText(p.slug).contains(nq)) return true;
         for (final c in p.categories) {
-          if ((c.name ?? '').toLowerCase().contains(lower)) return true;
-          if ((c.slug ?? '').toLowerCase().contains(lower)) return true;
+          if (normSearchText(c.name).contains(nq)) return true;
+          if (normSearchText(c.slug).contains(nq)) return true;
         }
         return false;
       }).toList();
@@ -235,6 +246,7 @@ class ShopController extends GetxController {
       _fullList = [];
       _filtered = [];
       isLoadingProducts = true;
+      loadFailed = false;
     } else {
       if (!hasMore || isLoadingMore) return;
       isLoadingMore = true;
@@ -253,43 +265,62 @@ class ShopController extends GetxController {
       if (match != null) categoryFilter = match.slug ?? categoryFilter;
     }
 
-    final res = await ApiService().request<ProductListResponseModel>(
-      endpoint: ApiEndpoints.productList,
-      method: ApiMethod.get,
-      queryParams: {
-        "page": 1,
-        // Ek hi baar me poora catalog — sort/price CLIENT-SIDE karne ke
-        // liye poori list chahiye (backend ke sort/price params kaam hi
-        // nahi karte — live verify).
-        "paginate": 500,
-        "status": 1,
-        "field": "",
-        "price": "",
-        "category": categoryFilter,
-        "tag": "",
-        "sort": "",
-        "sortBy": "",
-        "rating": "",
-        "attribute": "",
-      },
-      fromJson: (json) => ProductListResponseModel.fromJson(json),
-    );
+    // 17/09 DEEP FIX (Lalit ke device par category page "0 Products"):
+    // pehle EK hi request me paginate:500 maangta tha — server wo de deta
+    // hai (live verify chunk 18x) par ek BAHUT bada response (~2-4MB)
+    // device/network par kabhi-kabhi pura nahi aata, aur purana code
+    // SILENT khaali list dikhata tha (koi error/Retry nahi). Ab Search
+    // page wali PROVEN strategy (usi device par kaam kar chuki): 50-item
+    // ke chhote chunks sequential pages me + 1 auto-retry + fail hone par
+    // loadFailed=true taaki UI khamosh nahi, Retry button dikhaye.
+    final acc = <ProductApiModel>[];
+    final seenIds = <int>{};
+    var anySuccess = false;
+    for (var attempt = 0; attempt < 2 && acc.isEmpty && !anySuccess; attempt++) {
+      var page = 1;
+      while (page <= 10) {
+        final res = await ApiService().request<ProductListResponseModel>(
+          endpoint: ApiEndpoints.productList,
+          method: ApiMethod.get,
+          queryParams: {
+            "page": page,
+            "paginate": 50,
+            "status": 1,
+            "field": "",
+            "price": "",
+            "category": categoryFilter,
+            "tag": "",
+            "sort": "",
+            "sortBy": "",
+            "rating": "",
+            "attribute": "",
+          },
+          fromJson: (json) => ProductListResponseModel.fromJson(json),
+        );
+        if (!res.isSuccess || res.data == null) break;
+        anySuccess = true;
+        totalCount = res.data!.total;
+        for (final item in res.data!.data) {
+          if (item.id == null || seenIds.add(item.id!)) acc.add(item);
+        }
+        if (res.data!.data.length < 50) break; // aakhri page
+        page++;
+      }
+      if (acc.isEmpty && attempt == 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+    }
 
     isLoadingProducts = false;
     isLoadingMore = false;
 
-    if (res.isSuccess && res.data != null) {
-      // duplicate ids hata do (backend kabhi repeated rows bhej deta hai)
-      final seen = <int>{};
-      _fullList = [
-        for (final p in res.data!.data)
-          if (p.id == null || seen.add(p.id!)) p
-      ];
-      _applyFiltersAndSort();
-      hasMore = _filtered.length > _pageSize;
-      productList = _filtered.take(_pageSize).toList();
-    } else {
-      hasMore = false;
+    _fullList = acc;
+    _applyFiltersAndSort();
+    hasMore = _filtered.length > _pageSize;
+    productList = _filtered.take(_pageSize).toList();
+    if (acc.isEmpty && !anySuccess) {
+      // LOUD failure — silent "0 Products" dhokha tha; UI ab Retry dikhayega.
+      loadFailed = true;
     }
 
     update();

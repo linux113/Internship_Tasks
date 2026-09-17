@@ -5,6 +5,7 @@ import '../../models/product_api_model.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../../services/category_cache.dart';
+import '../../utilities/search_normalizer.dart';
 
 class SearchScreenController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -150,48 +151,11 @@ class SearchScreenController extends GetxController {
   /// NOTE: code points Python se VERIFY kiye hue hai — FARSI ye (U+06CC)
   /// -> Arabi ye (U+064A) waghera saare 13 roop mappings exact hai.
   String _normSearch(String? s) {
-    var t = (s ?? '').toLowerCase();
-    // harakat/tashkeel (064B-0652), dagger alef (0670), Quranic marks
-    // (06D6-06ED), tatweel (0640), zero-width/bidi marks hatao.
-    // !!! 16/09 deep-review BUG CATCH: range ko "[0640-0652]" EK saath NAHI
-    // likhna — U+0641..U+064A Asli HAROOF hai (ف ق ك ل م ن ه و ى ي) —
-    // contiguous range unhe bhi kaat deti thi (LIVE-data e2e test ne pakdi:
-    // category "الحديث" -> "احدث" ban rahi thi, user ki FARSI query
-    // "الحدیث" -> "احديث" — kabhi match nahi hoti). Isliye tatweel (0640)
-    // ALAG, tashkeel block (064B-0652) ALAG.
-    t = t.replaceAll(
-        RegExp(
-            '[\u0640\u064B-\u0652\u0670\u06D6-\u06ED\u200C\u200D\u200E\u200F\uFEFF]'),
-        '');
-    // keyboard roop -> ek canonical Arabi rup (dono sides same hote hai):
-    // \u0623 \u0625 \u0622 \u0671 -> \u0627 (alef ke roop)
-    // \u06CC FARSI ye / \u0649 / \u06D2 URDU bari ye / \u0626 -> \u064A
-    // \u06A9 FARSI ke -> \u0643 | \u0624 -> \u0648
-    // \u0629 taa-marbuta / \u06C1 / \u06BE -> \u0647
-    const roop = {
-      '\u0623': '\u0627',
-      '\u0625': '\u0627',
-      '\u0622': '\u0627',
-      '\u0671': '\u0627',
-      '\u06CC': '\u064A',
-      '\u0649': '\u064A',
-      '\u06D2': '\u064A',
-      '\u0626': '\u064A',
-      '\u06A9': '\u0643',
-      '\u0624': '\u0648',
-      '\u0629': '\u0647',
-      '\u06C1': '\u0647',
-      '\u06BE': '\u0647',
-    };
-    roop.forEach((from, to) {
-      t = t.replaceAll(from, to);
-    });
-    // Arabic-Indic + Extended digits -> latin (Arabic keyboard se SKU)
-    for (var i = 0; i < 10; i++) {
-      t = t.replaceAll(String.fromCharCode(0x0660 + i), '$i');
-      t = t.replaceAll(String.fromCharCode(0x06F0 + i), '$i');
-    }
-    return t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // 17/09: logic SHARED normalizer me move ho gaya (utilities/
+    // search_normalizer.dart) — Shop/category page ka in-page search bhi ab
+    // yahi use karta hai. Neeche sirf delegation hai (ek hi source of truth;
+    // 13 roop mappings + range-split wahan documented hai).
+    return normSearchText(s);
   }
 
   /// Textfield me type karte hi call hota hai — name/description me filter.

@@ -625,6 +625,7 @@ final dynamic kr = {
   "reviewSubmitted": "리뷰가 제출되었습니다! 승인 후 표시됩니다.",
   "reviewFailed": "리뷰를 볼 수 없습니다. 다시 시도해 주세요.",
   "loadingAddresses": "주소를 불러오는 중...",
+  "shopLoadFailed": "상품을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.",
   "applied": "적용됨",
   "couponExpired": "이 쿠폰은 만료되었습니다",
   "couponNotStarted": "이 쿠폰은 아직 활성화되지 않았습니다",

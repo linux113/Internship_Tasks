@@ -398,33 +398,76 @@ class OrderDetailController extends GetxController {
     tax = jsonToDouble(
             j['tax_total'] ?? j['taxTotal'] ?? j['Tax_Total'] ?? j['tax'] ?? j['Tax']) ??
         0;
-    total = jsonToDouble(j['total'] ??
+    // 17/09 DEEP FIX (Lalit ka order #1098: Discount -27.50 / Total 24.00
+    // dikh raha tha, jabki sahi -6.00 / 45.50 tha): GetOrder ka `total`
+    // field website-orders par GRAND (subtotal+shipping+tax-discount) hota
+    // hai, PAR app se place kiye orders par PARTIAL (sirf subtotal-coupon;
+    // shipping+tax ALAG fields me rehte hain). Ek formula dono par nahi
+    // chal sakta — isliye pehle DETECT karte hai kaun-sa interpretation
+    // rows ke saath CONSISTENT hai (±0.5), phir display Total HAMESHA
+    // payable rakhte hai (= rows ka sum) — yehi payment page ne bhi
+    // dikhaya tha aur yehi customer sach me dega. Naya number invent nahi
+    // hota — subtotal/shipping/tax sab server ke hi hai.
+    final rawTotal = jsonToDouble(j['total'] ??
             j['Total'] ??
             j['grand_total'] ??
             j['Grand_Total']) ??
-        (subtotal + shipping + tax - discount);
-    // 15/09 user round (order #1085): payment par coupon -18.90 laga aur
-    // server ka grand TOTAL bhi 75.60 = 90+4.50-18.90 hai, par GetOrder ka
-    // 'discount' field 15.12 bhejta hai — Price Details ki rows ka sum
-    // Total se MILNA chahiye warna user ko galat lagta hai. Clear mismatch
-    // ho to display-discount ko server ke HI totals (subtotal+shipping+tax
-    // - total) se derive karo. Naya number invent nahi — sab server data.
-    if (total > 0 && discount > 0) {
-      final expected = subtotal + shipping + tax - discount;
-      if ((expected - total).abs() > 0.5) {
-        final derived = subtotal + shipping + tax - total;
-        if (derived > 0) {
-          discount = double.parse(derived.toStringAsFixed(2));
-        }
+        0;
+    // Hidden-tax guard (15/09 point 3 preserve): kabhi-kabhi total me VAT
+    // CHHUPA hota hai jabki tax row 0 aati hai — pehle wahi implied tax
+    // nikalo (raw se), phir reconciliation grand track pe chal payega.
+    if (tax <= 0 && rawTotal > 0) {
+      final impliedHidden = rawTotal - subtotal - shipping + discount;
+      if (impliedHidden > 0.5) {
+        tax = double.parse(impliedHidden.toStringAsFixed(2));
       }
     }
-    // 15/09 (point 3 — tax row): kuch orders me server tax_total 0/khaali
-    // bhejta hai jabki grand total me VAT INCLUDED hota hai — tab Price
-    // Details ke rows ka sum Total se match hi nahi hota (tax "galat"
-    // lagta hai). Rows hamesha server ke HI numbers se sum-consistent
-    // rakhne ke liye: tax 0 ho AUR (total - subtotal - shipping +
-    // discount) bacha positive ho to wahi server-implied tax hai —
-    // app khud koi VAT rate invent NAHI karti.
+    if (rawTotal > 0) {
+      final grandConsistent =
+          (subtotal + shipping + tax - discount - rawTotal).abs() <= 0.5;
+      final partialConsistent =
+          discount > 0 && (subtotal - discount - rawTotal).abs() <= 0.5;
+      if (partialConsistent && !grandConsistent) {
+        // API-style PARTIAL total (#1098): server ka discount SAHI tha,
+        // sirf total adhura hai — display total neeche payable banega.
+      } else if (grandConsistent) {
+        // Website-style GRAND total — parsed discount raw se mil raha hai.
+      } else if (discount > 0) {
+        // Server ka discount field JUNK nikla (jaise #1087 ka 15.12) —
+        // dono interpretation se match nahi. Grand-derive use karo agar sane.
+        final dGrand = subtotal + shipping + tax - rawTotal;
+        if (dGrand >= 0 && dGrand <= subtotal + shipping + tax) {
+          discount = double.parse(dGrand.toStringAsFixed(2));
+        }
+      } else {
+        // Server ne discount bheja hi nahi (0/negative).
+        final dPartial = subtotal - rawTotal;
+        if (rawTotal > subtotal + 0.01 || shipping <= 0.01) {
+          // GRAND interpretation (raw me shipping/tax pehle se shamil).
+          final dGrand = subtotal + shipping + tax - rawTotal;
+          discount =
+              dGrand > 0 ? double.parse(dGrand.toStringAsFixed(2)) : 0;
+        } else if (dPartial > 0.5) {
+          // API-style PARTIAL + shipping alag → coupon partial-derive
+          // (#1098 ke numbers par: 30 - 24 = 6.00 bilkul sahi).
+          discount = double.parse(dPartial.toStringAsFixed(2));
+        } else {
+          // raw ≈ subtotal: API no-coupon order (total=subtotal; shipping
+          // + tax to ALAG rows me hi hai) — discount 0 hi sahi.
+          discount = 0;
+        }
+      }
+      if (discount < 0) discount = 0;
+      // FINAL: display Total hamesha PAYABLE (rows ka sum) — server partial
+      // ho ya grand, Price Details kabhi sum-mismatch nahi karega.
+      total = double.parse(
+          (subtotal + shipping + tax - discount).toStringAsFixed(2));
+    } else {
+      total = subtotal + shipping + tax - discount;
+    }
+    // 15/09 (point 3 — tax row) fallback: agar ab bhi tax 0 hai aur
+    // (total - subtotal - shipping + discount) positive bachta hai to wahi
+    // server-implied tax hai (app khud koi VAT rate invent NAHI karti).
     if (total > 0 && tax <= 0) {
       final implied = total - subtotal - shipping + discount;
       if (implied > 0.5) {
