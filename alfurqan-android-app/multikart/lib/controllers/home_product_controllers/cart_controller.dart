@@ -480,7 +480,7 @@ class CartController extends GetxController {
       // karo; tab bhi empty aaye tabhi accept karo.
       if (mapped == null) {
         final expectNonEmpty =
-            (cartModelList?.cartList.isNotEmpty ?? false) ||
+            (cartModelList?.cartList?.isNotEmpty ?? false) ||
                 (_lastAddSuccess != null &&
                     DateTime.now().difference(_lastAddSuccess!).inSeconds <
                         25);

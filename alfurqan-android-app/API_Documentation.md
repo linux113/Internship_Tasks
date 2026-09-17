@@ -1879,3 +1879,42 @@ Version 1.6.36+65, label "v1.6.36 (65)", zip v1677.
    "View Details" — blank nahi, rows dikhen (har step par).
 3. Coupons page par GALAT code (jaise XYZ123) type karke Apply/done karo —
    ab message aaye "Coupon didn't apply...". HPY20 waise hi chale.
+
+---
+
+## v1.6.37+66 (17/09/2025) — BUILD-FIX: null-safety compile error (v1677 build fail)
+
+Lalit ka report: v1677 `flutter run --release` FAIL —
+`cart_controller.dart:483:38: Error: Property 'isNotEmpty' cannot be
+accessed on 'List<HomeDealOfTheDayModel>?' because it is potentially
+null.`
+
+- ROOT (meri galti): v1.6.36 ka naya empty-read guard likhte waqt
+  `(cartModelList?.cartList.isNotEmpty ?? false)` likha tha — par
+  `CartModel.cartList` khud NULLABLE hai (`cart_model.dart` me
+  `List<HomeDealOfTheDayModel>? cartList;`). `?.` sirf pehle null par
+  short-circuit karta hai, beech ke NULLABLE field par plain `.` se
+  null-safety compile error. Sandbox me Flutter SDK nahi hai isliye ye
+  galti audits se bachkar chali gayi.
+- FIX: `(cartModelList?.cartList?.isNotEmpty ?? false)` — `cartList` ke
+  baad bhi `?.` (wahi pattern jo line 1062 `cartModelList?.cartList?
+  .removeWhere(...)` pehle se use karti hai).
+- SWEEP: poore `lib/` me CartModel ke saare nullable fields
+  (`cartList`, `orderDetail`, `deliveryChargesInstruction`,
+  `deliveryInstruction`, `totalAmount`) ke `?.field.` chains grep se
+  check kiye — koi aur violation NAHI. `_mapApiCartToViewModel`,
+  coupons/crop code bhi null-safe verify.
+- Behaviour koi change NAHI — sirf compile-fix (logic wahi).
+
+Audits: deep_check 551 files 0 issues, audit2 388x4 keys + 349/0 .tr,
+audit3 5 pre-existing warns, audit5/audit6/audit7 = 0, negative cases
+1/3/2 flags (expected). Zip v1678 content asserts ALL PASS.
+
+Version 1.6.37+66, label "v1.6.37 (66)", zip v1678.
+
+### Test notes (v1.6.37)
+1. `flutter pub get` ke baad `flutter run --release` — build CLEAN
+   chalegi (koi kernel/compile error nahi).
+2. Profile photo CROP & CIRCLE — (v1.6.36 feature) crop screen aaye.
+3. PEHLI baar ADD TO BAG → cart blank nahi.
+4. GALAT coupon Apply par message aaye.
