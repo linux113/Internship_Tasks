@@ -1674,3 +1674,50 @@ the; ab dono ke liye naya audit likh diya). Root-cause fixes:
    ab CLEAN chalna chahiye (dono compile errors gaye).
 2. Build chalne par PROFILE PHOTO ka poora test (v1.6.31 notes wale 3
    steps) + search test (`الحدیث` Farsi ye se bhi) karna hai.
+
+---
+
+## v1.6.33+62 (17/09/2025) — ANDROID BUILD FIX #2 (checkReleaseAarMetadata / AGP)
+
+v1673 par phir ek aur build error aaya — is baar DART code ka nahi, ANDROID
+config ka (Lalit error: "androidx.activity/core ... requires Android Gradle
+plugin 8.9.1 or higher. This build currently uses 8.7.3").
+
+### Root cause
+1. v1.6.31 me profile photo ke liye `image_picker` add hua. Uska Android
+   plugin naye AndroidX libraries laata hai. Gradle har build par unke
+   `1.x` open-range ke LATEST version uthata hai — abhi Google ne
+   `androidx.core:1.18.0` + `androidx.activity:1.12.4` (+ navigationevent
+   1.0.2) release kiye hain jinki AAR metadata **minimum AGP 8.9.1** likhti
+   hai. Template ka pin **AGP 8.7.3** kam pada → `checkReleaseAarMetadata`
+   ne build rok di. (Ye time-bomb thi — image_picker ke bina bhi kisi
+   din toot sakta tha.)
+2. **Teeno fixes (sab zip ke andar, Lalit ko kuch manually nahi karna):**
+   - `android/settings.gradle`: AGP **8.7.3 → 8.9.1** (Gradle wrapper pehle
+     se **8.12** hai — AGP 8.9.x ko minimum 8.11.1 chahiye, isliye wrapper
+     touch karne ki zaroorat nahi. Kotlin 2.1.0 compatible.)
+   - `android/gradle.properties`: `android.enableJetifier=true → false`.
+     AGP 8.8+ me `true` **HARD ERROR** ban gaya hai (Jetifier deprecated,
+     AGP 9 me removed). Project ke SAARE plugins (firebase, sqflite,
+     image_picker, webview_flutter, share_plus...) AndroidX-native hain —
+     kisi ko jetifier chahiye hi nahi → false 100% safe.
+   - `android/app/build.gradle`: androidx **version-PIN** block add —
+     `core:1.18.0`, `core-ktx:1.18.0`, `activity:1.12.4`, `activity-ktx:1.12.4`
+     `force` se pin (wahi versions jo aaj resolve ho rahe the = tested
+     combo). Ab Google kafka naya androidx naya AGP maange, hamara build
+     apne-aap nahi tootega — reproducible.
+3. Naya checker `dev_audit/audit7.py` (+ negative case `_case/gradle/`):
+   AGP≥8.9.1, Gradle≥8.11.1, jetifier≠true — teeno verify. Negative test
+   ne EXACT purani config (8.7.3 + jetifier=true) ko sahi pakda (2/2).
+
+- Full suite CLEAN: deep 550/0, a2 387x4 + 348/0, a3 5 pre-existing warns,
+  a5 0 (731 bodies), a6 0 (5 TextFormField), a7 0.
+- Version 1.6.33+62, label "v1.6.33 (62)".
+- Koi app-feature change nahi — sirf Android build config + audit.
+
+### Test notes (v1.6.33)
+1. Naya zip extract → `flutter clean` → `flutter pub get` →
+   `flutter run --release`. PEHLI build thodi derlegi (AGP 8.9.1 download
+   hota hai) — ye normal hai, fail nahi.
+2. Build chale to baki tests wahi: profile photo (pick→SAVE→website),
+   search `الحدیث`, coupon Applied/Remove, delivery charge.

@@ -40,3 +40,19 @@ android {
 flutter {
     source = "../.."
 }
+
+// 17/09 BUILD-HARDENING (future surprise-build-break roko): Google ke naye
+// androidx releases kabhi bhi naya AGP maang sakte hain (aaj hi core 1.18.0
+// ne AGP 8.9.1 manga aur build toota). In artifacts ko aaj ke RESOLVED+TESTED
+// versions par PIN kar rahe hain — Gradle ab inke naye version apne-aap nahi
+// uthayega, isliye kal ko "requires AGP x.y" wala naya jhatka nahi lagega.
+// (activity 1.12.4 apne saath navigationevent 1.0.2 transitive laata hai,
+//  isliye use alag se pin karne ki zaroorat nahi.)
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.core:core:1.18.0'
+        force 'androidx.core:core-ktx:1.18.0'
+        force 'androidx.activity:activity:1.12.4'
+        force 'androidx.activity:activity-ktx:1.12.4'
+    }
+}
