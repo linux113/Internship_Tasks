@@ -338,8 +338,8 @@ class HomeController extends GetxController {
   }
 
   /// Home ke kisi bhi product card (deals/find-style/kids) ka tap —
-  /// id se real ProductApiModel dhoond kar detail page pe le jao
-  /// (na mile to purana demo detail fallback khulega).
+  /// id se real ProductApiModel dhoond kar detail page pe le jao.
+  /// DEMO fallback AB HARAGIZ NAHI (null par navigate hi nahi hota).
   /// ID se product lao: pehle loaded pools (home/newest) me, warna SERVER
   /// se paged scan. 17/09 (Lalit — "theme screen"): cart ke "You May Also
   /// Like" cards aise products ke ho sakte hai jo pools me NAHI (cold-start
