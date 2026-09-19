@@ -646,6 +646,7 @@ final dynamic hi = {
   "loadingAddresses": "आपके पते लोड हो रहे हैं...",
   "gender": "लिंग",
   "deliveryChargeUpdated": "इस पते के लिए डिलीवरी शुल्क अपडेट हो गया",
+  "productNotAvailable": "यह प्रोडक्ट अभी उपलब्ध नहीं है",
   "shopLoadFailed": "प्रोडक्ट्स लोड नहीं हो सके। कृपया इंटरनेट जाँचें और फिर कोशिश करें।",
   "applied": "लागू",
   "couponExpired": "यह कूपन समाप्त हो गया है",

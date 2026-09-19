@@ -2042,3 +2042,54 @@ Version 1.6.39+68, label "v1.6.39 (68)", zip v1680.
    wapas lagao — discount −63 wapas aaye.
 4. Step-2: doosra address select karo — charge BADLA to toast aaye
    ("Delivery charge updated...").
+
+---
+
+## v1.6.40+69 (17/09/2026) — 3 NAYE points ke deep root-cause fixes
+
+### 1. Cart ke neeche ke products click = "THEME/DEMO screen" (ROOT mila!)
+- ROOT (code-level): cart ke "You May Also Like" card tap → agar product
+  loaded pools me na mile (cold start par alag fetch hua ho) to purana
+  `openProductById` `goToProductDetail(arguments: null)` kar deta tha →
+  detail controller ka **static DEMO fashion fallback** khulta tha = wo
+  "theme screen" (template demo page).
+- FIX (3 layers):
+  (a) NAYA `HomeController.fetchProductById(id)` — pools me na ho to
+      SERVER se paged scan (50/page ≤6, search-pool strategy).
+  (b) `openProductById` async — na mile to DEMO KABHI na khule; toast
+      `productNotAvailable` (naya key ×4).
+  (c) `AppController.goToProductDetail` null-guard — arguments null par
+      navigate hi nahi hota (koi bhi purana no-arg default ab demo nahi
+      khol sakta).
+
+### 2. Cart icon par QTY badge + FAV icon par count badge
+- NAYA shared `CountBadge` widget (red bubble, >99 = "99+").
+- `CartController.cartItemsCount` (server cart qty ka YOG — 3+1+1=5) +
+  `WishlistController.wishlistCount`.
+- HEADER appbar icons (BuyIcon/HeartIcon) GetBuilder wrap — turant update.
+- BOTTOM NAV CART(2)/WISHLIST(3) items bhi — builder-chain wrap
+  (registered ho tabhi; splash safe).
+
+### 3. Doosri photo upload par PURANI photo hi dikhti rahi (ROOT + fix)
+- ROOT (classic Flutter cache bug): local photo ka PATH hamesha SAME
+  (profile_photo_<uid>.jpg). `Image.file`/`FileImage` decoded image ko
+  PATH se cache karta hai — naye bytes ke bawajood PURANA decode dikhta
+  raha tha. Isliye pehli photo theek, REPLACE kabhi dikhti nahi thi.
+- FIX: (a) pick/save ke waqt `FileImage(...).evict()` — cache se wahi
+  provider turant hatao; (b) UserIcon me file ki modified-time ko widget
+  KEY banaya (naya save = fresh decode). Upload/serverURL path alag se
+  chalta hi hai (naya media id = naya URL).
+
+Audits: deep 551/0, a2 391×4 + 349/0 .tr, a3 5 pre-existing, a5/a6/
+a7/a8 = 0, negatives expected-fail ✓. Zip v1681 asserts ALL PASS.
+
+Version 1.6.40+69, label "v1.6.40 (69)", zip v1681.
+
+### Test notes (v1.6.40)
+1. Cart me product Add → neeche "You May Also Like" → us par tap → ab
+   usi book ka ASLI detail page khule (demo "theme" page kabhi nahi).
+2. Kisi bhi screen par upar cart icon par RED badge me qty dikhe
+   (jaise 5); heart/fav icon par saved count; niche bottom nav ke
+   CART/WISHLIST par bhi same badge.
+3. Profile Setting → nayi photo pick → Crop & Save → turant + app
+   restart ke baad bhi NAYI photo dikhe (purani nahi).

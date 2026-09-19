@@ -41,9 +41,20 @@ class UserIcon extends StatelessWidget {
       return GetBuilder<ProfileController>(builder: (profileCtrl) {
         final path = profileCtrl.profileImagePath;
         if (path.isNotEmpty) {
+          // 17/09: same-path FileImage ka purana cached decode na aaye —
+          // file ki modified-time ko widget KEY banaya (nayi photo = naya
+          // key = fresh decode). Controller pick ke waqt cache evict bhi
+          // karta hai; ye double-safety hai.
+          final f = File(path);
+          ObjectKey? verKey;
+          try {
+            verKey = ObjectKey(
+                'pfp_${f.lastModifiedSync().millisecondsSinceEpoch}');
+          } catch (_) {}
           return ClipOval(
             child: Image.file(
-              File(path),
+              f,
+              key: verKey,
               height: AppScreenUtil().size(height),
               width: AppScreenUtil().size(height),
               fit: BoxFit.cover,

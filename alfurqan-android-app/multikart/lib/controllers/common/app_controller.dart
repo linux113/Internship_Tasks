@@ -64,6 +64,16 @@ class AppController extends GetxController {
 
   //go to product detail screen
   goToProductDetail({dynamic arguments}){
+    // 17/09 (Lalit — "similar product click = THEME/demo screen"): ye
+    // function arguments NULL par template ka DEMO fashion product page
+    // khol deta tha (detail controller ka static fallback). Demo KABHI na
+    // khule — null par navigate hi mat karo, user ko ek line bata do.
+    // (Har asli flow ab ProductApiModel ke saath hi aata hai — cards,
+    //   cart images, banners, search, wishlist, similar.)
+    if (arguments == null) {
+      snackBar('productNotAvailable'.tr);
+      return;
+    }
     isNotification =false;
     isSearch =false;
     isCart  =true;

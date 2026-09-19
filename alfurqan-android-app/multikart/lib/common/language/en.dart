@@ -643,6 +643,7 @@ final dynamic en = {
   "loadingAddresses": "Loading your addresses...",
   "gender": "Gender",
   "deliveryChargeUpdated": "Delivery charge updated for this address",
+  "productNotAvailable": "This product is not available right now",
   "shopLoadFailed": "Products could not be loaded. Please check your internet and retry.",
   "applied": "Applied",
   "couponExpired": "This coupon has expired",

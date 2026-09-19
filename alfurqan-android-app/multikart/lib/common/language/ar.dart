@@ -643,6 +643,7 @@ final dynamic ar = {
   "loadingAddresses": "جاري تحميل عناوينك...",
   "gender": "الجنس",
   "deliveryChargeUpdated": "تم تحديث رسوم التوصيل لهذا العنوان",
+  "productNotAvailable": "هذا المنتج غير متوفر حالياً",
   "shopLoadFailed": "تعذر تحميل المنتجات. يرجى التحقق من الإنترنت وإعادة المحاولة.",
   "applied": "تم التطبيق",
   "couponExpired": "انتهت صلاحية هذه القسيمة",

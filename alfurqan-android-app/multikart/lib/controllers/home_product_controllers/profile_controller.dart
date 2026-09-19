@@ -353,6 +353,17 @@ class ProfileController extends GetxController {
         } catch (_) {}
       }
       await File(cropped.path).copy(target.path);
+      // 17/09 (Lalit — "doosri photo upload ki par PURANI hi dikhti rahi"):
+      // ROOT CAUSE (deep): file ka PATH har baar SAME rehta hai
+      // (profile_photo_<uid>.jpg) aur Flutter ka imageCache FileImage ko
+      // PATH se key karta hai — file ke NAYE bytes aane ke bawajood cache
+      // PURANA decoded image deta raha tha (step-1: pehli photo theek
+      // dikhti thi, REPLACE kabhi dikhta hi nahi tha). Fix: is provider
+      // ko cache se turant EVICT karo — agla decode NAYI file se hoga
+      // (display side mtime-key bhi di hai — user_icon.dart).
+      try {
+        await FileImage(File(target.path)).evict();
+      } catch (_) {}
       profileImagePath = target.path;
       await storage.write(_photoKey, profileImagePath);
       update(); // photo turant dikhe — upload uske BAAD background-wait

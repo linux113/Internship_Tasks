@@ -340,25 +340,60 @@ class HomeController extends GetxController {
   /// Home ke kisi bhi product card (deals/find-style/kids) ka tap —
   /// id se real ProductApiModel dhoond kar detail page pe le jao
   /// (na mile to purana demo detail fallback khulega).
-  openProductById(int id) {
-    ProductApiModel? found;
-    // pehle naye home api ke products me dhoondo (deals/tabs/trending),
-    // phir newest list me — dono cover ho jaye.
-    for (final p in homeApiProductsAll) {
-      if (p.id == id) {
-        found = p;
-        break;
-      }
+  /// ID se product lao: pehle loaded pools (home/newest) me, warna SERVER
+  /// se paged scan. 17/09 (Lalit — "theme screen"): cart ke "You May Also
+  /// Like" cards aise products ke ho sakte hai jo pools me NAHI (cold-start
+  /// par alag se fetch hue) — purana openProductById unhe null ke saath
+  /// detail kholta tha = template ka DEMO page ("theme screen"). Ab kabhi
+  /// null navigate nahi hoga.
+  /// Server total ~227 products — 50/page chunks (search-pool wali proven
+  /// strategy; 500 wala single pull us device par fail hota tha). Sirf tab
+  /// tak scan jab tak product na mil jaye ya pages khatam.
+  Future<ProductApiModel?> fetchProductById(int id) async {
+    if (id <= 0) return null;
+    for (final p in [...homeApiProductsAll, ...newestApiProducts]) {
+      if (p.id == id) return p;
     }
-    if (found == null) {
-      for (final p in newestApiProducts) {
-        if (p.id == id) {
-          found = p;
-          break;
+    try {
+      for (var page = 1; page <= 6; page++) {
+        final res = await ApiService().request<ProductListResponseModel>(
+          endpoint: ApiEndpoints.productList,
+          method: ApiMethod.get,
+          queryParams: {
+            "page": page,
+            "paginate": 50,
+            "status": 1,
+            "field": "created_at",
+            "price": "",
+            "category": "",
+            "tag": "",
+            "sort": "desc",
+            "sortBy": "desc",
+            "rating": "",
+            "attribute": "",
+          },
+          fromJson: (json) => ProductListResponseModel.fromJson(json),
+        );
+        if (!res.isSuccess || res.data == null) break;
+        final list = res.data!.data;
+        for (final p in list) {
+          if (p.id == id) return p;
         }
+        if (list.length < 50) break; // aakhri page aa gaya
       }
+    } catch (_) {}
+    return null;
+  }
+
+  openProductById(int id) async {
+    // pehle pools/fresh-server dono se dhoondo; na mile to DEMO/blank page
+    // KABHI mat kholo — user ko bas bata do ki abhi available nahi.
+    final found = await fetchProductById(id);
+    if (found != null) {
+      appCtrl.goToProductDetail(arguments: found);
+    } else {
+      snackBar('productNotAvailable'.tr);
     }
-    appCtrl.goToProductDetail(arguments: found);
   }
 
   /// Offer banner tap — Redirect_Link ke hisaab se route karo:

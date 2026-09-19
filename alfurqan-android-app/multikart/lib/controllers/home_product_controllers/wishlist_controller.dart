@@ -29,6 +29,10 @@ class WishlistController extends GetxController {
   CartModel? cartModelList;
   List<HomeDealOfTheDayModel> wishlist = [];
 
+  /// 17/09 (Lalit): HEADER heart icon ka badge — wishlist me kitne
+  /// products saved hai (local+server UNION list ka count).
+  int get wishlistCount => wishlist.length;
+
   static const String _prefsKey = 'local_wishlist';
   static final LocalStorage _staticStorage = LocalStorage();
 

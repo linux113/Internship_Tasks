@@ -744,6 +744,22 @@ class CartController extends GetxController {
   /// borderline orders (98 vs min 100) me gate galat faisla karta tha.
   double get bagSubtotalRaw => _bagTotalFinal;
 
+  /// 17/09 (Lalit): HEADER cart icon ka badge — server cart ki saari live
+  /// lines ki quantity ka YOG (jaise 65x3 = 3 items => "5" nahi quantity
+  /// sum aata — usi hisaab se: qty 3 + 1 + 1 = 5 dikhe). zero-qty ghost
+  /// lines count nahi hoti. cartModelList mapped view se count (server
+  /// sync ka wahi single source).
+  int get cartItemsCount {
+    final items = cartModelList?.cartList ?? const <HomeDealOfTheDayModel>[];
+    var n = 0;
+    for (final it in items) {
+      // view item ka byWhom 'Qty: N' format me hota hai
+      final m = RegExp(r'(\d+)').firstMatch(it.byWhom ?? '');
+      n += int.tryParse(m?.group(1) ?? '') ?? 1;
+    }
+    return n;
+  }
+
   /// Effective tax jo UI me dikhega — server explicit pehle, warna client.
   double? get _effectiveTax {
     final s = serverTax;
