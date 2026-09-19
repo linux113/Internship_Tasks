@@ -47,7 +47,7 @@ class ProfileSetting extends StatelessWidget {
                     // pata chale ki kaunsa build chal raha hai.
                     Center(
                       child: LatoFontStyle(
-                        text: "Al Furqan Book Shop  v1.6.40 (69)",
+                        text: "Al Furqan Book Shop  v1.6.41 (70)",
                         fontSize: FontSizes.f12,
                         color: profileCtrl.appCtrl.appTheme.contentColor,
                         textAlign: TextAlign.center,

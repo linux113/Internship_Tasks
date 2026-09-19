@@ -207,12 +207,13 @@ class CartController extends GetxController {
     snackBar(CommonTextFont().moveToWishList);
   }
 
-  /// Static demo cart (`cartList` from cart_array) ke instruction
-  /// sections ko borrow kar lo — ye sirf UI ke icons/text hai.
+  /// Static demo cart (`cartList` from cart_array) ke delivery ICON row
+  /// ko borrow kar lo — ye sirf UI ke generic trust-icons hain.
+  /// (delivery charges ka demo banner 19/09 HATA diya — server ke asli
+  /// charge se jhoot bolta tha; ab DeliveryCharges widget serverShipping
+  /// dekh kar decide karta hai.)
   List<DeliveryInstructionModel>? get _demoDeliveryInstruction =>
       cartList.deliveryInstruction;
-  List<DeliveryChargesInstruction>? get _demoDeliveryCharges =>
-      cartList.deliveryChargesInstruction;
 
   /// Cart me product add karna (Cart/AddToCart)
   /// [wholesalePrice] optional - na ho to 0 bhej dena.
@@ -684,7 +685,11 @@ class CartController extends GetxController {
       cartList: viewItems,
       totalAmount: total,
       orderDetail: const [],
-      deliveryChargesInstruction: _demoDeliveryCharges,
+      // 19/09: demo "No Delivery Charges applied" instruction AB nahi —
+      // server ke asli shipping se jhoot liye ti (banner ab DeliveryCharges
+      // widget KHUD serverShipping dekh kar sirf sach me FREE hone par
+      // dikhata hai).
+      deliveryChargesInstruction: null,
       deliveryInstruction: _demoDeliveryInstruction,
     );
     cartModelList = model; // _rebuildOrderDetail ko list chahiye (items)

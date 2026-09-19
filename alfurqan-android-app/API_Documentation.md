@@ -2093,3 +2093,35 @@ Version 1.6.40+69, label "v1.6.40 (69)", zip v1681.
    CART/WISHLIST par bhi same badge.
 3. Profile Setting → nayi photo pick → Crop & Save → turant + app
    restart ke baad bhi NAYI photo dikhe (purani nahi).
+
+---
+
+## v1.6.41+70 (19/09/2026) — v1681 screenshots: saab fixtures LIVE ✓ + 1 jhoothe banner ka fix
+
+Lalit ke 6 screenshots NE prove kiya ta sab kaam kar raha hai: similar
+product tap → asli detail page (theme screen GAYAB), cart/heart badges
+(header+bottom nav dono), nayi profile photo circle me BADLI hui dikhi,
+HPY20 −13/65 + tax 2.60 + delivery 30 = 84.60 math EXACT ✓.
+
+### FIX — Jhoota "No Delivery Charges applied" banner (screenshot 4 me pakra)
+- ROOT: Order Details ke neeche wala note template ke DEMO cart array se
+  aata tha (`noDeliveryCharges` STATIC) — server asli shipping 20/30/50
+  charge kar raha tha phir bhi "free" banner dikhta tha = galat
+  information (zero-demo rule ke khilaaf).
+- FIX: (a) `_mapApiCartToViewModel` se demo `deliveryChargesInstruction`
+  HATA diya (+ ab-unused getter bhi); (b) `DeliveryCharges` widget ab
+  CartController.serverShipping DEKH kar decide karta hai — banner
+  SIRF tab jab server preview ne sach me 0 bataya ho (free delivery);
+  charge > 0 ya preview pending ho to banner bilkul nahi.
+  (icon row wale generic trust badges waise hi — wo data se jhoot nahi
+  bolte.) Lang key `noDeliveryCharges` pehle se ×4 maujood — reuse.
+
+Audits: 8/8 PASS. Zip v1682 asserts ALL PASS.
+
+Version 1.6.41+70, label "v1.6.41 (70)", zip v1682.
+
+### Test notes (v1.6.41)
+1. Cart me item + Delivery wali address select jiska charge > 0 → Order
+   Details ke neeche "No Delivery Charges" banner AB NAHI aayega.
+2. Kisi FREE-shipping address (charge AED0.00) par aaye to hi banner
+   dikhega — sach ke saath.
