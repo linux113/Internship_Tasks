@@ -67,20 +67,30 @@ class _CategoryScreenState extends State<CategoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // ---- rounded image card ----
+                              // 22/09 (Lalit — "category page ke CIRCLE apne
+                              // SQUARE frame ke BAHAR nikle hue hai, circle
+                              // ko frame ke ANDAR karo"): pehle image SQUARE
+                              // card ko poori bhar deti thi (BoxFit.cover) —
+                              // server ki gol coin-artwork photos card ke
+                              // border ko touch/cross karti hui DIKHTI thi
+                              // (portrait cell me cover-scale se circle art
+                              // ~25% bada ho jata). Ab WHITE rounded square
+                              // ke ANDAR 10px margin chhod kar gol photo —
+                              // circle HAMESHA frame ke andar (home row jaisa).
                               Expanded(
                                 child: Container(
                                   width: double.infinity,
+                                  padding:
+                                      EdgeInsets.all(AppScreenUtil().size(10)),
+                                  clipBehavior: Clip.hardEdge,
                                   decoration: BoxDecoration(
-                                    color: appCtrl.appTheme.greyLight25,
+                                    color: appCtrl.appTheme.whiteColor,
                                     borderRadius: BorderRadius.circular(
                                         AppScreenUtil().borderRadius(12)),
                                     border: Border.all(
                                         color: appCtrl.appTheme.greyLight25),
                                   ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(
-                                        AppScreenUtil().borderRadius(12)),
+                                  child: ClipOval(
                                     child: imageNetwork(
                                         url: cat.displayImageUrl ?? '',
                                         fit: BoxFit.cover),

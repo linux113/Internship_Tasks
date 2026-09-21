@@ -2293,3 +2293,79 @@ Version 1.6.43+72, label "v1.6.43 (72)", zip v1684.
    ek baar/sahi time, DOWNLOAD INVOICE, CANCEL (delivered se pehle) /
    RETURN (delivered ke baad), 3-item order ke asli naam+qty cards,
    fav badge count app kholte hi aur heart tap par turant.
+
+## v1.6.44+73 (22/09/2026) — 17-screenshot report ke 5 fixes (category PAGE frame, payment double-total, status chip, timeline naam, #1100 placeholder)
+
+### 1. Categories PAGE (bottom nav tab): CIRCLE apna SQUARE frame ke BAHAR nikla tha — Lalit ka explicit point
+- EVIDENCE (screenshot 1): 3-column grid me gol coin-artwork images apne
+  white square cells se BADA draw ho rahi thi — halke square frame ke bahar
+  gol photo chipakti/dikhti.
+- ROOT (`bottom_navigate_page/category/category.dart`): image SQUARE card
+  ko poori bhar deti thi (`ClipRRect` + `BoxFit.cover`, koi padding nahi) —
+  server ki artwork photos (andaz) gol hain, portrait cell me cover-scale se
+  circle art cell ke border ke bahar tak pahunchti = "circle frame ke bahar".
+- FIX: card ab WHITE rounded-12 square + `padding: 10` + `clipBehavior:
+  hardEdge` + andar `ClipOval(image, fit: cover)` → gol photo HAMESHA
+  square frame ke ANDAR 10px safe margin ke saath (home row v1.6.43 jaisa).
+
+### 2. Payment (step 3): neeche ka bar AED207.50 jabki upar Total AED612.50
+- EVIDENCE (screenshot 3): CartBottomLayout (bottom bar) 207.50 (puraana
+  180+20+7.50 cart), top "Total Amount" 612.50 — order place karne se pehle
+  customer KO GALAT amount CONFUSE karta.
+- ROOT (`views/checkout/payment/payment.dart`): bottom ka chain tha
+  `serverPreviewTotal ?? cartModelList?.totalAmount ?? paymentCtrl.total`
+  — CheckOut ka STALE preview (peeche ke dry-run ka) fresh cart total se
+  match nahi karta tha, phir bhi priority par aa jata tha.
+- FIX: preview SIRF tab jab (a) cart total null ho YA (b) preview cart
+  total se ±0.5 ke andar ho — warna CartController ka LIVE total, aakhir
+  me argument fallback. Bottom HAMESHA top Total ke barabar.
+
+### 3. Order detail: status chip pe raw lowercase 'pending'/'cancelled'
+- EVIDENCE (screenshot 4): chip pe "pending"/"cancelled" English lowercase.
+- ROOT (`order_detail_body.dart`): chip `ctrl.status` RAW server string
+  dikhati thi, translation (`tr`) kabhi nahi chalta tha.
+- FIX: `canonStatusKey(status)` mil jaaye to uski `.tr` (en/ar/hi/kr saari
+  keys already maujood) — ab "Pending"/"Cancelled" (bhasha ke hisaab se),
+  nahi to pehle-jaisa raw.
+
+### 4. Timeline rows ka label generic "Order update" — ab ASLI note
+- EVIDENCE (screenshot 4): timeline me do rows "Order update" — customer
+  samajh hi nahi pata KYA update hua.
+- ROOT (`order_detail_controller.dart`): server name-less activities deta
+  hai (name NULL) — unka label hum 'orderUpdate'.tr rakhte the jabki server
+  inka ASLI matlab `note` field me bhejta hai ("Order Placed", "Customer
+  requested cancellation (mobile app)").
+- FIX: name-less activity ka label = note (agar ho), note title ban gaya to
+  neeche duplicate line NAHI (note field clear). Flow steps kabhi is label
+  se nahi milte (v1.6.42 duplicate-status fix same as-is).
+
+### 5. Order history: cancelled order #1100 ka naam/photo nahi aaya
+- EVIDENCE (screenshot 2): #1100 row me "Order #1100" book-icon placeholder.
+- ROOT (`order_history_controller.dart`): list API slim hoti hai (items ke
+  naam/photo nahi deti); hum har order ka DETAIL se items backfill karte
+  hain — par cap sirf 15 orders tha, #1100 cap ke BAHAR reh gaya.
+- FIX: cap 15 → 25 (ek baar me 25 orders/call tak detail fetch — pehle-se
+  cached, sirf pull-refresh par).
+
+### Verification (22/09 LIVE + static)
+- Server LIVE GET (alfurqan.ae): Products GetAllProductsFront code:200 +
+  227 products + thumbnails OK; Orders endpoints list (swagger v2) me koi
+  change nahi — Cancel/Return ab bhi UpdateOrderActivities se hi.
+- Audits: dart_clean, deep_check (553 files), audit2 (401 lang keys ×4
+  CLEAN — naya key is round NAHI chahiye tha), audit3/5/6/7/8 — 8/8 PASS +
+  verify_v1642 21/21 PASS.
+- Symbol checks: canonStatusKey static OK; appTheme.whiteColor defined OK;
+  payment.dart me checkoutCtrl/CartController scope+import OK.
+
+### Test notes (v1.6.44)
+1. CATEGORIES tab (bottom nav) kholo → har cell: gol photo apne WHITE
+   SQUARE frame ke ANDAR 10px margin ke saath — koi circle bahar nahi.
+2. Cart me items daalo → payment step 3 jao → NEECHE ka total bar ==
+   upar "Total Amount". Dono same number.
+3. Kisi bhi order ka detail kholo → status chip ab Capitalized + bhasha
+   ke hisaab se ("Pending"/"Cancelled"...); timeline rows me "Order update"
+   ki jagah ASLI likha: "Order Placed", "Customer requested cancellation...".
+4. Orders pull-down refresh → puraana cancelled #1100 bhi asli book ka
+   naam+photo dikhata hai (pehle placeholder tha).
+
+Version 1.6.44+73, label "v1.6.44 (73)", zip v1685.

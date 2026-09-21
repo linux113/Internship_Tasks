@@ -71,20 +71,35 @@ class Payment extends StatelessWidget {
                   // sheet (dead text kahi nahi rehna chahiye). Centralized
                   // opener (capped height — grey flash NAHI).
                   onDescTap: () => CartPriceDetailsSheet.show(),
-                  // TOTAL priority: (1) SERVER CheckOut preview (shipping/
-                  // tax samet, RAW AED) → (2) LIVE cart total →
-                  // (3) arguments fallback. Widget khud ×rateValue karta
-                  // hai — yaha hamesha RAW AED jana chahiye ("₹0" kabhi na).
-                  totalAmount: (checkoutCtrl.serverPreviewTotal ??
-                          (Get.isRegistered<CartController>()
-                              ? (Get.find<CartController>()
-                                      .cartModelList
-                                      ?.totalAmount ??
-                                  (double.tryParse(paymentCtrl.totalAmount) ??
-                                      0))
-                              : (double.tryParse(paymentCtrl.totalAmount) ??
-                                  0)))
-                      .toStringAsFixed(2),
+                  // 22/09 (Lalit screenshot — upar Total 612.50, neeche
+                  // bottom bar 207.50!): bottom ka chain
+                  // `serverPreviewTotal ?? cartTotal ?? ...` me STALE preview
+                  // (purane cart ka) aa jata tha jab wo cart ke FRESH total
+                  // se match nahi karta — top ka Total (cartModel.totalAmount)
+                  // aur bottom do alag numbers dikhate the. Ab preview SIRF
+                  // tab jab cart total ke consistent ho (±0.5); hamesha
+                  // CartController ka LIVE total use — bottom HAMESHA top
+                  // ke barabar.
+                  totalAmount: (() {
+                    final cartTotal = Get.isRegistered<CartController>()
+                        ? Get.find<CartController>()
+                            .cartModelList
+                            ?.totalAmount
+                        : null;
+                    final preview = checkoutCtrl.serverPreviewTotal;
+                    double chosen;
+                    if (preview != null &&
+                        (cartTotal == null ||
+                            (preview - cartTotal).abs() <= 0.5)) {
+                      chosen = preview; // fresh & cart ke consistent
+                    } else if (cartTotal != null) {
+                      chosen = cartTotal;
+                    } else {
+                      chosen = preview ??
+                          (double.tryParse(paymentCtrl.totalAmount) ?? 0);
+                    }
+                    return chosen.toStringAsFixed(2);
+                  })(),
                   onTap: () {
                     if (!checkoutCtrl.isPlacing) checkoutCtrl.placeOrder();
                   })

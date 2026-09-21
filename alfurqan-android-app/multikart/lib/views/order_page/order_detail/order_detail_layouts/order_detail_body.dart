@@ -71,8 +71,13 @@ class OrderDetailBody extends StatelessWidget {
                   color: appCtrl.appTheme.greyLight25,
                   borderRadius:
                       BorderRadius.circular(AppScreenUtil().borderRadius(5))),
+              // 22/09 (screenshot): chip pe raw lowercase 'pending'/'cancelled'
+              // dikhta tha — canonical key ho to TRANSLATED label dikhao.
               child: LatoFontStyle(
-                  text: ctrl.status,
+                  text: OrderDetailController.canonStatusKey(ctrl.status)
+                          .isNotEmpty
+                      ? OrderDetailController.canonStatusKey(ctrl.status).tr
+                      : ctrl.status,
                   fontSize: FontSizes.f12,
                   fontWeight: FontWeight.w600,
                   color: appCtrl.appTheme.primary),

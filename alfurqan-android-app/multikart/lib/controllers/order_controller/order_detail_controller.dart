@@ -668,14 +668,18 @@ class OrderDetailController extends GetxController {
         // ke saath aati — SAME STATUS 2 DATES. Ab name-less activity ko
         // kisi bhi status ka naam/key KABHI NAHI milta — wo sirf generic
         // "Order update" event hai aur neeche drop ho jati hai.
+        final noteS = jsonToString(a['note'] ?? a['Note']) ?? '';
         timeline.add({
           // Naam wali activity ko uska RAW naam; name-less ko khaali naam
           // (view me kabhi fake status na bane isliye).
           'name': nm,
-          // name-less entry ka label generic hi rakhta hai — kisi flow
-          // step ka naam NAHI (warna duplicate status rows — 22/09 bug).
-          'label': nm.isNotEmpty ? nm : 'orderUpdate'.tr,
-          // Key bhi sirf REAL naam se — current-status se derive KABHI nahi.
+          // name-less entry ka label: NOTE ho to NOTE hi dikhai de
+          // ("Order Placed", "Customer requested cancellation...") —
+          // warna generic "Order update". Kisi flow step ka naam NAHI
+          // (warna duplicate status rows — 22/09 bug).
+          'label': nm.isNotEmpty
+              ? nm
+              : (noteS.isNotEmpty ? noteS : 'orderUpdate'.tr),
           'key': canonStatusKey(nm),
           'seq': 0,
           'done': true,
@@ -686,7 +690,9 @@ class OrderDetailController extends GetxController {
                   a['createdAt'] ??
                   a['date']) ??
               '',
-          'note': jsonToString(a['note'] ?? a['Note']) ?? '',
+          // name-less activity ka note ko upar TITLE bana diya — niche
+          // wahi line dobara mat dikhao (duplicate text).
+          'note': nm.isNotEmpty ? noteS : '',
         });
       }
       timeline.sort((a, b) {

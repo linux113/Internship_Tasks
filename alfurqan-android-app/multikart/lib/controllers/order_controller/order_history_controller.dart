@@ -557,8 +557,10 @@ class OrderHistoryController extends GetxController {
     }
     // 22/09 (point 4): detail ab ASLI ITEMS ({name, image(raw), qty})
     // deta hai — neeche Step 3b me placeholder/galat rows isi se theek.
+    // 22/09 (screenshot — cancelled order #1100 ka naam/photo nahi aaya):
+    // cap 15 -> 25 taake zyada orders cover ho.
     final detailItems = <String, List<Map<String, dynamic>>>{};
-    for (final no in orderNos.take(15)) {
+    for (final no in orderNos.take(25)) {
       detailItems[no] = await _detailItemsOf(no);
     }
 
