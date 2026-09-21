@@ -33,7 +33,12 @@ class AppBarActionLayout extends StatelessWidget {
                         builder: (wc) => CountBadge.wrap(
                             HeartIcon(color: appCtrl.appTheme.blackColor),
                             wc.wishlistCount))
-                    : HeartIcon(color: appCtrl.appTheme.blackColor))
+                    // 21/09 (point 6): controller na ho to bhi badge STOARGE
+                    // ke asli count ke saath dikhe — plain icon (bina count)
+                    // kabhi NAHI.
+                    : CountBadge.wrap(
+                        HeartIcon(color: appCtrl.appTheme.blackColor),
+                        WishlistController.loadWishlistItems().length))
                 .gestures(onTap: () {
               // FIX: pehle Get.toNamed(dashboard) se current stack ke UPAR ek
               // naya dashboard push ho jata tha — isliye (1) wishlist dikhte

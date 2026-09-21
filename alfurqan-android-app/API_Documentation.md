@@ -2125,3 +2125,114 @@ Version 1.6.41+70, label "v1.6.41 (70)", zip v1682.
    Details ke neeche "No Delivery Charges" banner AB NAHI aayega.
 2. Kisi FREE-shipping address (charge AED0.00) par aaye to hi banner
    dikhega — sach ke saath.
+
+---
+
+## v1.6.42+71 (22/09/2026) — Orders ka END-TO-END round: timeline duplicates, invoice, cancel/return, multi-item qty, fav badge
+
+Lalit ke 6 naye points. Server LIVE re-verify (22/09 swagger v2 GET probes):
+Orders ke endpoints sirf yehi hai — AddOrders / UpdateOrders / GetOrders /
+GetUserOrders / GetOrderStatus / GetOrder / UpdateOrderActivities /
+CheckOut / OrderPlace. **KOI dedicated Cancel / Return / Invoice endpoint
+backend me HAI HI NAHI** — isliye jahan ho sakta tha app-side REAL fix
+kiya, aur backend support ki list (neeche) di hai.
+
+### POINT 1 & 5 — Status DO BAAR dikhta tha (ek order-date ke saath, ek sahi date ke saath)
+- ROOT (2 critical bugs, `order_detail_controller.dart`):
+  (a) server ki placement activity me status NULL hota hai (swagger
+  OrderStatusActivityDto nullable) — parser us name-less row ko CURRENT
+  STATUS ka naam de deta tha; phir wo hijacked row flow-step se match ho
+  kar ORDER DATE dikhaati, aur ASLI activity leftover me dobara SAHI date
+  ke saath aati = "Delivered/Processing DO baar, do dates".
+  (b) status table me ek meaning ke DO naam ho sakte hai (jaise
+  'Delivery' + 'Delivered') — dono ka canonical key same, dono done
+  hokar do alag rows bante the.
+- FIX: (a) name-less activity ko kisi status ka naam/key KABHI nahi milta;
+  note-less placement row timeline se DROP (uska asli timestamp sirf
+  'pending' step ki date ban-ta hai); same-naam activities me SABSE PURANI
+  (asal pehla event) rakhi, duplicates drop. (b) flow steps ko canonical
+  key par DEDUPE — same key ka sirf EK step (jo current/activity se match
+  ho). Sort ab stable hai (tiebreak insertion order).
+- Ab har status EK BAAR, apni SAHI date-time ke saath. Python mirror
+  tests 10/10 PASS.
+
+### POINT 2 — Delivered product ka INVOICE download button
+- Server `invoice_url` (OrderMst.invoiceUrl — swagger me field hai) agar
+  GetOrder detail me aayi to wahi ASLI server invoice browser me khulti
+  hai (naya `url_launcher` package).
+- Warna app REAL order data (server se hi padha hua — items/qty/totals/
+  address/payment) ka HTML invoice file banati hai + share-sheet deti hai
+  (save/Downloads/print-PDF). HTML isliye ki Arabic naam browser sahi
+  shape karta hai. Koi demo/invented number NAHI.
+- Button: Order Detail page neeche "DOWNLOAD INVOICE" (delivered orders,
+  ya jinpar server invoice url di ho).
+
+### POINT 3 — CANCEL button (delivered tak) + RETURN button (delivered ke baad)
+- Order Detail page neeche: status delivered/cancelled/return NAHI ho to
+  "CANCEL ORDER" (red) dikhta hai; delivered ho to uski jagah
+  "RETURN ORDER" (return policy ke mutabik).
+- Tap → CONFIRM dialog (yes/no) → server par REAL request:
+  `POST Orders/UpdateOrderActivities` body = OrderStatusActivityDto
+  {order_id: server PK, order_status_id: status table se 'Cancelled'/
+  'Return...' status ki id, note, changed_at}. Phir detail FRESH fetch.
+- Message honest: status turant badla to "Order cancelled"/"Return
+  request sent", warna "request shop ko bhej di gayi" (admin approve
+  karega); fail ho to retry-ka message. Fake success KABHI nahi.
+
+### POINT 4 — 3 products ek saath: history me details + qty GALAT
+- ROOT: GetUserOrders ki SLIM rows me products[] hi nahi aata — multi-item
+  order ke liye bhi EK 'Order #N' (qty=1) placeholder row banti thi.
+- FIX (`order_history_controller.dart`): GetOrder detail ab ASLI items
+  {name, qty(pivot.quantity), photo} INDEX order me deta hai (ek call,
+  cache, cap 15) — placeholder/count-mismatch rows POORI rebuild hoti hai
+  asli naam+qty+photo se (total sirf first row par, date/status preserve);
+  count-match ho to per-index qty/naam/photo sync. Mirror tests 6/6 PASS.
+
+### POINT 6 — fav badge count HI nahi karta tha (cold start)
+- ROOT: WishlistController SIRF wishlist tab khulne par banta tha —
+  header/bottom-nav badge `Get.isRegistered` guard ke andar tha, to cold
+  start par badge Bana hi nahi, heart taps apni _notifyUi kisi ko na bhej
+  paati.
+- FIX: main.dart me app start par WishlistController PERMANENT register
+  (local storage se — sasta, no network); wishlist tab ab naya instance
+  nahi banati (purana pattern listener-chain reset kar deta tha); header
+  + bottom-nav dono badges ab controller na bhi ho to storage ke ASLI
+  count ke saath dikhte hai.
+
+Naye lang keys ×4 (401 lang keys each): cancelOrder, returnOrder,
+confirmCancelOrder, confirmReturnOrder, orderCancelled, cancelRequestSent,
+returnRequested, returnNotAvailable, requestFailedTryAgain, pleaseWait
+(downloadInvoice pehle se ×4 maujood thi — reuse).
+
+### BACKEND SUPPORT CHAHIYE (Lalit se request — server team ko)
+1. **Invoice**: `GET /api/Orders/DownloadInvoice?id=<order_no>` (PDF)
+   BANAO, ya har delivered order ke GetOrder response me `invoice_url`
+   HAMESHA bharo — tab app server ki asli invoice khol paayegi.
+2. **Customer Cancel**: `POST /api/Orders/CancelOrder {order_id}` —
+   server-side rule ke saath (sirf delivered se pehle). Abhi app
+   UpdateOrderActivities use karti hai — agar wo normal customer ko
+   401/403 de to cancel kaam NAHI karega; dedicated endpoint zaroori.
+3. **Return**: `POST /api/Orders/ReturnOrder {order_id, reason}` + status
+   table me 'Returned' status + RETURN POLICY ki kitne DIN window hai wo
+   batao (app ko policy days pata nahi — window enforce server karega).
+4. **Refund status sync**: OrderProducts.refundStatus pivot field update
+   ho jab return approve ho — app timeline me return status tabhi sahi
+   dikhega.
+
+Audits: 8/8 PASS + Python mirror-tests 21/21 PASS (verify_v1642.py) +
+invoice string-quote deep-scan CLEAN.
+
+Version 1.6.42+71, label "v1.6.42 (71)", zip v1683.
+
+### Test notes (v1.6.42)
+1. Order Detail khol jo admin panel se "Delivered" mark hua ho → timeline
+   me DELIVERED sirf EK baar, aur wahi SAHI date-time (double rows gayab).
+   Processing/Ready-to-ship par bhi same check.
+2. Delivered order par neeche "DOWNLOAD INVOICE" → server invoice ya app
+   ki REAL invoice file (save/share/print).
+3. Pending/Processing order → "CANCEL ORDER" → yes → request server par
+   (message dekho). Delivered order → "RETURN ORDER" dikhe, cancel nahi.
+4. Profile → Orders → 2-3 products wala order → card par SAB items apni
+   ASLI qty ke saath dikhe (Order #N placeholder nahi).
+5. App CHALA kar (wishlist tab na bhi kholo) kisi product ka heart dabao
+   → upar heart icon + neeche WISHLIST tab dono par count TURANT badhe.

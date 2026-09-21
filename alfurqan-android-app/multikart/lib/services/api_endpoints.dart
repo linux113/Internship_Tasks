@@ -21,6 +21,17 @@ class ApiEndpoints {
   // (Pending/In Process/Ready to ship/Shipped...) ab static nahi, table se
   // aate hai. Status dropdown/flow jaha bhi dikhta hai, isi api se le.
   static const String orderStatus = 'Orders/GetOrderStatus';
+  // 21/09 (Lalit, points 2/3): swagger v2 LIVE re-verify (22/09) — Orders
+  // ke endpoints sirf yehi hai: AddOrders/UpdateOrders/GetOrders/
+  // GetUserOrders/GetOrderStatus/GetOrder/UpdateOrderActivities/CheckOut/
+  // OrderPlace. KOI dedicated Cancel/Return/Invoice endpoint NAHI hai.
+  // Cancel/Return ke liye ekmatra server path = UpdateOrderActivities
+  // (OrderStatusActivityDto: {id, order_status_id, status, order_id, note,
+  // changed_at}) — cancel/return status ki id GetOrderStatus table se aati
+  // hai. Invoice: GetOrder detail me `invoice_url` (OrderMst.invoiceUrl
+  // schema) aati ho to wahi, warna app REAL order data se HTML invoice
+  // banati hai. Backend support list API_Documentation.md me di gayi hai.
+  static const String updateOrderActivities = 'Orders/UpdateOrderActivities';
   // TAX rates (id/name/rate/status) — swagger 10/09: GET /api/Taxes/
   // GetAllTaxes. Products me sirf tax_id aata hai; rate yahi se milta hai
   // (login maangti hai). Cart/payment ka TAX row isi se banta hai.

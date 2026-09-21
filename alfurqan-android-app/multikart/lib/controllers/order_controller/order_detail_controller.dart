@@ -2,6 +2,7 @@ import '../../config.dart';
 import '../../models/json_parse_utils.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../services/invoice_service.dart';
 import '../../services/order_status_service.dart';
 import '../home_product_controllers/home_controller.dart';
 
@@ -29,6 +30,11 @@ class OrderDetailController extends GetxController {
   // Current status ka sequence (order_status{sequence}) — dynamic flow me
   // "ab tak complete" steps nikalne ke liye.
   int statusSequence = 0;
+
+  /// 22/09 (points 1/5): server ki placement (name-less) activity ka ASLI
+  /// datetime — 'pending' flow-step ka REAL timestamp yahi hota hai
+  /// (orderDate sirf DIN dikhata hai; row duplicate nahi banate).
+  String _placementDate = '';
   double subtotal = 0;
   double shipping = 0;
   double discount = 0;
@@ -48,6 +54,16 @@ class OrderDetailController extends GetxController {
   /// translation key (pending/processing/shipped/outForDelivery/delivered/
   /// cancelled), 'name' = server ka raw naam (fallback display).
   List<Map<String, dynamic>> timeline = [];
+
+  // 22/09 (Lalit points 2/3): order actions ke liye server fields.
+  /// GetOrder detail ka REAL PK (cancel/return POST `order_id` me yahi
+  /// jaata hai — display order_number se alag ho sakta hai).
+  int serverOrderPk = 0;
+
+  /// Server ka invoice url (OrderMst.invoiceUrl — swagger v2, 22/09 LIVE
+  /// verify). Khaali ho to app REAL order data se apna HTML invoice banati
+  /// hai (backend invoice endpoint abhi swagger me hai hi nahi).
+  String invoiceUrl = '';
 
   /// Tracking flow ka SAHI order (Issue #3, 10/09). Server list me
   /// 'cancelled' beech me aa jata hai — flow view isi canonical order se
@@ -613,6 +629,7 @@ class OrderDetailController extends GetxController {
         j['Status_Activities'] ??
         j['activities'];
     timeline = [];
+    _placementDate = ''; // pichhle parse/re-refresh ka leak nahi (22/09)
     if (rawActs is List) {
       for (final e in rawActs) {
         if (e is! Map) continue;
@@ -641,21 +658,25 @@ class OrderDetailController extends GetxController {
               a['statusId'] ??
               a['StatusId']);
         }
-        final displayName = nm.isNotEmpty
-            ? nm
-            : (status.isNotEmpty ? status : 'orderUpdate'.tr);
+        // 22/09 ROOT CAUSE (Lalit points 1 & 5 — "delivered/processing DO
+        // BAAR dikhta hai — ek ORDER date-time ke saath, ek SAHI date-time
+        // ke saath"): pehle NAME-LESS activity (server ki placement row —
+        // order_status_id/status NULL hota hai, schema nullable) ko hum
+        // GALTI se CURRENT STATUS ka naam de dete the (fallback), phir wo
+        // hijacked row flow-step "Delivered" se match ho kar ORDER DATE
+        // dikhati, aur ASLI delivered activity leftover me dobara SAHI date
+        // ke saath aati — SAME STATUS 2 DATES. Ab name-less activity ko
+        // kisi bhi status ka naam/key KABHI NAHI milta — wo sirf generic
+        // "Order update" event hai aur neeche drop ho jati hai.
         timeline.add({
-          // Naam/status dono khaali ho to bhi row chhoti se chhoti sahi
-          // dikhni chahiye — 'Order update' generic label (x4 langs).
-          'name': displayName,
-          // 10/09: view ko bataya jata hai ye entry ek REAL ACTIVITY hai —
-          // iska label RAW hi dikhe ("Order update" + note), canonical key
-          // se TRANSLATE mat karo (warna "Pending" ka duplicate row ban
-          // jata hai — jaise screenshots me dikh raha tha).
-          'label': displayName,
-          // Activities REAL hui hui events hai — done=true + canonical key
-          // (view ka green-check + translated label, Issue #3).
-          'key': canonStatusKey(nm.isNotEmpty ? nm : status),
+          // Naam wali activity ko uska RAW naam; name-less ko khaali naam
+          // (view me kabhi fake status na bane isliye).
+          'name': nm,
+          // name-less entry ka label generic hi rakhta hai — kisi flow
+          // step ka naam NAHI (warna duplicate status rows — 22/09 bug).
+          'label': nm.isNotEmpty ? nm : 'orderUpdate'.tr,
+          // Key bhi sirf REAL naam se — current-status se derive KABHI nahi.
+          'key': canonStatusKey(nm),
           'seq': 0,
           'done': true,
           'date': jsonToString(a['changed_At'] ??
@@ -675,6 +696,33 @@ class OrderDetailController extends GetxController {
             DateTime(2000);
         return da.compareTo(db);
       });
+      // 22/09 (points 1 & 5) DUPLICATE-CLEANER:
+      //  a) placement row (name-less + note bhi khaali) DROP — uska date ≈
+      //     order date hai; 'pending' flow-step isi se fill hoga (neeche
+      //     _placementDate). Dikhane se wahi status do alag dates par do
+      //     baar dikhti thi.
+      //  b) server kabhi same-status activity DO BAAR likh deta hai (admin
+      //     panel se delivered karne par) — same naam (case-insensitive)
+      //     hote to sirf SABSE PURANI (chronological pehli = asal pehla
+      //     event) rakho — duplicate delivered/processing rows hat jati hai.
+      {
+        String? placement;
+        final seenActs = <String>{};
+        timeline.removeWhere((t) {
+          final nmT = (t['name'] ?? '').toString().trim();
+          final noteT = (t['note'] ?? '').toString().trim();
+          final dtT = (t['date'] ?? '').toString().trim();
+          if (nmT.isEmpty) {
+            if (placement == null && dtT.isNotEmpty) placement = dtT;
+            return noteT.isEmpty; // placement noise drop; note wala event rakho
+          }
+          final k = nmT.toLowerCase();
+          if (seenActs.contains(k)) return true; // duplicate status event
+          seenActs.add(k);
+          return false;
+        });
+        if (placement != null) _placementDate = placement!;
+      }
     }
     // timeline khaali ho to kam se kam current status ki ek entry dikhao
     if (timeline.isEmpty && status.isNotEmpty) {
@@ -727,7 +775,50 @@ class OrderDetailController extends GetxController {
 
       final merged = <Map<String, dynamic>>[];
       final used = <int>{};
-      for (final s in steps) {
+      // 22/09 (points 1/5 — DOOSRI duplicate wajah): server ki status table
+      // me EK canonical meaning ke DO alag-alag naam ho sakte hai (jaise
+      // 'Delivery' + 'Delivered', ya 'Ready to ship' + 'Shipped') — dono
+      // ek hi canonical key banate the isliye delivered karne par DONO
+      // steps done hokar do alag rows/dates ke saath dikhte the. Ab flow
+      // ko canonical key par DEDUPE karte hai — same key ka sirf EK step:
+      // jis par asli activity/current status match ho, wo; warna pehla.
+      final flowSteps = <Map<String, dynamic>>[];
+      {
+        bool hasActivityFor(Map<String, dynamic> s) {
+          final nmS = (s['name'] ?? '').toString();
+          return timeline.any(
+              (t) => matches((t['name'] ?? '').toString(), nmS));
+        }
+
+        final byKey = <String, int>{};
+        for (final s in steps) {
+          final nmS = (s['name'] ?? '').toString();
+          if (nmS.isEmpty) continue;
+          final k = canonStatusKey(nmS);
+          if (k.isEmpty) {
+            flowSteps.add(s); // unknown status — jaisa hai waisa rakho
+            continue;
+          }
+          final prevIdx = byKey[k];
+          if (prevIdx == null) {
+            byKey[k] = flowSteps.length;
+            flowSteps.add(s);
+            continue;
+          }
+          // Same canonical key ka doosra naam — behtar candidate chuno:
+          // (1) current status ka EXACT naam, (2) activity wala naam.
+          final prev = flowSteps[prevIdx];
+          final prevExact = (prev['name'] ?? '').toString().trim().toLowerCase() ==
+              status.trim().toLowerCase();
+          final newExact = nmS.trim().toLowerCase() == status.trim().toLowerCase();
+          final prevAct = hasActivityFor(prev);
+          final newAct = hasActivityFor(s);
+          if ((newExact && !prevExact) || (newAct && !prevAct && !prevExact)) {
+            flowSteps[prevIdx] = s;
+          }
+        }
+      }
+      for (final s in flowSteps) {
         final nm = (s['name'] ?? '').toString();
         if (nm.isEmpty) continue;
         Map<String, dynamic>? act;
@@ -752,9 +843,18 @@ class OrderDetailController extends GetxController {
           'label': '',
           'key': canonStatusKey(nm),
           'seq': seq,
-          // Aane wale (pending) steps ka fake date mat dikhao
+          // Aane wale (pending) steps ka fake date mat dikhao. 'pending'
+          // step ka REAL time placement-activity ka timestamp hai (22/09 —
+          // pehle current-status wale step par galat ORDER date aata tha
+          // aur doosri row SAHI date — ab sirf ek row, sahi date).
           'date': isDone
-              ? (act?['date'] ?? (isCurrent ? orderDate : '')).toString()
+              ? (act?['date'] ??
+                      (canonStatusKey(nm) == 'pending' &&
+                              _placementDate.isNotEmpty
+                          ? _placementDate
+                          : null) ??
+                      (isCurrent ? orderDate : ''))
+                  .toString()
               : '',
           'note': (act?['note'] ?? '').toString(),
           'done': isDone,
@@ -793,7 +893,17 @@ class OrderDetailController extends GetxController {
         final sq = e['seq'] is num ? (e['seq'] as num).toInt() : 0;
         return sq > 0 ? 500 + sq : 900;
       }
-      merged.sort((a, b) => rank(a).compareTo(rank(b)));
+      // 22/09: same-rank entries ka insertion order preserve karo —
+      // Dart List.sort STABLE nahi hota, equal ranks randomly idhar-udhar
+      // ho kar flow ka sequence bigaad sakte the.
+      final insOrder = <Map<String, dynamic>, int>{};
+      for (var i = 0; i < merged.length; i++) {
+        insOrder[merged[i]] = i;
+      }
+      merged.sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        return r != 0 ? r : insOrder[a]!.compareTo(insOrder[b]!);
+      });
       timeline = merged;
 
       // 10/09 deep-fix (tracking): current status TAK ke saare steps done
@@ -901,6 +1011,25 @@ class OrderDetailController extends GetxController {
       }
     }
 
+    // ---- 22/09 (points 2/3): server PK + invoice url ----
+    // PK display number se alag ho sakta hai; cancel/return POST isi se.
+    serverOrderPk = jsonToInt(j['id'] ??
+            j['Id'] ??
+            j['order_id'] ??
+            j['orderId'] ??
+            j['Order_Id']) ??
+        0;
+    // OrderMst.invoiceUrl (swagger v2 — LIVE verify 22/09). Admin jo
+    // invoice generate karta hai uska url yaha aata hai; khaali ho to
+    // InvoiceService REAL order data se HTML invoice banata hai.
+    invoiceUrl = jsonToString(j['invoice_url'] ??
+            j['invoiceUrl'] ??
+            j['invoiceURL'] ??
+            j['Invoice_Url'] ??
+            j['download_invoice_url'] ??
+            j['downloadInvoiceUrl']) ??
+        '';
+
     // ---- server khaali/slim de to prefill (REAL summary) restore ----
     if (items.isEmpty && _prefillItems.isNotEmpty) {
       items = List<Map<String, dynamic>>.from(_prefillItems);
@@ -913,4 +1042,127 @@ class OrderDetailController extends GetxController {
       status = _prefillStatus;
     }
   }
+
+  // ===========================================================================
+  // 22/09 (Lalit points 2 & 3) — ORDER ACTIONS: invoice / cancel / return
+  // ===========================================================================
+
+  /// Current status ka canonical key ('' = unknown).
+  String get currentStatusKey => canonStatusKey(status);
+
+  bool get isDelivered => currentStatusKey == 'delivered';
+
+  bool get isCancelled => currentStatusKey == 'cancelled';
+
+  /// Status ka naam return/refund se milta hai (dynamic status table).
+  bool get isReturnStatus =>
+      RegExp(r'return|refund', caseSensitive: false).hasMatch(status);
+
+  /// CANCEL button — Lalit: "order delivered hone TAK cancel ka button".
+  /// Delivered/cancelled/return ho chuka ho to NAHI; baaki har live
+  /// status (pending/processing/shipped/out-for-delivery) par dikhe.
+  bool get canCancel => currentStatusKey.isNotEmpty &&
+      !isDelivered &&
+      !isCancelled &&
+      !isReturnStatus;
+
+  /// RETURN button — delivered hone ke BAAD (return policy ke mutabik;
+  /// policy window backend enforce karega — app ko policy ki date pata
+  /// nahi, isliye delivered par button; server mana kare to honest error).
+  bool get canReturn => isDelivered;
+
+  bool isCancelling = false;
+  bool isReturning = false;
+
+  /// Cancel ya Return REQUEST server par likho. Server ka ekmatra public
+  /// path = POST Orders/UpdateOrderActivities (swagger 22/09 LIVE verify —
+  /// dedicated Cancel/Return endpoint backend me HAI HI NAHI, isliye status
+  /// table (GetOrderStatus) se 'Cancelled'/'Return...' status ki id le kar
+  /// activity POST karte hai).
+  ///
+  /// Return value:
+  ///  'done'     = request ke baad order ka STATUS turant badal gaya
+  ///  'sent'     = request server par likhi gayi, status abhi shop approve
+  ///               karegi (hard refresh par badal jayega)
+  ///  'failed'   = request fail (401/403/network — user ko retry/support)
+  ///  'noStatus' = status table me cancel/return status hi nahi mila
+  Future<String> requestOrderAction({required bool isReturn}) async {
+    if (serverOrderPk <= 0) return 'failed';
+    if (isReturn) {
+      isReturning = true;
+    } else {
+      isCancelling = true;
+    }
+    update();
+    try {
+      await OrderStatusService.load();
+      Map<String, dynamic>? target;
+      for (final s in OrderStatusService.statuses) {
+        final nm = (s['name'] ?? '').toString();
+        if (!isReturn && canonStatusKey(nm) == 'cancelled') {
+          target = s;
+          break;
+        }
+        if (isReturn &&
+            RegExp(r'return|refund', caseSensitive: false).hasMatch(nm)) {
+          target = s;
+          break;
+        }
+      }
+      if (target == null) return 'noStatus';
+      final statusId =
+          target['id'] is num ? (target['id'] as num).toInt() : 0;
+      if (statusId <= 0) return 'noStatus';
+      final res = await ApiService().request(
+        endpoint: ApiEndpoints.updateOrderActivities,
+        method: ApiMethod.post,
+        // OrderStatusActivityDto (swagger v2 — additionalProperties:false,
+        // sirf yahi fields bhejo): {id, order_status_id, status, order_id,
+        // note, changed_at}.
+        data: <String, dynamic>{
+          'id': 0,
+          'order_id': serverOrderPk,
+          'order_status_id': statusId,
+          'status': (target['name'] ?? '').toString(),
+          'note': isReturn
+              ? 'Customer requested return (mobile app)'
+              : 'Customer requested cancellation (mobile app)',
+          'changed_at': DateTime.now().toIso8601String(),
+        },
+        fromJson: (json) => json,
+      );
+      if (!res.isSuccess) return 'failed';
+      // Fresh detail lao — status/timeline turant sahi dikhe; phir status
+      // badla ya nahi (admin approval lagta hai kya) uske hisaab se result.
+      await fetchOrderDetail();
+      final nowReturn =
+          RegExp(r'return|refund', caseSensitive: false).hasMatch(status);
+      final nowCancel = canonStatusKey(status) == 'cancelled';
+      return isReturn ? (nowReturn ? 'done' : 'sent') : (nowCancel ? 'done' : 'sent');
+    } catch (_) {
+      return 'failed';
+    } finally {
+      isCancelling = false;
+      isReturning = false;
+      update();
+    }
+  }
+
+  /// INVOICE — server `invoice_url` ho to wahi asli copy kholo, warna REAL
+  /// order data (yehi page jis server se pada) se HTML invoice banao.
+  Future<void> downloadInvoice() => InvoiceService.downloadInvoice(
+        invoiceUrl: invoiceUrl,
+        orderNumber: orderNumber.isNotEmpty ? orderNumber : '$orderId',
+        orderDate: orderDate,
+        status: status,
+        items: items,
+        subtotal: subtotal,
+        shipping: shipping,
+        discount: discount,
+        tax: tax,
+        total: total,
+        paymentMethod: paymentMethod,
+        address: address,
+        currencySymbol: 'AED',
+      );
 }

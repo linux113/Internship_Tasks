@@ -32,9 +32,12 @@ class CommonBottomNavigation extends StatelessWidget {
                   var badgeCount = 0;
                   if (e.key == 2 && Get.isRegistered<CartController>()) {
                     badgeCount = Get.find<CartController>().cartItemsCount;
-                  } else if (e.key == 3 &&
-                      Get.isRegistered<WishlistController>()) {
-                    badgeCount = Get.find<WishlistController>().wishlistCount;
+                  } else if (e.key == 3) {
+                    // 21/09 (point 6): controller kisi wajah se abhi na bana
+                    // ho to bhi badge 0 mat dikhayo — storage ka ASLI count.
+                    badgeCount = Get.isRegistered<WishlistController>()
+                        ? Get.find<WishlistController>().wishlistCount
+                        : WishlistController.loadWishlistItems().length;
                   }
                   return BottomNavigationWidget().bottomNavigationCard(
                       color: appCtrl.selectedIndex == e.key

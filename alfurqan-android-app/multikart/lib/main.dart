@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:multikart/config.dart';
 import 'package:multikart/views/splash_screen.dart';
 import 'common/language/index.dart';
+import 'controllers/home_product_controllers/wishlist_controller.dart';
 import 'services/local_storage_service.dart';
 
 void main() async {
@@ -11,6 +12,15 @@ void main() async {
   await Firebase.initializeApp();
 
   Get.put(AppController());
+  // 21/09 (Lalit, point 6 — "fav badge count nahi karta"): WishlistController
+  // SIRF wishlist tab khulne par banta tha — cold start par header/bottom-nav
+  // ka fav COUNT badge isRegistered=false hone ki wajah se BANA hi nahi tha
+  // aur heart tap ki _notifyUi bhi kissi ko na dhoond paati thi. Ab app start
+  // me hi PERMANENT register (data local storage se aata hai — sasta, koi
+  // extra network nahi), taaki har screen ka badge day-1 se LIVE count dikhe.
+  if (!Get.isRegistered<WishlistController>()) {
+    Get.put(WishlistController(), permanent: true);
+  }
   runApp(const MyApp());
 }
 

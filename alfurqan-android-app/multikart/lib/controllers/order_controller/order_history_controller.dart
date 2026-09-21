@@ -64,14 +64,16 @@ class OrderHistoryController extends GetxController {
   /// Jin par resolve FAIL ho chuka — bar-bar api NAHI (network bachao).
   static final Set<String> _imageMisses = {};
 
-  /// order_number -> GetOrder DETAIL se aayi item-photo urls (index order
-  /// me). v1.6.29 DEEP FIX: GetUserOrders ki slim rows me item ka naam/id/
-  /// thumbnail AATA HI NAHI (card ka "Order #N" fallback-title isi ka
-  /// saboot) — catalog/pid match kabhi possible hi nahi thi. Detail api
-  /// (Orders/GetOrder?id=<number>) hi wahin source hai jisme products[] +
-  /// product_thumbnail aata hai (order DETAIL page par photo isi se dikhti
-  /// hai) — ek order = ek chhota call, cache ke saath.
-  static final Map<String, List<String>> _detailImgCache = {};
+  /// order_number -> GetOrder DETAIL ke ASLI items [{name, image(raw), qty}]
+  /// (index order me). v1.6.29 DEEP FIX: GetUserOrders ki slim rows me item
+  /// ka naam/id/thumbnail AATA HI NAHI (card ka "Order #N" fallback-title
+  /// isi ka saboot) — catalog/pid match kabhi possible hi nahi thi. 22/09
+  /// (Lalit point 4 — "3 products ek saath order karne par history me
+  /// details AUR qty dono galat"): ab detail call se sirf photo nahi, poora
+  /// item (naam + qty bhi) aata hai aur placeholder rows REPLACE hoti hai —
+  /// Detail api (Orders/GetOrder?id=<number>) hi wahin source hai jisme
+  /// products[] + pivot.quantity aata hai. Ek order = ek chhota call, cache ke saath.
+  static final Map<String, List<Map<String, dynamic>>> _detailItemCache = {};
 
   /// MediaFiles {asset_url, original_url} — 'url' key hoti hi nahi (detail
   /// ctrl ka private helper tha; yaha apna).
@@ -546,15 +548,18 @@ class OrderHistoryController extends GetxController {
     // (GetUserOrders slim rows me item naam/photo hi nahi aata, isliye
     // pid=0 aur naam='Order #N' placeholder hota hai — catalog/naam match
     // tab kabhi kaam nahi karti. Detail api me products[] + thumbnail hota
-    // hai.) Ek order = ek chhota call (cache ke saath).
+    // hai.) Ek order = ek chhota call (cache ke saath), cap 15 (bohot purane
+    // orders ke liye list pehle dikhe, photos baad me lazy).
     final orderNos = <String>{};
     for (final p in pend) {
       final no = '${p['order'] ?? ''}';
       if (no.isNotEmpty) orderNos.add(no);
     }
-    final detailImgs = <String, List<String>>{};
-    for (final no in orderNos) {
-      detailImgs[no] = await _detailItemImages(no);
+    // 22/09 (point 4): detail ab ASLI ITEMS ({name, image(raw), qty})
+    // deta hai — neeche Step 3b me placeholder/galat rows isi se theek.
+    final detailItems = <String, List<Map<String, dynamic>>>{};
+    for (final no in orderNos.take(15)) {
+      detailItems[no] = await _detailItemsOf(no);
     }
 
     // Step 1 — full catalog scan (sirf ek baar per session) — SIRF tab jab
@@ -629,8 +634,9 @@ class OrderHistoryController extends GetxController {
         final cur = list[idx].image ?? '';
         if (cur.isEmpty || cur.contains('m_logo')) {
           // 1) GetOrder detail ka index-matched photo (sabse bharosemand)
-          final dlist = detailImgs['${p['order'] ?? ''}'] ?? const <String>[];
-          var url = idx < dlist.length ? dlist[idx] : '';
+          final dl = detailItems['${p['order'] ?? ''}'] ??
+              const <Map<String, dynamic>>[];
+          var url = idx < dl.length ? '${dl[idx]['image'] ?? ''}' : '';
           // 2) warna catalog pid / exact-naam cache
           if (url.isEmpty) url = urlFor(p) ?? '';
           if (url.isNotEmpty) {
@@ -648,6 +654,72 @@ class OrderHistoryController extends GetxController {
             pid > 0 ? 'id:$pid' : 'nm:${_normName('${p['name'] ?? ''}')}');
       }
     }
+
+    // Step 3b — 22/09 (Lalit point 4 — "3 products ek saath order karne par
+    // history me product details + qty GALAT"): slim row se bana single
+    // 'Order #N' (qty=1) placeholder sab kuch galat dikhata hai — items=3
+    // ke sath bhi 1 row. Ab DETAIL ke ASLI items se: (a) placeholder ya
+    // count-mismatch ho to poori list REBUILD (naam+qty+photo asli, date/
+    // status/total purani row se), (b) count match ho to per-index
+    // qty/naam/photo hi sync karo. Total (size) sirf FIRST row par rahega
+    // (pehle ka convention hi).
+    for (final entry in detailItems.entries) {
+      final real = entry.value;
+      if (real.isEmpty) continue;
+      final oid = int.tryParse(entry.key) ?? 0;
+      OrderHistoryModel? order;
+      for (final o in orderHistoryList) {
+        if (o.orderId == oid) {
+          order = o;
+          break;
+        }
+      }
+      final cur = order?.daysWiseList;
+      if (order == null || cur == null || cur.isEmpty) continue;
+      final isPlaceholder = cur.length == 1 &&
+          ((cur.first.name ?? '').startsWith('Order #') ||
+              (cur.first.image ?? '').isEmpty);
+      if (isPlaceholder || cur.length != real.length) {
+        final keep = cur.first;
+        order.daysWiseList = <DaysWiseList>[
+          for (var k = 0; k < real.length; k++)
+            DaysWiseList(
+              image: buildMediaUrl('${real[k]['image'] ?? ''}'),
+              name: '${real[k]['name'] ?? ''}'.isNotEmpty
+                  ? '${real[k]['name']}'
+                  : 'Order #${entry.key}',
+              size: k == 0 ? (keep.size ?? '') : '',
+              qty: real[k]['qty'] is int ? real[k]['qty'] as int : 1,
+              date: keep.date ?? '',
+              deliveryStatus: keep.deliveryStatus ?? '',
+              status: keep.status ?? '',
+            ),
+        ];
+        changed = true;
+      } else {
+        // Counts match — per-index asli qty/naam/photo sync (galat qty
+        // ka seedha ilaaj).
+        for (var k = 0; k < cur.length && k < real.length; k++) {
+          final q = real[k]['qty'];
+          if (q is int && q > 0 && cur[k].qty != q) {
+            cur[k].qty = q;
+            changed = true;
+          }
+          final nm = '${real[k]['name'] ?? ''}';
+          if (nm.isNotEmpty && (cur[k].name ?? '').startsWith('Order #')) {
+            cur[k].name = nm;
+            changed = true;
+          }
+          final im = '${real[k]['image'] ?? ''}';
+          if (im.isNotEmpty &&
+              ((cur[k].image ?? '').isEmpty ||
+                  (cur[k].image ?? '').contains('m_logo'))) {
+            cur[k].image = buildMediaUrl(im);
+            changed = true;
+          }
+        }
+      }
+    }
     // Resolve hone wale misses se hata do (agli baar direct cache hit);
     // updated rows turant photo ke saath dikhao.
     if (changed) {
@@ -661,14 +733,18 @@ class OrderHistoryController extends GetxController {
     }
   }
 
-  /// Ek order ka GetOrder DETAIL lao aur uske items ki photos INDEX order
-  /// me nikaalo. Slim row items unusable hai (naam/id nahi) — isliye row
-  /// item k ko detail product k se jodo (user ke orders 1-2 items ke hote
-  /// hai, counts match). Detail parse me mile pid/naam bhi caches me daal
-  /// do (agli baar catalog/free match).
-  Future<List<String>> _detailItemImages(String orderNo) async {
-    if (_detailImgCache.containsKey(orderNo)) return _detailImgCache[orderNo]!;
-    var urls = <String>[];
+  /// Ek order ka GetOrder DETAIL lao aur uske ASLI items ([{name, image(raw),
+  /// qty}] INDEX order me) nikaalo. Slim row items unusable hai (naam/id
+  /// nahi) — isliye row item k ko detail product k se jodo (user ke orders
+  /// 1-2 items ke hote hai, counts match). 22/09 (point 4): ab sirf photo
+  /// nahi, naam + ASLI qty (pivot.quantity) bhi isse aati hai — history card
+  /// ka naam/qty/photo teeno isi se theek hote hai. Parse me mile pid/naam
+  /// caches me bhi daal do (agli baar catalog/free match).
+  Future<List<Map<String, dynamic>>> _detailItemsOf(String orderNo) async {
+    if (_detailItemCache.containsKey(orderNo)) {
+      return _detailItemCache[orderNo]!;
+    }
+    var out = <Map<String, dynamic>>[];
     try {
       final res = await ApiService().request<Map<String, dynamic>>(
         endpoint: ApiEndpoints.getOrder,
@@ -696,15 +772,16 @@ class OrderHistoryController extends GetxController {
         },
       );
       if (res.isSuccess && res.data != null && res.data!.isNotEmpty) {
-        urls = _itemImagesFromOrderDetail(res.data!);
+        out = _itemsFromOrderDetail(res.data!);
       }
     } catch (_) {}
-    _detailImgCache[orderNo] = urls;
-    return urls;
+    _detailItemCache[orderNo] = out;
+    return out;
   }
 
-  /// Detail JSON ke products[] se photo urls (INDEX order me) + caches.
-  List<String> _itemImagesFromOrderDetail(Map<String, dynamic> j) {
+  /// Detail JSON ke products[] se [{name, image(raw), qty}] (INDEX order
+  /// me) + pid/naam image caches.
+  List<Map<String, dynamic>> _itemsFromOrderDetail(Map<String, dynamic> j) {
     var rawItems = j['products'] ??
         j['Products'] ??
         j['items'] ??
@@ -717,11 +794,11 @@ class OrderHistoryController extends GetxController {
         rawItems = s0['products'] ?? s0['Products'] ?? s0['items'];
       }
     }
-    final out = <String>[];
+    final out = <Map<String, dynamic>>[];
     if (rawItems is List) {
       for (final e in rawItems) {
         if (e is! Map) {
-          out.add('');
+          out.add(const <String, dynamic>{'name': '', 'image': '', 'qty': 1});
           continue;
         }
         final it = Map<String, dynamic>.from(e);
@@ -730,6 +807,19 @@ class OrderHistoryController extends GetxController {
             : (it['Product'] is Map
                 ? Map<String, dynamic>.from(it['Product'] as Map)
                 : <String, dynamic>{});
+        // 22/09 (point 4 — ASLI qty): DTO me qty pivot.quantity me hoti hai
+        // (swagger OrderPivotDto verify), entity me top-level quantity.
+        final pivot = it['pivot'] is Map
+            ? Map<String, dynamic>.from(it['pivot'] as Map)
+            : (it['Pivot'] is Map
+                ? Map<String, dynamic>.from(it['Pivot'] as Map)
+                : <String, dynamic>{});
+        final qty = jsonToInt(pivot['quantity'] ??
+                pivot['Quantity'] ??
+                it['quantity'] ??
+                it['qty'] ??
+                it['Quantity']) ??
+            1;
         var img = _mediaUrlOf(it['product_thumbnail']);
         if (img.isEmpty) img = _mediaUrlOf(it['variation_image']);
         if (img.isEmpty) img = _mediaUrlOf(prod['product_thumbnail']);
@@ -742,7 +832,13 @@ class OrderHistoryController extends GetxController {
                   prod['thumbnail']) ??
               '';
         }
-        out.add(img);
+        final name = jsonToString(it['name'] ??
+                it['Name'] ??
+                it['product_name'] ??
+                prod['name'] ??
+                prod['Name']) ??
+            '';
+        out.add(<String, dynamic>{'name': name, 'image': img, 'qty': qty});
         if (img.isNotEmpty) {
           final pid = jsonToInt(it['product_id'] ??
                   it['Product_Id'] ??
@@ -750,8 +846,7 @@ class OrderHistoryController extends GetxController {
                   prod['Id']) ??
               0;
           if (pid > 0) _pidImageCache[pid] = img;
-          final nm = _normName(
-              '${it['name'] ?? prod['name'] ?? prod['Name'] ?? ''}');
+          final nm = _normName(name);
           if (nm.isNotEmpty) _nameImageCache[nm] = img;
         }
       }

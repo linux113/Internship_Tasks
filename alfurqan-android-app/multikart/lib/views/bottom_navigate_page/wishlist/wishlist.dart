@@ -13,7 +13,12 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
-  final wishListCtrl = Get.put(WishlistController());
+  // 21/09: controller ab main.dart me PERMANENT registered hai — yaha
+  // dobara Get.put mat karo (purana pattern har bar NAYA instance bana kar
+  // badges ka listener-chain reset kar deta tha). Sirf same instance lo.
+  final wishListCtrl = Get.isRegistered<WishlistController>()
+      ? Get.find<WishlistController>()
+      : Get.put(WishlistController(), permanent: true);
 
   /// Wishlist item ko REAL cart api (Cart/AddToCart) se cart me dalo.
   /// (Pehle ye button sirf ek bottom sheet dikhata tha, cart me add nahi hota tha.)

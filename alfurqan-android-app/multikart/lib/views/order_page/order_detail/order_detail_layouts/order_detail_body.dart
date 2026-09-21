@@ -316,6 +316,46 @@ class OrderDetailBody extends StatelessWidget {
                   color: appCtrl.appTheme.primary),
             ]),
           ],
+
+          // ================= 22/09 (Lalit points 2/3): order actions =================
+          // INVOICE — delivered order (ya jinpar server invoice_url di ho).
+          // Server invoice url ho to wahi asli copy khulti hai, warna app
+          // REAL order data ka HTML invoice save/share karati hai.
+          if (ctrl.isDelivered || ctrl.invoiceUrl.isNotEmpty) ...[
+            const Space(0, 20),
+            const BorderLineLayout(),
+            const Space(0, 16),
+            _actionButton(
+              appCtrl,
+              label: "downloadInvoice".tr,
+              icon: Icons.download_rounded,
+              color: appCtrl.appTheme.primary,
+              onTap: () => ctrl.downloadInvoice(),
+            ),
+          ],
+          // CANCEL — order delivered hone TAK (point 3). Server ke dynamic
+          // status flow ka 'Cancelled' status me activity POST hoti hai.
+          if (ctrl.canCancel) ...[
+            const Space(0, 12),
+            _actionButton(
+              appCtrl,
+              label: ctrl.isCancelling ? "pleaseWait".tr : "cancelOrder".tr,
+              icon: Icons.cancel_outlined,
+              color: Colors.red,
+              onTap: () => _confirmOrderAction(ctrl, isReturn: false),
+            ),
+          ],
+          // RETURN — delivered hone ke BAAD (return policy ke mutabik).
+          if (ctrl.canReturn) ...[
+            const Space(0, 12),
+            _actionButton(
+              appCtrl,
+              label: ctrl.isReturning ? "pleaseWait".tr : "returnOrder".tr,
+              icon: Icons.assignment_return_outlined,
+              color: Colors.red.shade700,
+              onTap: () => _confirmOrderAction(ctrl, isReturn: true),
+            ),
+          ],
           const Space(0, 40),
         ],
       ).marginSymmetric(horizontal: AppScreenUtil().screenWidth(15));
@@ -336,6 +376,68 @@ class OrderDetailBody extends StatelessWidget {
             fontSize: FontSizes.f13,
             color: appCtrl.appTheme.blackColor),
       ]),
+    );
+  }
+
+  /// 22/09 (points 2/3): invoice/cancel/return ka common outlined button.
+  Widget _actionButton(AppController appCtrl,
+      {required String label,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: AppScreenUtil().size(18), color: color),
+        label: LatoFontStyle(
+            text: label,
+            fontSize: FontSizes.f13,
+            fontWeight: FontWeight.w700,
+            color: color),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: color),
+          padding: EdgeInsets.symmetric(
+              vertical: AppScreenUtil().screenHeight(11)),
+          shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(AppScreenUtil().borderRadius(8))),
+        ),
+      ),
+    );
+  }
+
+  /// Cancel/Return ke liye pehle CONFIRM (galat tap se order na kata),
+  /// phir server request. Result server ke jawab par — done/sent/failed/
+  /// noStatus ka HONEST translated message (koi fake success nahi).
+  void _confirmOrderAction(OrderDetailController ctrl,
+      {required bool isReturn}) {
+    Get.defaultDialog(
+      title: (isReturn ? "returnOrder" : "cancelOrder").tr,
+      middleText: (isReturn ? "confirmReturnOrder" : "confirmCancelOrder").tr,
+      textConfirm: "yes".tr,
+      textCancel: "no".tr,
+      confirmTextColor: Colors.white,
+      buttonColor: ctrl.appCtrl.appTheme.primary,
+      onConfirm: () async {
+        Get.back();
+        final result = await ctrl.requestOrderAction(isReturn: isReturn);
+        switch (result) {
+          case 'done':
+            // server ne status turant badal diya
+            snackBar((isReturn ? "returnRequested" : "orderCancelled").tr);
+            break;
+          case 'sent':
+            // request likh gayi — shop/admin approve karega
+            snackBar((isReturn ? "returnRequested" : "cancelRequestSent").tr);
+            break;
+          case 'noStatus':
+            snackBar((isReturn ? "returnNotAvailable" : "requestFailedTryAgain").tr);
+            break;
+          default:
+            snackBar("requestFailedTryAgain".tr);
+        }
+      },
     );
   }
 }
