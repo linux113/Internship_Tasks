@@ -2369,3 +2369,78 @@ Version 1.6.43+72, label "v1.6.43 (72)", zip v1684.
    naam+photo dikhata hai (pehle placeholder tha).
 
 Version 1.6.44+73, label "v1.6.44 (73)", zip v1685.
+
+## v1.6.45+74 (21/09/2026) — 6-screenshot report: category HALF-CUT, order list photos, DOWNLOAD button, cancelled ka Processing-tick
+
+### 1. Categories PAGE — "half cutting" (har gol coin adhura kata dikhta)
+- EVIDENCE (screenshot 2): v1685 ke white square frames ke ANDAR har coin
+  ki upar/neeche ki patti kata hui dikhti (ellipse slice).
+- ROOT (`bottom_navigate_page/category/category.dart`): ClipOval ko
+  Expanded ka RECT (cell ki portrait height × width) mil raha tha —
+  ClipOval RECT bounds par ELLIPSE clip karta hai; cover-scale gol coin
+  art ke edges ellipse se kat jate. Square-par-oval hi poora CIRCLE hota.
+- FIX: hamesha TRUE SQUARE — `Center(child: AspectRatio(1, child:
+  ClipOval(...cover)))` — coin poora gol (koi ellipse-crop NAHI), charo
+  taraf white frame equal margin, outer hardEdge guard ab bhi hai.
+
+### 2. Order History — naye orders (#1109/#1110) ka naam/photo NAHI ("Order #N" + book icon)
+- EVIDENCE (screenshot 3): dono order rows placeholder; detail page me
+  photo THEEK dikh rahi thi — yaani detail api ka data aa raha hai.
+- ROOT-1 (`order_history_controller.dart` `_detailItemsOf`): EMPTY result
+  bhi session-cache ho jata tha — network/auth/server ka EK transient
+  fail = session BHAR placeholder atka rehta; refresh par cache pehle
+  line se wapas karta, kabhi fresh fetch NAHI. FIX: SIRF non-empty result
+  cache.
+- ROOT-2 (server timing): just-order-placed order ka GetOrder kabhi thodi
+  der tak items ke bina jawab de sakta hai. FIX: resolve-pass ke END me —
+  jo orders ab bhi [] mile unke liye EK baar, 3s baad, ek doosri pass
+  (allowRetry=false — recursion bounded; fresh api call asli hoti hai
+  kyuki empty-cache sticky nahi). Caller timeout 20s → 45s.
+- NOTE: RAW data screenshot — detail pages me photo+qyt+total sahi the
+  (#1109 تفسير AED65, #1110 اللولو AED30 dono) — parse pipeline sahi,
+  sirf timing/cache issue tha.
+
+### 3. Order detail — DOWNLOAD INVOICE button hi NAHI dikh raha
+- EVIDENCE (screenshots 1, 5): pending/cancelled orders par Payment
+  Method ke baad button absent.
+- ROOT: visibility rule tha `isDelivered || invoiceUrl.isNotEmpty` —
+  server ab tak invoice_url KABHI nahi bhejta (backend deliver karna hai)
+  aur test orders pending/cancelled the — button complete GAYAB.
+- FIX: button HAR status par dikta hai. Tap: server invoice_url ho to
+  wahi ASLI invoice khulti hai (url_launcher), warna REAL order data
+  (items/qty/subtotal/shipping/tax/total/address) ka HTML invoice
+  save+share hota hai — local HTML sirf tab jab server copy na ho.
+
+### 4. CANCELLED order me 'Processing' ka GREEN tick (kabhi hua hi nahi wale step)
+- EVIDENCE (screenshot 6, #1109): timeline me Pending ✓ + Processing ✓ —
+  ye order kabhi processing me GAYA hi nahi.
+- ROOT (`order_detail_controller.dart`): `isDone` ka linear fill
+  `seq < statusSequence` — server status-table me 'Cancelled' ka sequence
+  (3) normal flow ke beech ka number hai; cancelled order par seq<3 ke
+  steps (Pending+Processing) auto-done ho jate the.
+- FIX: linear fill SIRF jab current status flow ke ANDAR ka aage-wala
+  step ho. Terminal-out-of-flow (cancelled / return / undeliver) par fill
+  BAND — mid steps sirf REAL activity se green; Pending hamesha done
+  (order place hua hi hota hai — fact). Mirror test: OLD cancelled→
+  Processing=True (BUG), NEW cancelled→Processing=False ✓, pending/
+  shipped/delivered flows REGRET none — sab same.
+
+### Verification (21/09 static + mirror)
+- Audits 8/8 (dart_clean, deep_check 553 files, audit2 = 401 keys ×4
+  CLEAN — is round koi naya lang key NAHI chahiye), verify_v1642 21/21.
+- Quote-lexer FINAL-SCAN — 4 edited dart files ALL OK.
+- Timeline mirror (python): cancelled/pending/shipped/delivered — NEW
+  logic sirf Processing-on-cancelled theek karta, baaki CASES identical.
+
+### Test notes (v1.6.45)
+1. CATEGORIES tab → har coin POORA gol, white square ke andar barabar
+   margin — "half cutting" bilkul nahi.
+2. Orders → pull-down refresh karo → #1109/#1110 dono asli book ke naam
+   + photo + qty dikhaye (pehli baar na aaye to 3-4 second me khud dobara
+   try hota hai — ek aur refresh 100% laata hai).
+3. Koi bhi order kholo (pending ho ya cancelled) → Payment Method ke
+   NEECHE "DOWNLOAD INVOICE" dikhta hai → tap → invoice khulta/share.
+4. Cancelled order ka detail → sirf Pending ✓ + Cancelled ✓ green;
+   Processing/Shipped/Sab future steps GREY — galat tick nahi.
+
+Version 1.6.45+74, label "v1.6.45 (74)", zip v1686.

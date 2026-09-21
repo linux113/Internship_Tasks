@@ -824,6 +824,15 @@ class OrderDetailController extends GetxController {
           }
         }
       }
+      // 21/09 (cancelled order me Processing GREEN bug): current status
+      // flow se ALAG terminal node hai ya nahi — neeche linear sequence-fill
+      // sirf andar ke aage-wale statuses ke liye chalata hai. Server-
+      // verified terminal naam: cancelled (canon key) + return/undeliver
+      // (string match — canon map me nahi bhi ho to bhi pakde).
+      final _lowCur = status.trim().toLowerCase();
+      final isTerminalOutOfFlow = canonStatusKey(status) == 'cancelled' ||
+          _lowCur.contains('return') ||
+          _lowCur.contains('undeliver');
       for (final s in flowSteps) {
         final nm = (s['name'] ?? '').toString();
         if (nm.isEmpty) continue;
@@ -838,9 +847,23 @@ class OrderDetailController extends GetxController {
         }
         final isCurrent = matches(status, nm);
         final seq = s['sequence'] is num ? (s['sequence'] as num).toInt() : 0;
+        // 21/09 (Lalit screenshot #1109 — CANCELLED order me 'Processing'
+        // GREEN dikha, wo step KABHI hua hi nahi): ROOT = yaha ka
+        // `seq < statusSequence` linear fill — server ki status-table me
+        // 'Cancelled' ka sequence (3) normal flow ke beech ka number hai,
+        // isliye CANCELLED order par seq<3 ke steps (Pending+Processing)
+        // kHUD-BA-KHUD done mark ho jate the. Linear fill tabhi USE karo
+        // jab current status FLOW ke ANDAR ka aage-wala step ho; cancelled/
+        // returned/undelivered (flow se alag TERMINAL node) par Kabhi NAHI.
+        // Pending step hamesha done (order PLACE hua hi hota hai — fact).
+        final stepKey = canonStatusKey(nm);
         final isDone = act != null ||
             isCurrent ||
-            (statusSequence > 0 && seq > 0 && seq < statusSequence);
+            stepKey == 'pending' ||
+            (!isTerminalOutOfFlow &&
+                statusSequence > 0 &&
+                seq > 0 &&
+                seq < statusSequence);
         merged.add({
           'name': nm,
           // Server-flow steps label KHAALI — view canonical 'key' se

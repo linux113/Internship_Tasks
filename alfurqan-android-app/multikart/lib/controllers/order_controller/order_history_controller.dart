@@ -297,9 +297,10 @@ class OrderHistoryController extends GetxController {
     update();
     // 15/09 v1.6.29: photos ka resolve LIST KO BLOCK NAHI karega — rows
     // turant dikhti hai; photos (GetOrder detail + catalog se) milte hi
-    // resolver khud update() kar deta hai. 20s cap, koi throw UI tak NAHI.
+    // resolver khud update() kar deta hai. 45s cap (21/09 — empty-detail
+    // retry pass +3s baad bhi ghus sake), koi throw UI tak NAHI.
     _resolveMissingImages()
-        .timeout(const Duration(seconds: 20), onTimeout: () {})
+        .timeout(const Duration(seconds: 45), onTimeout: () {})
         .catchError((_) {});
   }
 
@@ -514,7 +515,10 @@ class OrderHistoryController extends GetxController {
   /// Step 2: tab bhi na mile to EXACT naam se search (Arabic ya/alef
   /// spellings normalize karke) — sirf EXACT match accept, GALAT photo
   /// kabhi nahi. Step 3: sirf display-image field update + update().
-  Future<void> _resolveMissingImages() async {
+  Future<void> _resolveMissingImages() async =>
+      _resolveMissingImagesPass(allowRetry: true);
+
+  Future<void> _resolveMissingImagesPass({required bool allowRetry}) async {
     if (_pendingImages.isEmpty) return;
     final pend = List<Map<String, dynamic>>.from(_pendingImages);
     _pendingImages.clear();
@@ -733,6 +737,24 @@ class OrderHistoryController extends GetxController {
       });
       update();
     }
+    // 21/09 (Lalit screenshot — naye orders ke naam/photo history me na
+    // aaye): server just-order-placed order ka GetOrder kabhi THODI der ke
+    // liye items ke bina jawab de (ya transient net hiccup) — sirf EK baar
+    // kuch hi second baad unhi orders ki resolve-pass dobara (allowRetry
+    // false — dusri pass se recursion/loop band; A-gate empty-cache ab
+    // sticky nahi, isliye ye pass sach me fresh api call karti hai).
+    if (allowRetry) {
+      final emptyOrders = <String>{
+        for (final e in detailItems.entries)
+          if (e.value.isEmpty) e.key,
+      };
+      if (emptyOrders.isNotEmpty) {
+        _pendingImages.addAll(pend.where((p) =>
+            emptyOrders.contains('${p['order'] ?? ''}')));
+        await Future<void>.delayed(const Duration(seconds: 3));
+        await _resolveMissingImagesPass(allowRetry: false);
+      }
+    }
   }
 
   /// Ek order ka GetOrder DETAIL lao aur uske ASLI items ([{name, image(raw),
@@ -777,7 +799,13 @@ class OrderHistoryController extends GetxController {
         out = _itemsFromOrderDetail(res.data!);
       }
     } catch (_) {}
-    _detailItemCache[orderNo] = out;
+    // 21/09 (Lalit screenshot — naye orders #1109/#1110 history me naam/
+    // photo NAHI, sirf 'Order #N' + icon): pehle EMPTY result bhi cache
+    // ho jata tha — network/auth/server ka EK transient fail = session
+    // BHAR placeholder atka rehta (refresh par bhi retry hi nahi hota,
+    // cache pehle line par wapas kar deta). Ab SIRF non-empty cache —
+    // fail hua to agli resolve-pass refresh/retry par dobara hit hoga.
+    if (out.isNotEmpty) _detailItemCache[orderNo] = out;
     return out;
   }
 

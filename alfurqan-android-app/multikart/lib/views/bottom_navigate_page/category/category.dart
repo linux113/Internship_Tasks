@@ -68,20 +68,27 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // 22/09 (Lalit — "category page ke CIRCLE apne
-                              // SQUARE frame ke BAHAR nikle hue hai, circle
-                              // ko frame ke ANDAR karo"): pehle image SQUARE
-                              // card ko poori bhar deti thi (BoxFit.cover) —
-                              // server ki gol coin-artwork photos card ke
-                              // border ko touch/cross karti hui DIKHTI thi
-                              // (portrait cell me cover-scale se circle art
-                              // ~25% bada ho jata). Ab WHITE rounded square
-                              // ke ANDAR 10px margin chhod kar gol photo —
-                              // circle HAMESHA frame ke andar (home row jaisa).
+                              // SQUARE frame ke BAHAR nikle hue hai"): pehle
+                              // image SQUARE card ko poori bharti thi.
+                              // 21/09 (Lalit v1685 — "category me image HALF
+                              // CUTTING aa rahi hai"): ClipOval ko Expanded ka
+                              // RECT (width×lambe-portrait-height) mil raha
+                              // tha — ClipOval RECT bounds par ELLIPSE karta
+                              // hai, aur cover-scale gol coin art ki upar/
+                              // neeche ki patti elliptical clip se KAT JATA
+                              // (screenshot me har coin adhura kata dikhta).
+                              // ROOT-FIX: hamesha TRUE SQUARE (AspectRatio 1,
+                              // Center se center) ke andar ClipOval — square
+                              // par oval == poora CIRCLE, coin hamesha poora,
+                              // white rounded frame charo taraf barabar marg
+                              // (outer hardEdge clipping ab bhi raksha rakhta
+                              // hai aur server ke square-art par cover ==
+                              // contain, koi double-crop ka effect NAHI).
                               Expanded(
                                 child: Container(
                                   width: double.infinity,
                                   padding:
-                                      EdgeInsets.all(AppScreenUtil().size(10)),
+                                      EdgeInsets.all(AppScreenUtil().size(12)),
                                   clipBehavior: Clip.hardEdge,
                                   decoration: BoxDecoration(
                                     color: appCtrl.appTheme.whiteColor,
@@ -90,10 +97,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                     border: Border.all(
                                         color: appCtrl.appTheme.greyLight25),
                                   ),
-                                  child: ClipOval(
-                                    child: imageNetwork(
-                                        url: cat.displayImageUrl ?? '',
-                                        fit: BoxFit.cover),
+                                  child: Center(
+                                    child: AspectRatio(
+                                      aspectRatio: 1.0,
+                                      child: ClipOval(
+                                        child: imageNetwork(
+                                            url: cat.displayImageUrl ?? '',
+                                            fit: BoxFit.cover),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
