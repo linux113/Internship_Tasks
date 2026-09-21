@@ -2236,3 +2236,60 @@ Version 1.6.42+71, label "v1.6.42 (71)", zip v1683.
    ASLI qty ke saath dikhe (Order #N placeholder nahi).
 5. App CHALA kar (wishlist tab na bhi kholo) kisi product ka heart dabao
    → upar heart icon + neeche WISHLIST tab dono par count TURANT badhe.
+
+---
+
+## v1.6.43+72 (22/09/2026) — Category circle frame + v1.6.42 ka FULL end-to-end re-verify
+
+### FIX — Category section: CIRCLE apne frame (square/border) ke BAHAR dikhta tha
+- ROOT (`home_category_data.dart` + `home_category_list.dart`): home top
+  "Category" row me har item = green circular frame (62px) + uske andar
+  gol PHOTO (56px) — photo ka edge sirf 3px ring tha, isliye photo har
+  device density par green ring ko TOUCH karti hui (kabhi border ko cross
+  karti hui dikhti) = "circle frame ke bahar" jaisa lagta. Plus lambe
+  Arabic naam 2-3 lines le kar Column ko row height (100) se bada kar
+  dete — content bounds ke BAHAR render hota tha.
+- FIX: frame 70px gol + photo 52px gol → beech me har jagah saaf 8-9px
+  GREEN RING (photo hamesha frame ke andar); frame par `clipBehavior:
+  hardEdge` (koi bhi device par bahar nahi aa sakta); label width 80 +
+  row height 100→106 (lambe naam ke 2 lines bhi andar rahe).
+- Tap behaviour same hai (category slug se products page khulta hai).
+
+### v1.6.42 END-TO-END RE-VERIFICATION (Lalit ka ask — har fix dobara jancha)
+1. **Points 1/5 (status do baar/do dates)** — code dobara line-by-line
+   dekha + Python mirror 10/10 PASS: name-less placement activity ko koi
+   status-naam/KEY nahi milta; note-less placement row DROP (timestamp
+   pending-step ki date ban-ta hai); same-naam activities earliest-keep;
+   flow steps canonical-key dedupe; stable sort. Delivered/Processing ab
+   EK baar, SAHI date-time.
+2. **Point 2 (invoice)** — `invoice_service.dart` re-audit: server
+   `invoice_url` ho to launchUrl(external), warna REAL data HTML invoice
+   + shareXFiles; file ka poora string-quote matrix deep-scan (nested
+   `${}` interpolation aware lexer) CLEAN — koi compile-risk nahi.
+3. **Point 3 (cancel/return)** — `requestOrderAction` re-read: status
+   table (GetOrderStatus live cached list) se 'Cancelled'/'Return...' id
+   → POST Orders/UpdateOrderActivities (OrderStatusActivityDto exact
+   fields) → fresh GetOrder → done/sent/failed/noStatus honest result.
+   canCancel = delivered/cancelled/return NAHI; canReturn = delivered.
+4. **Point 4 (multi-item qty)** — `_detailItemsOf` cache + Step 3b
+   rebuild (placeholder/count-mismatch rows asli naam+qty+photo se) +
+   count-match per-index sync — mirror 6/6 PASS. Cap 15 orders/call.
+5. **Point 6 (fav badge)** — main.dart PERMANENT WishlistController +
+   wishlist tab re-put band + header/bottom-nav storage-fallback (401
+   keys ×4 = audit2 CLEAN incl. 10 naye keys).
+6. **Server LIVE re-probe (22/09, GET)**: GetAllProductsFront exact app
+   params → code:200 + real products + thumbnails aaj bhi OK.
+   Audit battery: dart_clean, deep_check, audit2, 3, 5, 6, 7, 8 —
+   8/8 PASS + verify_v1642 21/21 PASS.
+
+Version 1.6.43+72, label "v1.6.43 (72)", zip v1684.
+
+### Test notes (v1.6.43)
+1. Home page bilkul upar "Category" row → har gol icon: photo circle ab
+   frame ke ANDAR, charo taraf patli green ring — kisi icon ka circle
+   bahar nahi nikla (lambe naam wale icons bhi theek).
+2. Category icon tap → us category ke asli products khulna pehle jaisa.
+3. Orders pull-down refresh karke dike: v1.6.42 ke saare fixes — timeline
+   ek baar/sahi time, DOWNLOAD INVOICE, CANCEL (delivered se pehle) /
+   RETURN (delivered ke baad), 3-item order ke asli naam+qty cards,
+   fav badge count app kholte hi aur heart tap par turant.

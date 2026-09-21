@@ -9,7 +9,12 @@ class HomeCategoryList extends StatelessWidget {
       builder: (appCtrl) {
         return GetBuilder<HomeController>(builder: (homeCtrl) {
           return SizedBox(
-            height: AppScreenUtil().size(100),
+            // 22/09 (Lalit — category circle frame ke bahar): gol photo ab
+            // 70px hai (pehle 62) — lambe Arabic naam 2 lines lene par bhi
+            // column (70+6+~30=106) row se bahar na nikle, isliye height
+            // 100 -> 106. ListView hardEdge clipping se bhi circle/label
+            // cut nahi honge.
+            height: AppScreenUtil().size(106),
             child: ListView.builder(
               itemCount: homeCtrl.homeCategoryList.length,
               shrinkWrap: true,

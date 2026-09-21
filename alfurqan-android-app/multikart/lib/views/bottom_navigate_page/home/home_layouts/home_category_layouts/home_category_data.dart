@@ -38,11 +38,19 @@ class HomeCategoryData extends StatelessWidget {
           child: Column(
             children: [
               // gol icon — soft brand-green background circle ke andar
-              // rounded category image
+              // category photo ka gol circle.
+              // 22/09 (Lalit — "category ka CIRCLE square/frame ke BAHAR
+              // nikal raha hai"): pehle photo 56px thi 62px frame me
+              // (sirf 3px ring) — edge photo ring tak lagti thi isliye
+              // "circle frame ke bahar" jaisa dikhta tha. Ab photo circle
+              // 52px, frame 70px green circle — beech me saaf 8-9px ka GREEN
+              // RING dikhta hai, photo HARD-CLIP ke sath hamesha frame ke
+              // ANDAR (kisi bhi device/density par bahar nahi aa sakti).
               Container(
-                width: AppScreenUtil().size(62),
-                height: AppScreenUtil().size(62),
-                padding: EdgeInsets.all(AppScreenUtil().size(3)),
+                width: AppScreenUtil().size(70),
+                height: AppScreenUtil().size(70),
+                padding: EdgeInsets.all(AppScreenUtil().size(6)),
+                clipBehavior: Clip.hardEdge,
                 decoration: BoxDecoration(
                   color: homeCtrl.appCtrl.appTheme.primaryLight,
                   shape: BoxShape.circle,
@@ -54,15 +62,18 @@ class HomeCategoryData extends StatelessWidget {
                 child: ClipOval(
                   child: FadeInImageLayout(
                     image: data!.image.toString(),
-                    height: AppScreenUtil().size(56),
-                    width: AppScreenUtil().size(56),
+                    height: AppScreenUtil().size(52),
+                    width: AppScreenUtil().size(52),
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
               const Space(0, 6),
               SizedBox(
-                width: AppScreenUtil().size(74),
+                // 22/09: label ki width thodi zyada + ek row ki height fix —
+                // lambe Arabic naam 3 lines banakar gol photo ko
+                // frame se BAHAR dhakel dete the (RenderFlex overflow).
+                width: AppScreenUtil().size(80),
                 child: LatoFontStyle(
                   text: data!.title,
                   fontWeight: FontWeight.w600,
