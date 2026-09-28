@@ -4,6 +4,7 @@ import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
 import '../home_product_controllers/cart_controller.dart';
 import '../home_product_controllers/wishlist_controller.dart';
+import '../order_controller/order_history_controller.dart';
 
 class ProductDetailController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -110,6 +111,27 @@ class ProductDetailController extends GetxController {
   /// isko merge/dedupe karta hai.
   Reviews? _myOptimisticReview;
 
+  /// REVIEW-GATE (21/09 — Lalit point 3): "Jab tak user ne ye product
+  /// KHARIDA nahi, review likhne Nahi dena chahiye". TRUE sirf jab:
+  ///   login ho, aur (a) server ka can_review == true (backend ka असली
+  ///   purchase-check), ya (b) order-history ke REAL rows se product is
+  ///   user ka PURCHASED ho (server can_review na bhejne ka local
+  ///   fallback — dono koi fake flag nahi, data server se).。
+  bool get canWriteReview {
+    final logged = (LocalStorage().read(Session.isLogin) ?? false) == true;
+    if (!logged) return false;
+    if (apiProduct?.canReview == true) return true;
+    try {
+      final pid = apiProduct?.id ?? 0;
+      if (pid > 0 && Get.isRegistered<OrderHistoryController>()) {
+        if (Get.find<OrderHistoryController>().userPurchased(pid)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// Product ke reviews SERVER se fresh lao:
   /// GET /api/Review/GetProductReview?id=<pid> (10/09 live verify —
   /// GUEST bina token bhi {code:200, data:{data:[...]}} paata hai).
@@ -156,12 +178,33 @@ class ProductDetailController extends GetxController {
       for (final e in items) {
         if (e is! Map) continue;
         final m = Map<String, dynamic>.from(e);
-        final consumer = m['consumer'] ?? m['user'] ?? m['created_by'];
+        final consumer =
+            m['consumer'] ?? m['user'] ?? m['created_by'] ?? m['customer'];
         var name = consumer is Map
             ? (consumer['name'] ?? consumer['Name'] ?? consumer['email'] ?? '')
                 .toString()
                 .trim()
             : '';
+        // 21/09 (Lalit point 2 — review me CUSTOMER NAME): first+last
+        // name wale rows bhi cover — aur flat consumer_name keys.
+        if (name.isEmpty && consumer is Map) {
+          final f = (consumer['first_name'] ?? consumer['firstName'] ?? '')
+              .toString()
+              .trim();
+          final l = (consumer['last_name'] ?? consumer['lastName'] ?? '')
+              .toString()
+              .trim();
+          name = '$f $l'.trim();
+        }
+        if (name.isEmpty) {
+          name = (m['consumer_name'] ??
+                  m['customer_name'] ??
+                  m['reviewer'] ??
+                  m['author'] ??
+                  '')
+              .toString()
+              .trim();
+        }
         final cid = m['consumer_id'] ?? m['consumerId'] ?? m['user_id'];
         // Server consumer:null bhejta hai — meri apni review ka naam mujhe
         // pata hai (local profile), to wahi dikhao.

@@ -45,6 +45,12 @@ class ProductApiModel {
   /// deta hai — stars ka sahi fallback yahi hai.
   final List<double> reviewRatings;
 
+  /// 21/09 (Lalit point 3 — "review SIRF wo de jisne product KHARIDA ho"):
+  /// server ka purchase-gate flag (`can_review` — LIVE probe 21/09 ke
+  /// response me '{"can_review":false}' dikha). TRUE ho tabhi review form
+  /// khole. Token ke saath aata hai, guest par false.
+  final bool? canReview;
+
   ProductApiModel({
     this.id,
     this.name,
@@ -71,6 +77,7 @@ class ProductApiModel {
     this.createdAt,
     this.apiReviews = const [],
     this.reviewRatings = const [],
+    this.canReview,
   });
 
   factory ProductApiModel.fromJson(Map<String, dynamic> json) {
@@ -98,6 +105,9 @@ class ProductApiModel {
       reviewsCount: jsonToInt(json['reviews_count']),
       isWishlist: jsonToBool(json['is_wishlist']),
       taxId: jsonToInt(json['tax_id'] ?? json['taxId'] ?? json['Tax_Id']),
+      // 21/09 (review purchase-gate field): bool/0-1/'true' sab forms.
+      canReview: jsonToBool(
+          json['can_review'] ?? json['canReview'] ?? json['Can_Review']),
       createdAt: jsonToString(json['created_at']),
       thumbnail: json['product_thumbnail'] is Map<String, dynamic>
           ? AssetImageModel.fromJson(json['product_thumbnail'] as Map<String, dynamic>)
@@ -119,11 +129,33 @@ class ProductApiModel {
               .where((e) => e is Map)
               .map((e) {
               final m = Map<String, dynamic>.from(e as Map);
-              final consumer = m['consumer'] ?? m['user'] ?? m['created_by'];
-              final cname = consumer is Map
-                  ? jsonToString(
-                      consumer['name'] ?? consumer['Name'] ?? consumer['email'])
+              // 21/09 (Lalit point 2 — "review me CUSTOMER KA NAAM dikhe"):
+              // consumer/user/created_by/customer maps ka 'name' (ya first+
+              // last name); flat consumer_name/customer_name bhi accept.
+              final consumer = m['consumer'] ??
+                  m['user'] ??
+                  m['created_by'] ??
+                  m['customer'];
+              var cname = consumer is Map
+                  ? jsonToString(consumer['name'] ??
+                      consumer['Name'] ??
+                      consumer['email'])
                   : null;
+              if ((cname == null || cname.isEmpty) && consumer is Map) {
+                final f = jsonToString(consumer['first_name'] ??
+                        consumer['firstName']) ??
+                    '';
+                final l = jsonToString(
+                        consumer['last_name'] ?? consumer['lastName']) ??
+                    '';
+                cname = '$f $l'.trim();
+              }
+              if (cname == null || cname.isEmpty) {
+                cname = jsonToString(m['consumer_name'] ??
+                    m['customer_name'] ??
+                    m['reviewer'] ??
+                    m['author']);
+              }
               final rawDate = jsonToString(m['created_at'] ??
                       m['Created_at'] ??
                       m['date'] ??

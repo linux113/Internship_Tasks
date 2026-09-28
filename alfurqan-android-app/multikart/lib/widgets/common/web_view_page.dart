@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 /// URL normalize karo — server kabhi "youtube.com" (scheme ke bina) bhejta
@@ -20,8 +21,17 @@ String normalizeWebUrl(String url) {
 class WebViewPage extends StatefulWidget {
   final String url;
   final String title;
+  // 21/09 (Lalit point 6 — "invoice ko web view banao aur download button
+  // usi me rakho"): true ho to neeche ka bottom bar me DOWNLOAD dikhe —
+  // tap par current URL external browser me kholta hai waha se user
+  // file save/print kar sakta hai (sirf REAL url; fake file nahi).
+  final bool showDownloadButton;
 
-  const WebViewPage({Key? key, required this.url, this.title = ''})
+  const WebViewPage(
+      {Key? key,
+      required this.url,
+      this.title = '',
+      this.showDownloadButton = false})
       : super(key: key);
 
   @override
@@ -75,13 +85,53 @@ class _WebViewPageState extends State<WebViewPage> {
           Expanded(child: WebViewWidget(controller: controller)),
         ],
       ),
+      // Invoice-mode: neeche ka DOWNLOAD bar — button `null` nahi: current
+      // (REAL) url ko browser me kholta hai, waha "Save as PDF/Print/File
+      // save" native options milte hai. WebView page se FILE cut-paste karne
+      // wale fake-download kaatakaaproach app me nahi.
+      bottomNavigationBar: widget.showDownloadButton
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(15, 8, 15, 10),
+                child: SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF044015),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.download_rounded,
+                        color: Colors.white),
+                    label: Text('download'.tr,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600)),
+                    onPressed: () async {
+                      final uri =
+                          Uri.tryParse(normalizeWebUrl(widget.url));
+                      if (uri != null) {
+                        try {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        } catch (_) {}
+                      }
+                    },
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }
 
 /// External link ko app ke andar WebView page me kholo.
-void openWebViewScreen(String? url, {String title = ''}) {
+void openWebViewScreen(String? url,
+    {String title = '', bool showDownloadButton = false}) {
   final u = normalizeWebUrl(url ?? '');
   if (u.isEmpty) return;
-  Get.to(() => WebViewPage(url: u, title: title));
+  Get.to(() => WebViewPage(
+      url: u, title: title, showDownloadButton: showDownloadButton));
 }

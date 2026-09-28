@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'package:get/get.dart';
 
 import '../env.dart';
+import '../widgets/common/web_view_page.dart';
 
 /// INVOICE download — 22/09 (Lalit point 2 — "delivered product ka invoice
 /// download karne ka koi button hi nahi").
@@ -39,17 +41,23 @@ class InvoiceService {
     required Map<String, dynamic> address,
     required String currencySymbol,
   }) async {
-    // ---- 1) server invoice url ----
+    // ---- 1) server invoice url (INV-URL ko app ke ANDAR WebView me ----;
+    // 21/09 (Lalit point 6): "invoice web view me dikhao aur download
+    // button WAHI par rahe". invoiceUrl field ab dynamic invoice (HTML/PDF)
+    // deta hai — App ke andar WebView page + neeche DOWNLOAD bar (button
+    // par browser khul kar user file save/print kar leta hai). Launch hi
+    // fail ho jaye to link SHARE — data-loss kabhi nahi.
     final rawUrl = invoiceUrl.trim();
     if (rawUrl.isNotEmpty) {
       final url = buildMediaUrl(rawUrl);
       final uri = Uri.tryParse(url);
       if (uri != null) {
         try {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          openWebViewScreen(url,
+              title: '${'downloadInvoice'.tr} · #$orderNumber',
+              showDownloadButton: true);
           return;
         } catch (_) {
-          // launch fail — kam se kam link to share kar do (data-loss nahi)
           await Share.share(url);
           return;
         }

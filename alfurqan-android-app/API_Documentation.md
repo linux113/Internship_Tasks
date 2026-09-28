@@ -2444,3 +2444,96 @@ Version 1.6.44+73, label "v1.6.44 (73)", zip v1685.
    Processing/Shipped/Sab future steps GREY — galat tick nahi.
 
 Version 1.6.45+74, label "v1.6.45 (74)", zip v1686.
+
+## v1.6.46+75 (21/09/2026) — 6 naye points: MULTI-FILTER, review naam + purchase-gate, history redesign, WebView pages
+
+### 1. Filter "unknowing" → MULTI-FILTRATION (Lalit point 1)
+- FILE: filter_controller.dart, filter.dart, shop_controller.dart.
+- Ab Filter page par: SORT (4 options — pehle jaisa) + **CATEGORY
+  multi-select chips** (server ke REAL categories — CategoryCache /
+  GetHomePageDataApp se; koi static/fake category NAHI) + **min-RATING
+  chips (4★+/3★+/2★+/1★+) + PRICE range slider** — saath me apply.
+- Engine: ShopController._applyFiltersAndSort — client-side, already-
+  loaded REAL catalog (50-item chunks ×pages) par. Selection re-open par
+  WAPAS dikhti hai (re-hydrate — jhootha "sab reset" nahi). Reset sab
+  options saaf karta hai.
+
+### 2. Review me CUSTOMER NAME (point 2)
+- product_api_model.dart + product_detail_controller.fetchLiveReviews:
+  consumer/user/created_by/**customer** maps ka 'name' (ya **first+last
+  name**), flat **consumer_name/customer_name/reviewer/author** bhi.
+  Meri apni review ka naam local profile se (pehle hi tha). Naam jaha
+  server deta hai, chippe se wahi dikhta hai.
+
+### 3. Review = SIRF KHAREEDNE PAR (point 3)
+- ROOT: review sheet sirf login check karti thi — purchase-check kahin
+  nahi tha (apka haq- complaint).
+- QUEUE: ProductApiModel.canReview — server ka field **`can_review`**
+  (21/09 LIVE product response me dikhaya gaya: "can_review":false).
+- GATE (donon jagah — UI star-tap AUR submit-level, koi bypass nahi):
+  guest->login page; logged-in ho to Sirf tab kholna jab (a) server
+  can_review==true, YA (b) GetUserOrders ki REAL slim rows ke EXPLICIT
+  product_ids me product ho (OrderHistoryController.purchasedProductIds
+  — 'id' use NAHI kiya, galti se alag-id account ho jaye isliye).
+  Message: 'reviewAfterPurchase' (4 bhasha). Star tap par toast + sheet
+  NAHI kholta; same submit guard inside controller.
+- Order history ka purana hap-hazard "Write Review" (Past Orders per-
+  item row) ab card-simplification ke sath nikal diya — ab review source
+  SIRF gated product detail.
+
+### 4+5. ORDER HISTORY REDESIGN (points 4/5 — "number dikhe, photo nahi; multi-item EKBAAR")
+- Card: grey strip (Ordered + Delivery status) + **EK compact row per
+  ORDER**: [green-border "#1109" tile] + bold "Order #1109" + Total
+  (current currency) + "N items" (REAL slim-row items count) + STATUS
+  chip (canon .tr). Photo ki jagah number — point 4 same.
+- Multi-product order list me EK baar hi — products ka poora detail
+  CLICK par (order detail page pehle se hi asli items+photos+qty dikhata
+  hai — usme koi change nahi, tap summary-prefill ab bhi chalti hai).
+- v1.6.45 ka detail-backfill/photo-resolver call LIST se hata (25-extra
+  api calls/un device-load bhi gaya; method code me unused rakhi -
+  baad me detail naare washacha zaroorat ho to).
+
+### 6. INVOICE WEBVIEW + DOWNLOAD + 4 WebView pages (point 6 + URL list)
+- InvoiceService (server-url branch): **invoiceUrl** (OrderMst 'invoiceUrl'
+  — camelCase parse ready) ab **app ke ANDAR WebView** me khulta hai aur
+  SAME screen ke neeche DOWNLOAD bar hai (button par URL external browser
+  me — waha se native file-save/print). Pehle direct external browser.
+- **WebViewPage** upgrade: showDownloadButton parameter (url_launcher
+  download action), openWebViewScreen signature same (default off — purani
+  banner-link openers par koi farq nahi).
+- **About Us / Terms & Conditions** — purani CMS-text screens, ab in-app
+  WebView (entwino.in/about-us, /page/terms-and-conditions).
+- **Privacy Policy + Return & Refund Policy** — profile menu me NAYE
+  items (index 13/14, Help→15, profile_controller switch SYNC) — in-app
+  WebView (privacy-policy / return-and-refund-policy). NOTE: ye 4 pages
+  ENTWINO.IN website ki hain — content jo website par ho wahi dikhta hai.
+- Lang: 6 naye keys ×4 -> **406** (items, download, reviewAfterPurchase,
+  privacyPolicy, returnAndRefundPolicy, + audit2 CLEAN 361 .tr).
+
+### Verification (21/09 LIVE + static)
+- LIVE fetch: entwino.in ke 3 pages (about/terms/privacy) REAL content ke
+  saath khule (aaj); products response me can_review dekha.
+- Audits: dart_clean, deep_check 553 files, audit2 (406 keys ×4 CLEAN),
+  3/5/6/7/8 — 8/8 PASS + verify_v1642 21/21.
+- Quote-lexer (string-aware variant) — 19 edited/new dart files ALL OK
+  (3 pehle "BAD" ayee thi check: mere LEXER ka false-positive tha —
+  'https://' ko comment samajh baitha; code bilkul sahi hai, baad me
+  counter-lexer se verify).
+
+### Test notes (v1.6.46)
+1. Shop page -> filter icon -> CATEGORY multiple chips tick karo +
+   rating chip + price — APPLY -> list filtered; filter dubara kholo to
+   selections wapas dikhti hai; RESET sab saaf.
+2. Kisi review-wale product par review card me NAAM dikhta hai.
+3. Us product ka page kholo jo purchase kiya ho -> stars tap -> sheet
+   khulti hai; jo purchase NAHI kiya -> stars tap par "Buy this product
+   to write a review" message.
+4. Orders list -> EK row per order (order number tile); 3-item order bhi
+   SIRF EK row "3 items"; tap -> ndhar detail me poore items+photos.
+5. Kisi bhi order detail -> DOWNLOAD INVOICE -> invoice app ke ANDAR
+   WebView me khulke page dikhta hai + neeche DOWNLOAD button (tap ->
+   browser me save ho jata).
+6. Profile -> Privacy Policy / Return & Refund Policy taps -> in-app
+   WebView pages; About Us / Terms bhi WebView.
+
+Version 1.6.46+75, label "v1.6.46 (75)", zip v1687.

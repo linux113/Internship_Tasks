@@ -14,5 +14,10 @@ var profileList = <ProfileModel>[
   ProfileModel(icon: svgAssets.setting,title: 'Settings',subTitle: 'App settings, Dark mode'),
   ProfileModel(icon: svgAssets.profileSetting,title: 'Profile setting',subTitle: 'Full Name, Password..'),
   ProfileModel(icon: svgAssets.aboutUs,title: 'Terms & Conditions',subTitle: 'T&C for use of Platform'),
+  // 21/09 (Lalit — URL for Web Views): PRIVACY POLICY (index 13) + RETURN
+  // & REFUND (index 14) bhi menu me — dono website ke asli pages app ke
+  // ANDAR WebView me (Help ab index 15 — profile_controller switch sync).
+  ProfileModel(icon: svgAssets.setting,title: 'privacyPolicy'.tr,subTitle: ''),
+  ProfileModel(icon: svgAssets.order,title: 'returnAndRefundPolicy'.tr,subTitle: ''),
   ProfileModel(icon: svgAssets.call,title: 'Help/Customer Care',subTitle: 'Customer Support, FAQs'),
 ];

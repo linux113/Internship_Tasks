@@ -1,4 +1,5 @@
 import '../../config.dart';
+import '../../services/category_cache.dart';
 import 'shop_controller.dart';
 
 class FilterController extends GetxController {
@@ -29,6 +30,28 @@ class FilterController extends GetxController {
   int selectedOccasion = 0;
   int selectedColor = 0;
   int selectSize = 0;
+
+  // ---------------- 21/09 MULTI-FILTER (Lalit point 1) ----------------
+  /// Selected CATEGORY slugs (multi-select chips). Khaali = no category
+  /// filter. Real categories CategoryCache se aati hai.
+  final List<String> selectedCategorySlugs = <String>[];
+
+  /// Minimum rating filter (0 = without-filter; 1..4 = "N+ stars").
+  double ratingMin = 0;
+
+  void toggleCategory(String slug) {
+    if (selectedCategorySlugs.contains(slug)) {
+      selectedCategorySlugs.remove(slug);
+    } else {
+      selectedCategorySlugs.add(slug);
+    }
+    update();
+  }
+
+  void setRatingMin(double v) {
+    ratingMin = ratingMin == v ? 0 : v; // dobara tap = clear
+    update();
+  }
   var data = [
     {"val": "0.0"},
     {"val": "50.0"},
@@ -68,6 +91,12 @@ class FilterController extends GetxController {
             "${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}";
       }
 
+      // 21/09 multi-filter — CATEGORY (multi) + RATING (min) shop par set
+      shop.filterCategorySlugs
+        ..clear()
+        ..addAll(selectedCategorySlugs);
+      shop.ratingMin = ratingMin;
+
       // sort mapping — backend ke sort params IGNORE hote hain (live
       // verify), isliye ShopController ye CLIENT-SIDE apply karta hai:
       //   Recommended   = "" (backend ka natural order — naye pehle)
@@ -103,12 +132,16 @@ class FilterController extends GetxController {
     selectedColor = 0;
     selectSize = 0;
     currentRangeValues = RangeValues(0, maxPriceVal);
+    selectedCategorySlugs.clear();
+    ratingMin = 0;
     update();
     if (Get.isRegistered<ShopController>()) {
       final shop = Get.find<ShopController>();
       shop.priceRange = "";
       shop.rating = "";
       shop.attribute = "";
+      shop.filterCategorySlugs.clear();
+      shop.ratingMin = 0;
       shop.sortField = ""; // Recommended = natural order
       shop.sortDirection = "asc";
       shop.applyClientFilters();
@@ -149,9 +182,18 @@ class FilterController extends GetxController {
       } else {
         currentRangeValues = RangeValues(0, maxPriceVal);
       }
+      // 21/09 multi-filter re-hydrate: already-applied category chips +
+      // rating chips dobara dikhne chahiye (jhootha "sab reset" nahi)
+      selectedCategorySlugs
+        ..clear()
+        ..addAll(shop.filterCategorySlugs);
+      ratingMin = shop.ratingMin;
       update();
     }
     colorList = AppArray().colorList;
+    // Category chips ke liye REAL categories — cache ensure (async, baad
+    // me loaded hone par bhi chips update ho jaye)
+    CategoryCache.ensureLoaded().then((_) => update());
 
     update();
     super.onReady();

@@ -36,6 +36,19 @@ class RatingLayout extends StatelessWidget {
             // (server POST) — sirf api product par (demo par nahi).
             onRatingUpdate: (val) {
               if (productCtrl.apiProduct == null || pid <= 0) return;
+              // 21/09 (Lalit point 3): review SIRF wo de jo product KHARID
+              // chuka ho —guest ko login pe bhejo; bina-kharide gate message.
+              final logged =
+                  (LocalStorage().read(Session.isLogin) ?? false) == true;
+              if (!logged) {
+                snackBar('pleaseLoginFirst'.tr);
+                Get.toNamed(routeName.login);
+                return;
+              }
+              if (!productCtrl.canWriteReview) {
+                snackBar('reviewAfterPurchase'.tr);
+                return;
+              }
               Get.bottomSheet(
                 RatingReview(productId: pid),
                 backgroundColor: Colors.white,

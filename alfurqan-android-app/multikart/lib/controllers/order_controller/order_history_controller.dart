@@ -58,6 +58,15 @@ class OrderHistoryController extends GetxController {
   static final Map<int, String> _pidImageCache = {};
   static final Map<String, String> _nameImageCache = {};
 
+  /// 21/09 (Lalit point 3 — review purchase-gate): is user ne JE-SE products
+  /// KABHI order kiye, unke REAL product_ids (server ki GetUserOrders rows
+  /// ke products[].product_id — sirf EXPLICIT product_id keys, `id` sconde
+  /// galti se kisi aur kaam ka id na utha le). Review block sirf tab khule
+  /// jab product is set me ho (ya apiProduct.canReview==true ho).
+  final Set<int> purchasedProductIds = <int>{};
+  bool userPurchased(int productId) =>
+      productId > 0 && purchasedProductIds.contains(productId);
+
   /// Poora catalog (paginate=500) ek baar scan ho chuka hai.
   static bool _catalogScanned = false;
 
@@ -295,13 +304,13 @@ class OrderHistoryController extends GetxController {
     } catch (_) {}
     isLoadingOrders = false;
     update();
-    // 15/09 v1.6.29: photos ka resolve LIST KO BLOCK NAHI karega — rows
-    // turant dikhti hai; photos (GetOrder detail + catalog se) milte hi
-    // resolver khud update() kar deta hai. 45s cap (21/09 — empty-detail
-    // retry pass +3s baad bhi ghus sake), koi throw UI tak NAHI.
-    _resolveMissingImages()
-        .timeout(const Duration(seconds: 45), onTimeout: () {})
-        .catchError((_) {});
+    // 21/09 (Lalit points 4 & 5 — FINAL): history LIST ab product photos
+    // dikhati hi nahi — ek order = EK compact row (ORDER NUMBER tile).
+    // Photos/items detail page ke kaam ke hai jaha parse reliable hai.
+    // Isliye v1.6.45 ka detail-backfill/photo-resolver call ab list se
+    // HATA diya (har open par 25-extra api calls ka load bhi gaya).
+    // (Method `_resolveMissingImages` ab bhi code me hai — unused;
+    // sirf call site band, koi stale loop nahi.)
   }
 
   /// Server ka full ISO datetime ("2026-08-31T23:17:55.3435123") user ko
@@ -361,6 +370,22 @@ class OrderHistoryController extends GetxController {
     if (items.isEmpty && j['items'] is List) items = j['items'] as List;
     if (items.isEmpty && j['order_items'] is List) items = j['order_items'] as List;
     if (items.isEmpty && j['Order_Items'] is List) items = j['Order_Items'] as List;
+
+    // 21/09 (point 3 review-gate local truth): EXPLICIT product_id keys se
+    // purchased set bharo — koi generic 'id' key NAHI (wo order-product row
+    // ka id ho sakta hai — wrong-review allow hone ka risk bilkul nahi).
+    try {
+      for (final e in items) {
+        if (e is! Map) continue;
+        final m = Map<String, dynamic>.from(e);
+        final pid = jsonToInt(m['product_id'] ??
+                m['Product_Id'] ??
+                m['productId'] ??
+                m['productID']) ??
+            0;
+        if (pid > 0) purchasedProductIds.add(pid);
+      }
+    } catch (_) {}
 
     // item i ki image: product_thumbnail{asset_url/original_url}
     // (MediaFiles me 'url' key hoti hi nahi) / product.product_thumbnail /

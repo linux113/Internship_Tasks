@@ -18,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../config.dart';
 import '../../services/api_endpoints.dart';
 import '../../services/api_service.dart';
+import '../../widgets/common/web_view_page.dart';
 
 class ProfileController extends GetxController {
   final appCtrl = Get.isRegistered<AppController>()
@@ -572,7 +573,15 @@ class ProfileController extends GetxController {
       Get.toNamed(routeName.profileSetting);
     }else if (index == 12) {
       Get.toNamed(routeName.termsCondition);
+    // 21/09 (URL for Web Views): profile_list.dart me insert hoke
+    // Privacy=13 / Return&Refund=14 / Help=15 ho gaya — switch sync.
     }else if (index == 13) {
+      openWebViewScreen('https://entwino.in/page/privacy-policy',
+          title: 'privacyPolicy'.tr);
+    }else if (index == 14) {
+      openWebViewScreen('https://entwino.in/page/return-and-refund-policy',
+          title: 'returnAndRefundPolicy'.tr);
+    }else if (index == 15) {
       Get.toNamed(routeName.help);
     }
     update();

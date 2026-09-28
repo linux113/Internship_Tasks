@@ -39,6 +39,14 @@ class ShopController extends GetxController {
   String rating = "";
   String attribute = "";
 
+  // 21/09 (Lalit point 1 — MULTI-FILTER): Filter page se set hote hai.
+  /// Selected CATEGORY slugs (multi-select); khaali = filter nahi.
+  final List<String> filterCategorySlugs = <String>[];
+
+  /// Min stars (0 = filter nahi). Product ki REAL avg rating (model
+  /// `rating` — server rating_count/review_ratings se computed) par.
+  double ratingMin = 0;
+
   /// Title ke liye REAL name (slug nahi — slug url-friendly hota hai, user
   /// ko padhne me ajeeb lagta hai). Filter ke liye `name`/slug hi use hota hai.
   String displayName = "";
@@ -178,6 +186,45 @@ class ShopController extends GetxController {
             .where((p) => p.finalPrice >= min && p.finalPrice <= max)
             .toList();
       }
+    }
+
+    // ---- 21/09 (point 1): CATEGORY multi-select — product categories ka
+    // koi bhi slug selected set me ho (server slug + normalized name dono
+    // ke hisaab se; drizzle-slug format mismatch cover).
+    if (filterCategorySlugs.isNotEmpty) {
+      final wanted = filterCategorySlugs
+          .map((e) => e.trim().toLowerCase())
+          .where((e) => e.isNotEmpty)
+          .toSet();
+      bool catHit(ProductApiModel p) {
+        for (final c in p.categories) {
+          final s = (c.slug ?? '').trim().toLowerCase();
+          final n = normSearchText(c.name);
+          for (final w in wanted) {
+            final nw = normSearchText(w);
+            if (s.isNotEmpty && s == w) return true;
+            if (n.isNotEmpty && n == nw) return true;
+          }
+        }
+        return false;
+      }
+
+      list = list.where(catHit).toList();
+    }
+
+    // ---- 21/09 (point 1): min-RATING — server ki REAL avg rating se
+    // (rating_count, warna review_ratings ka average — model comment ke
+    // mutabik backend rating_count aksar 0 rakhta hai).
+    if (ratingMin > 0) {
+      double avgOf(ProductApiModel p) {
+        final c = (p.ratingCount ?? 0).toDouble();
+        if (c > 0) return c;
+        final real = p.reviewRatings.where((e) => e > 0).toList();
+        if (real.isEmpty) return 0;
+        return real.reduce((a, b) => a + b) / real.length;
+      }
+
+      list = list.where((p) => avgOf(p) >= ratingMin).toList();
     }
 
     // ---- search text (shop page ka box) — name/desc/SKU/slug/category me

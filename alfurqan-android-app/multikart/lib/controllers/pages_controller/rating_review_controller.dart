@@ -1,5 +1,6 @@
 import '../../config.dart';
 import '../../services/api_service.dart';
+import '../order_controller/order_history_controller.dart';
 import 'product_detail_controller.dart';
 
 /// WRITE REVIEW sheet ka REAL controller (08/09 deep-fix — "rating dene par
@@ -57,6 +58,22 @@ class RatingReviewController extends GetxController {
       Get.toNamed(routeName.login);
       return;
     }
+    // 21/09 (Lalit point 3 — defence-in-depth): sheet UI gate ke alawa
+    // submit-level guard bhi (future flow-bypass pe bhi). Khareda hua
+    // hi review — server rows (order history) ke explicit product_id se.
+    try {
+      if (Get.isRegistered<OrderHistoryController>() &&
+          !Get.find<OrderHistoryController>().userPurchased(productId)) {
+        if (Get.isRegistered<ProductDetailController>() &&
+            Get.find<ProductDetailController>().apiProduct?.canReview ==
+                true) {
+          // server ka gate hi allow kar raha hai — OK
+        } else {
+          _toast('reviewAfterPurchase'.tr);
+          return;
+        }
+      }
+    } catch (_) {}
     isSubmitting = true;
     update();
     final review = textCtrl.text.trim();
