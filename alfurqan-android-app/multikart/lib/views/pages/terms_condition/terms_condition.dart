@@ -1,4 +1,7 @@
 import 'package:get/get.dart';
+// 28/09 (Lalit build error): material widgets import missing tha —
+// get.dart StatelessWidget/Key/BuildContext export nahi karta.
+import 'package:flutter/material.dart';
 
 import '../../../widgets/common/web_view_page.dart';
 

@@ -2537,3 +2537,32 @@ Version 1.6.45+74, label "v1.6.45 (74)", zip v1686.
    WebView pages; About Us / Terms bhi WebView.
 
 Version 1.6.46+75, label "v1.6.46 (75)", zip v1687.
+
+## v1.6.47+76 (28/09/2026) — BUILD ERROR FIX (About Us / Terms screens)
+
+### Lalit ka paste: "Type 'StatelessWidget' not found / Key / BuildContext" — build fail
+- ROOT: v1.6.46 me About/Terms screens WebView ke liye dobara likhte waqt
+  unse `config.dart` ka material-import chain hat gaya tha —
+  `import 'package:get/get.dart'` bare flutter widgets (StatelessWidget,
+  Key, Widget, BuildContext) EXPORT NAHI karta. Mere static audits (short
+  of full flutter analyze) isko miss kar gaye — pehla real compile
+  (Lalit ke device) par pakda gaya. Galti meri, sorry.
+- FIX: dono files me `import 'package:flutter/material.dart';` vaapis.
+  (Baaki is-round files — filter.dart, order_histor_card.dart,
+  web_view_page.dart — sab me material/config chain pehle se hai.)
+- GUARD (future): naya **audit9.py** — har lib file jo flutter-widget
+  types use kare par material/cupertino/widgets/dart:ui/config import na
+  kare flag hogi (360 files scan — CLEAN). audit battery 8/8 → 9/9.
+- NOTE: log me "SDK XML version 4" sirf WARNING hai (build rokti nahi) —
+  Android Studio SDK Manager me "Android SDK Command-line Tools
+  (latest)" update karo to wo bhi chali jayegi.
+- Audits: dart_clean, deep_check 553, audit2 (406 ×4 CLEAN), 3/5/6/7/8/9
+  — 9/9 PASS + verify_v1642 21/21.
+
+### Test notes (v1.6.47)
+1. `flutter clean` → `flutter pub get` → `flutter run --release` — build
+   ab GREEN chalti hai.
+2. Baaki sab v1.6.46 jaisa (multi-filter, review name+gate, history
+   rows, WebView invoice + 4 pages).
+
+Version 1.6.47+76, label "v1.6.47 (76)", zip v1688.

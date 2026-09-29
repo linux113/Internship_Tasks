@@ -1,4 +1,9 @@
 import 'package:get/get.dart';
+// 28/09 (Lalit build error — "StatelessWidget/Key/Widget/BuildContext
+// not found"): pehle config.dart ka material chain yaha tha — dobara
+// likhte waqt hat gaya; get.dart widgets framework EXPORT nahi karta,
+// isliye bare flutter/material.dart ZAROORI tha.
+import 'package:flutter/material.dart';
 
 import '../../../widgets/common/web_view_page.dart';
 
