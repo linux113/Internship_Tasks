@@ -28,15 +28,23 @@ class ProductInformation extends StatelessWidget {
                 .inclusiveTax(ProductDetailFont().inclusiveOfAllTaxes),
             const BorderLineLayout(),
 
+            // 29/09 (Lalit screenshot — HAR book par "Select Size:"/"Size
+            // Chart"/"Select Color:" dikhte the): ye FASHION template ke
+            // bache hue sections hai — server books ke liye size/color
+            // bhejta hi nahi. Ab list khaali/null ho to HEADING bhi mat
+            // dikhao (pehle header hamesha render hota tha, list khaali).
             //product size layout
-            ProductSizeLayout(product: productCtrl.product),
+            if (productCtrl.product.size != null &&
+                productCtrl.product.size!.isNotEmpty)
+              ProductSizeLayout(product: productCtrl.product),
 
-            //color text layout
-            ProductDetailWidget().commonText(
-                text: ProductDetailFont().selectColor, fontSize: FontSizes.f14),
-
-            //color list layout
-            ProductColorLayout(product: productCtrl.product),
+            //color text + list layout
+            if (productCtrl.product.color != null &&
+                productCtrl.product.color!.isNotEmpty) ...[
+              ProductDetailWidget().commonText(
+                  text: ProductDetailFont().selectColor, fontSize: FontSizes.f14),
+              ProductColorLayout(product: productCtrl.product),
+            ],
             ProductDetailWidget().commonText(
                 text: ProductDetailFont().quantity, fontSize: FontSizes.f14),
 

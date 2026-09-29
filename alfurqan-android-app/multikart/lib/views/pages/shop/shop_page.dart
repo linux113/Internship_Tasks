@@ -41,7 +41,13 @@ class ShopPage extends StatelessWidget {
                 desc:
                 // 17/09: sirf loaded-slice count nahi, server ka REAL total
                 // (paginator meta) dikhao — "0 Products" confusion khatam.
-                "${shopCtrl.totalCount > 0 ? shopCtrl.totalCount : shopCtrl.productList.length} ${ShopFont().products}",
+                // 29/09: filter ON ho to "FILTERED / TOTAL Products" — warna
+                // "26 Products" headline ke neeche KHAALI grid TUTA lagta hai
+                // (Lalit ka hadith screenshot: price 0-30 me hadith book hi
+                // nahi thi, par header 26 bolta raha).
+                shopCtrl.anyFilterActive
+                    ? "${shopCtrl.filteredCount} / ${shopCtrl.totalCount > 0 ? shopCtrl.totalCount : shopCtrl.fullProducts.length} ${ShopFont().products}"
+                    : "${shopCtrl.totalCount > 0 ? shopCtrl.totalCount : shopCtrl.productList.length} ${ShopFont().products}",
               ),
             ),
             body: RefreshIndicator(
@@ -117,20 +123,51 @@ class ShopPage extends StatelessWidget {
                                                       fontSize: FontSizes.f14,
                                                       color: Colors.white)),
                                             ])
-                                      : Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.inventory_2_outlined,
-                                                size: AppScreenUtil().size(40),
-                                                color: shopCtrl
-                                                    .appCtrl.appTheme.contentColor),
-                                            const Space(0, 12),
-                                            LatoFontStyle(
-                                                text: 'noProductsFound'.tr,
-                                                fontSize: FontSizes.f14,
-                                                color: shopCtrl
-                                                    .appCtrl.appTheme.contentColor),
-                                          ])))
+                                      : shopCtrl.anyFilterActive
+                                          // 29/09 (Lalit screenshot): filters
+                                          // ON + 0 result = purana generic
+                                          // "No products found" CONFUSING tha
+                                          // (category me sach me 26 hai!).
+                                          // Ab saaf msg + RESET FILTERS.
+                                          ? Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.filter_alt_off_outlined,
+                                                    size: AppScreenUtil().size(40),
+                                                    color: shopCtrl
+                                                        .appCtrl.appTheme.contentColor),
+                                                const Space(0, 12),
+                                                LatoFontStyle(
+                                                    text: 'noProductsForFilters'.tr,
+                                                    fontSize: FontSizes.f14,
+                                                    color: shopCtrl
+                                                        .appCtrl.appTheme.contentColor),
+                                                const Space(0, 12),
+                                                ElevatedButton(
+                                                    style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            const Color(0xFF044015)),
+                                                    onPressed: () => shopCtrl
+                                                        .resetFiltersAndSearch(),
+                                                    child: LatoFontStyle(
+                                                        text: 'resetFilters'.tr,
+                                                        fontSize: FontSizes.f14,
+                                                        color: Colors.white)),
+                                              ])
+                                          : Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.inventory_2_outlined,
+                                                    size: AppScreenUtil().size(40),
+                                                    color: shopCtrl
+                                                        .appCtrl.appTheme.contentColor),
+                                                const Space(0, 12),
+                                                LatoFontStyle(
+                                                    text: 'noProductsFound'.tr,
+                                                    fontSize: FontSizes.f14,
+                                                    color: shopCtrl
+                                                        .appCtrl.appTheme.contentColor),
+                                              ])))
                           : const ShopListLayout()
             ]))),
             bottomNavigationBar: CommonBottomNavigation(

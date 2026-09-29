@@ -142,6 +142,45 @@ class ShopController extends GetxController {
   /// Server ka REAL total (paginator meta) — header count ke liye.
   int totalCount = 0;
 
+  /// 29/09 (Lalit screenshot — header "hadith Collection — 26 Products"
+  /// par grid "No products found here yet"): header UNFILTERED total aur
+  /// grid FILTERED slice alag-alag dikh rahe the — user ko TUTA hua laga.
+  /// Ab filter ON ho to header "0 / 26 Products" style me FILTERED count
+  /// bhi dikhata hai aur empty-state me RESET FILTERS button aata hai.
+  /// Client filters (price/rating/category/search) ke baad bache items
+  /// (poora count — page slice nahi).
+  int get filteredCount => _filtered.length;
+
+  /// Koi bhi client filter ya page-search ACTIVE hai?
+  bool get anyFilterActive =>
+      priceRange.isNotEmpty ||
+      ratingMin > 0 ||
+      filterCategorySlugs.isNotEmpty ||
+      searchQuery.isNotEmpty;
+
+  /// Empty-state ka RESET FILTERS button — sab client filters + search
+  /// box clear karke poori list dobara. FilterController registered ho
+  /// to uska resetFilter chalao (selections + shop filters dono clear +
+  /// khud reapply karta hai — reopen par purani chips nahi dikhti).
+  void resetFiltersAndSearch() {
+    if (searchQuery.isNotEmpty || controller.text.isNotEmpty) {
+      searchQuery = '';
+      controller.clear(); // listener dedupe q==searchQuery — 1 hi reapply
+    }
+    if (Get.isRegistered<FilterController>()) {
+      Get.find<FilterController>().resetFilter();
+    } else {
+      priceRange = '';
+      rating = '';
+      attribute = '';
+      filterCategorySlugs.clear();
+      ratingMin = 0;
+      sortField = '';
+      sortDirection = 'asc';
+      applyClientFilters();
+    }
+  }
+
   /// Loaded catalog ki max price (filter slider ki range isi se banti hai —
   /// 08/09; min 100, 50 ke steps me rounded-up).
   double get catalogMaxPrice {

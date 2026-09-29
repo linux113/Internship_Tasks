@@ -85,8 +85,22 @@ class InvoiceService {
         : orderNumber.trim().replaceAll(RegExp(r'[^0-9A-Za-z_-]'), '');
     final file = File('${dir.path}/AlFurqan-Invoice-$safeNo.html');
     await file.writeAsString(html, flush: true);
-    await Share.shareXFiles([XFile(file.path)],
-        text: 'Invoice — Order #$orderNumber');
+    // 29/09 (Lalit screenshot): pehle yahin seedha Android SHARE-SHEET
+    // khulti thi — user ko "WhatsApp/Drive/Gmail" sheet ajeeb lagi aur
+    // browser me kholne par dark-mode KAALA page. Ab invoice app ke
+    // ANDAR WebView me dikhta hai (LOCAL html) aur neeche DOWNLOAD bar
+    // wahi file share karta hai. WebView na khule (bahut rare) to purana
+    // share-sheet fallback — data-loss kabhi nahi.
+    try {
+      openWebViewScreen('',
+          title: '${'downloadInvoice'.tr} · #$orderNumber',
+          showDownloadButton: true,
+          html: html,
+          shareFilePath: file.path);
+    } catch (_) {
+      await Share.shareXFiles([XFile(file.path)],
+          text: 'Invoice - Order #$orderNumber');
+    }
   }
 
   static String _esc(String s) => s
@@ -153,10 +167,18 @@ class InvoiceService {
       ..write('<tr class="grand"><td>Total</td><td>${_money(total, cur)}</td></tr>');
 
     return '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        // 29/09 (Lalit screenshot — invoice browser me BLACK/KHAALI page
+        // + title garbled): (1) body par koi background-color nahi tha —
+        // Android Chrome ka DARK theme un-declared pages ko auto-invert
+        // karke kaala kar deta hai; (2) share-title ke em-dash (—) ko
+        // kuch viewer apps garbled "â€"" karte (Latin-1 samajh kar). Ab
+        // color-scheme light LOCK + explicit white bg/color + ASCII dash.
+        '<meta name="color-scheme" content="light">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        '<title>Invoice — Order #${_esc(orderNumber)}</title>'
+        '<title>Invoice - Order #${_esc(orderNumber)}</title>'
         '<style>'
-        'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:720px}'
+        'html{background:#ffffff}'
+        'body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#ffffff;margin:24px;max-width:720px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         '.brand{color:#044015;font-size:22px;font-weight:700}'
         'h1{font-size:16px;margin:24px 0 8px;color:#333}'
         'table{width:100%;border-collapse:collapse;font-size:14px}'
@@ -169,7 +191,7 @@ class InvoiceService {
         '</style></head><body>'
         '<div class="brand">AL FURQAN BOOK SHOP</div>'
         '<div class="muted">https://alfurqan.ae</div>'
-        '<h1>Invoice — Order #${_esc(orderNumber)}</h1>'
+        '<h1>Invoice - Order #${_esc(orderNumber)}</h1>'
         '<div class="muted">'
         '${orderDate.trim().isEmpty ? '' : 'Date: ${_esc(orderDate)}<br>'}'
         '${status.trim().isEmpty ? '' : 'Status: ${_esc(status)}<br>'}'

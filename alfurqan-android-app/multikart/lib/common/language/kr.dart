@@ -628,6 +628,8 @@ final dynamic kr = {
   "gender": "성별",
   "deliveryChargeUpdated": "이 주소의 배송비가 업데이트되었습니다",
   "productNotAvailable": "현재 이 상품은 사용할 수 없습니다",
+  "noProductsForFilters": "이 필터와 일치하는 상품이 없습니다",
+  "resetFilters": "필터 초기화",
   "items": "항목",
   "download": "다운로드",
   "reviewAfterPurchase": "이 상품을 구매해야 리뷰를 작성할 수 있습니다",

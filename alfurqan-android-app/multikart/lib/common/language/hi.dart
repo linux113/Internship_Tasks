@@ -647,6 +647,8 @@ final dynamic hi = {
   "gender": "लिंग",
   "deliveryChargeUpdated": "इस पते के लिए डिलीवरी शुल्क अपडेट हो गया",
   "productNotAvailable": "यह प्रोडक्ट अभी उपलब्ध नहीं है",
+  "noProductsForFilters": "इन फ़िल्टर पर कोई प्रोडक्ट नहीं मिला",
+  "resetFilters": "फ़िल्टर रीसेट करें",
   "items": "आइटम",
   "download": "डाउनलोड करें",
   "reviewAfterPurchase": "रिव्यू लिखने के लिए यह प्रोडक्ट खरीदें",

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -27,11 +28,22 @@ class WebViewPage extends StatefulWidget {
   // file save/print kar sakta hai (sirf REAL url; fake file nahi).
   final bool showDownloadButton;
 
+  // 29/09 (Lalit screenshots — invoiceUrl abhi server nahi de raha tab
+  // share-sheet + dark-mode me kaala page dikha): LOCAL HTML ko bhi
+  // WebView me dikhao — `html` diya ho to URL ignore hokar loadHtmlString
+  // chalegi (in-app WebView ka benefit: samaan UI + DOWNLOAD button);
+  // `shareFilePath` ho to DOWNLOAD button wo FILE share karega
+  // (save/send — file REAL hai, app ne hi banayi).
+  final String? html;
+  final String? shareFilePath;
+
   const WebViewPage(
       {Key? key,
       required this.url,
       this.title = '',
-      this.showDownloadButton = false})
+      this.showDownloadButton = false,
+      this.html,
+      this.shareFilePath})
       : super(key: key);
 
   @override
@@ -52,8 +64,15 @@ class _WebViewPageState extends State<WebViewPage> {
         NavigationDelegate(
           onProgress: (p) => setState(() => progress = p),
         ),
-      )
-      ..loadRequest(Uri.parse(normalizeWebUrl(widget.url)));
+      );
+    // LOCAL HTML mode: url ki jagah diya hua html hi render karo (invoice
+    // fallback jaisa — server ka url nahi, app ka banaya REAL-data page).
+    final localHtml = widget.html;
+    if (localHtml != null && localHtml.trim().isNotEmpty) {
+      controller.loadHtmlString(localHtml);
+    } else {
+      controller.loadRequest(Uri.parse(normalizeWebUrl(widget.url)));
+    }
   }
 
   @override
@@ -109,6 +128,17 @@ class _WebViewPageState extends State<WebViewPage> {
                             color: Colors.white,
                             fontWeight: FontWeight.w600)),
                     onPressed: () async {
+                      // LOCAL FILE mode (invoice fallback): REAL html file
+                      // ko share-sheet do — user waha se save/PDF/print/
+                      // bhej sakta hai (arabic text sahi rehta hai).
+                      final filePath = widget.shareFilePath;
+                      if (filePath != null && filePath.isNotEmpty) {
+                        await Share.shareXFiles([XFile(filePath)],
+                            text: widget.title.isNotEmpty
+                                ? widget.title
+                                : null);
+                        return;
+                      }
                       final uri =
                           Uri.tryParse(normalizeWebUrl(widget.url));
                       if (uri != null) {
@@ -128,10 +158,20 @@ class _WebViewPageState extends State<WebViewPage> {
 }
 
 /// External link ko app ke andar WebView page me kholo.
+/// `html`+`shareFilePath` dene par LOCAL page (invoice fallback) dikhta
+/// hai — url khaali chal sakta hai.
 void openWebViewScreen(String? url,
-    {String title = '', bool showDownloadButton = false}) {
+    {String title = '',
+    bool showDownloadButton = false,
+    String? html,
+    String? shareFilePath}) {
   final u = normalizeWebUrl(url ?? '');
-  if (u.isEmpty) return;
+  final hasLocal = html != null && html.trim().isNotEmpty;
+  if (u.isEmpty && !hasLocal) return;
   Get.to(() => WebViewPage(
-      url: u, title: title, showDownloadButton: showDownloadButton));
+      url: u,
+      title: title,
+      showDownloadButton: showDownloadButton,
+      html: hasLocal ? html : null,
+      shareFilePath: shareFilePath));
 }

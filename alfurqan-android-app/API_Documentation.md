@@ -2566,3 +2566,81 @@ Version 1.6.46+75, label "v1.6.46 (75)", zip v1687.
    rows, WebView invoice + 4 pages).
 
 Version 1.6.47+76, label "v1.6.47 (76)", zip v1688.
+
+## v1.6.48+77 (29/09/2026) — 17-SCREENSHOT REPORT: invoice black-page/share-sheet, filter count, yes/no, size-color junk
+
+### Aapke 17 screenshots (29/09) me se jo TUTA dikha + ROOT + FIX
+
+**1. DOWNLOAD INVOICE par ajeeb share-sheet + browser me KAALA page ("Invoice â€" Order #1112")**
+- ROOT (2 alag bugs): (a) server abhi tak `invoiceUrl` nahi bhej raha, to
+  fallback (local HTML) seedha Android SHARE-SHEET kholta tha —
+  "WhatsApp/Drive/Gmail" sheet user ko lutpat lagti hai; (b) HTML ke
+  body par koi `background-color` nahi tha — Android Chrome ka DARK
+  theme un-declared pages ko auto-invert karke KAALA karta hai; share
+  title ka em-dash (—) kuch viewer apps Latin-1 samajh kar "â€"" karte.
+- FIX: (1) HTML me `<meta name="color-scheme" content="light">` +
+  explicit `html/body{background:#ffffff;color:#111}` + print-color-exact
+  — dark-mode me bhi hamesha safed page; (2) title/headings/share-text
+  me em-dash → ASCII `-`; (3) sabse bada: fallback invoice ab seedha
+  share-sheet NAHI — app ke ANDAR WebView page me dikhta hai (local
+  HTML) aur neeche wala DOWNLOAD button wahi REAL file share karta hai
+  (save/PDF/send). Server jab invoiceUrl bhejega to waise hi server
+  invoice khulegi (v1.6.46 wala raasta untouched).
+- Kaam: `web_view_page.dart` me `html`(loadHtmlString)+`shareFilePath`
+  (Share.shareXFiles) mode + `openWebViewScreen` extended;
+  `invoice_service.dart` fallback ab WebView kholta hai (fail ho to
+  purana share fallback — data-loss kabhi nahi).
+
+**2. Cancel dialog ke buttons "no"/"yes" chhote/galat (ar me "no"="رقم" = number!)**
+- ROOT: en values lowercase the; ar me "yes" untranslated "yes" tha aur
+  "no" ki value "رقم" (matlab NUMBER) — galat copy-paste.
+- FIX: en "Yes"/"No", ar "نعم"/"لا" (hi/kr pehle se sahi).
+
+**3. "hadith Collection — 26 Products" header par grid "No products found here yet"**
+- ROOT: header UNFILTERED server-total (26) aur grid FILTERED slice
+  dikhata tha. Price 0–30 + quran+hadith lagane par sach me 0 book bachi
+  (hadith books ≥35) — list sahi thi par SCREEN TUTI lagti thi;
+  empty-state ko pata hi nahi tha ki filter laga hai.
+- FIX: filter/search ON ho to header "0 / 26 Products" (FILTERED/TOTAL);
+  empty-state ab filter-aware: naya icon + "No products match these
+  filters" + green **RESET FILTERS** button (sab filters+search clear,
+  FilterController ke selections bhi — reopen par purani chips nahi).
+
+**4. HAR book par "Select Size:"/"Size Chart"/"Select Color:" junk**
+- ROOT: fashion template ke sections — header row HAMESHA render hota
+  tha (list ka null-check sirf chips par tha); books server size/color
+  bhejta hi nahi.
+- FIX: `product_information.dart` me size/color list khaali/null ho to
+  heading+list dono skip — book page saaf.
+
+### Aapke screenshots se VERIFY-WORKING (dobara touch nahi kiya)
+- Order #1112 detail: Pending chip, تفسير book photo AED65, Price
+  Details (Subtotal 65/Shipping 50/Tax 3.25/Total 118.25) — sab sahi.
+- Cancel E2E: confirm dialog → "Order cancelled" snackbar → timeline
+  Pending ✓ + Cancelled ✓, Processing/Shipped/OFD/Delivered GREY
+  (terminal-fill fix ka live saboot).
+- Review purchase-gate: star tap → "Buy this product to write a review"
+  snackbar; review list me "Lk kumar | 08/09/2026" 3★ + "(1 ratings)".
+- Filters page: Sort dropdown + Category chips (القرآن الكريم/الحديث/…)
+  + Rating 4+/3+/2+/1+ + Price slider — selections reopen par bhi bane.
+- Order Placed screen #1112 + compact history rows (#1110/#1111/#1112).
+- Return & Refund WebView (entwino.in server ka asli content).
+
+### Lang + version
+- +2 keys ×4 (406→408): `noProductsForFilters`, `resetFilters` —
+  audit2 CLEAN (en/ar/hi/kr sab .tr resolve).
+- Audits: dart_clean, deep_check 553, audit2, 3/5/6/7/8/9 — 9/9 PASS +
+  verify_v1642 21/21 + string/bracket lexer 9 edited files OK.
+
+### Test notes (v1.6.48)
+1. `flutter clean` → `flutter pub get` → `flutter run --release`.
+2. Order #1112 → DOWNLOAD INVOICE — ab app ke ANDAR safed invoice
+   dikhega, neeche DOWNLOAD bar; usse share karo to file sahi naam +
+   arabic sahi.
+3. Shop → koi category → filter price 0–30 lagao — header "0 / 26
+   Products" + RESET FILTERS button; dabate hi poori list vaapis.
+4. Kisi bhi book ke detail me Select Size/Size Chart/Select Color
+   NAHI dikhna chahiye.
+5. Cancel Order dialog ke buttons ab "No"/"Yes" (arabic me لا/نعم).
+
+Version 1.6.48+77, label "v1.6.48 (77)", zip v1689.
