@@ -14,11 +14,9 @@ class MainActivity : FlutterActivity() {
     // Android 10+ (API 29) par MediaStore Downloads ko koi runtime
     // permission NAHI chahiye. Purane Android (minSdk 26-28) par app
     // Dart side par share-sheet fallback karti hai (data-loss nahi).
-    private val channelName = "alfurqan/downloads"
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "alfurqan/downloads")
             .setMethodCallHandler { call, result ->
                 if (call.method != "saveToDownloads") {
                     result.notImplemented()

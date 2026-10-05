@@ -2721,3 +2721,32 @@ Version 1.6.48+77, label "v1.6.48 (77)", zip v1689.
    nahi).
 
 Version 1.6.49+78, label "v1.6.49 (78)", zip v1690.
+
+## v1.6.50+79 (03/10/2026) — BUILD ERROR FIX (MainActivity Redeclaration)
+
+### Lalit ka build log: "Redeclaration: class MainActivity : FlutterActivity" (compileReleaseKotlin fail)
+- ROOT (meri galti, sorry): v1.6.49 ka naya MainActivity maine
+  `kotlin/ecom/furqanbook/com/` me banaya — par template ki PURANI file
+  `kotlin/com/webiots/multikart/MainActivity.kt` bhi chhupti baithi thi
+  (rebrand ke waqt uske andar ka package `ecom.furqanbook.com` kar diya
+  gaya tha, folder ka naam nahi badla tha). Kotlin folder-path nahi,
+  saari .kt files compile karta hai — isliye class
+  `ecom.furqanbook.com.MainActivity` DO baar bani = Redeclaration +
+  cascade me 'channelName' unresolved.
+- FIX: (1) purani duplicate file DELETE — ab poore project me sirf EK
+  MainActivity (ecom/furqanbook/com path = package ke saath, manifest ke
+  `.MainActivity` + namespace `ecom.furqanbook.com` se match); (2)
+  Kotlin code aur simple — channel name seedha literal
+  ("alfurqan/downloads"), koi extra member nahi.
+- GUARD: zip-assert me check — kotlin/ ke andar EXACTLY 1 .kt file.
+- NOTE: "SDK XML version 4" sirf WARNING hai, build rokti nahi.
+- Audits 9/9 + verify_v1642 21/21; dart code v1.6.49 jaisa hi
+  (filter/invoice/domain sab same).
+
+### Test notes (v1.6.50)
+1. Naya folder → zip kholo → `flutter clean` → `flutter pub get` →
+   `flutter run --release` — build ab GREEN.
+2. Baaki sab v1.6.49 ke test steps same (filter page, delivered-only
+   invoice + Downloads folder, alfurqan.ae domain pages).
+
+Version 1.6.50+79, label "v1.6.50 (79)", zip v1691.
