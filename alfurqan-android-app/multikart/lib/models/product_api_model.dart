@@ -191,6 +191,15 @@ class ProductApiModel {
   /// Final displayed price (sale_price agar 0 se zyada ho to wahi, warna price)
   double get finalPrice => (salePrice != null && salePrice! > 0) ? salePrice! : (price ?? 0);
 
+  /// REAL discount % (sale_price price se kam ho tabhi > 0) — 03/10
+  /// Flipkart-style filter ke "Discount — 10% or more" section ka data.
+  double get discountPct {
+    final p = price ?? 0;
+    final s = salePrice ?? 0;
+    if (p <= 0 || s <= 0 || s >= p) return 0;
+    return (p - s) * 100 / p;
+  }
+
   /// Wishlist jaisi jagah par sirf HomeDealOfTheDayModel (id/name/image/price)
   /// save hota hai — waha se product detail page kholne ke liye ek minimal
   /// ProductApiModel wapas bana lo, taaki detail page REAL product samajh kar

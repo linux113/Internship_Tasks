@@ -576,10 +576,12 @@ class ProfileController extends GetxController {
     // 21/09 (URL for Web Views): profile_list.dart me insert hoke
     // Privacy=13 / Return&Refund=14 / Help=15 ho gaya — switch sync.
     }else if (index == 13) {
-      openWebViewScreen('https://entwino.in/page/privacy-policy',
+      // 03/10 (Lalit point 4): DOMAIN dynamic (env baseUrl) — entwino.in
+      // hardcode NAHI, sirf path. Backend domain badle to app saath chale.
+      openWebViewScreen(storePageUrl('/page/privacy-policy'),
           title: 'privacyPolicy'.tr);
     }else if (index == 14) {
-      openWebViewScreen('https://entwino.in/page/return-and-refund-policy',
+      openWebViewScreen(storePageUrl('/page/return-and-refund-policy'),
           title: 'returnAndRefundPolicy'.tr);
     }else if (index == 15) {
       Get.toNamed(routeName.help);

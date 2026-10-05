@@ -15,8 +15,10 @@ class AboutUs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 03/10 (Lalit point 4): DOMAIN dynamic — entwino.in sirf sample tha;
+    // env ke baseUrl (alfurqan.ae) + sirf last PATH use hota hai.
     return WebViewPage(
-      url: 'https://entwino.in/about-us',
+      url: storePageUrl('/about-us'),
       title: 'aboutUs'.tr,
     );
   }

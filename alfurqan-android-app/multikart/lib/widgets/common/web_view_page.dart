@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../env.dart';
+import '../../services/download_service.dart';
+import '../../utilities/snack_and_dialogs_utils.dart';
 
 /// URL normalize karo — server kabhi "youtube.com" (scheme ke bina) bhejta
 /// hai, WebView ko poora "https://..." chahiye.
@@ -127,27 +133,7 @@ class _WebViewPageState extends State<WebViewPage> {
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600)),
-                    onPressed: () async {
-                      // LOCAL FILE mode (invoice fallback): REAL html file
-                      // ko share-sheet do — user waha se save/PDF/print/
-                      // bhej sakta hai (arabic text sahi rehta hai).
-                      final filePath = widget.shareFilePath;
-                      if (filePath != null && filePath.isNotEmpty) {
-                        await Share.shareXFiles([XFile(filePath)],
-                            text: widget.title.isNotEmpty
-                                ? widget.title
-                                : null);
-                        return;
-                      }
-                      final uri =
-                          Uri.tryParse(normalizeWebUrl(widget.url));
-                      if (uri != null) {
-                        try {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                        } catch (_) {}
-                      }
-                    },
+                    onPressed: _onDownload,
                   ),
                 ),
               ),
@@ -155,6 +141,83 @@ class _WebViewPageState extends State<WebViewPage> {
           : null,
     );
   }
+
+  /// REAL DOWNLOAD — 03/10 (Lalit point 2: "download ki jgha share ho
+  /// raha hai"). Pehle PUBLIC Downloads folder me save (MediaStore —
+  /// Android 10+), na ho sake to purane fallbacks: local file SHARE,
+  /// remote url BROWSER. Har haal me file user tak pahunchti hai.
+  Future<void> _onDownload() async {
+    // (a) LOCAL invoice file (fallback-invoice) — bytes padh kar save
+    final filePath = widget.shareFilePath;
+    if (filePath != null && filePath.isNotEmpty) {
+      try {
+        final file = File(filePath);
+        final bytes = await file.readAsBytes();
+        final name = file.uri.pathSegments.isNotEmpty
+            ? file.uri.pathSegments.last
+            : 'AlFurqan-Invoice.html';
+        final saved = await DownloadService.saveToDownloads(
+            bytes: bytes,
+            fileName: name,
+            mimeType:
+                DownloadService.mimeOf(DownloadService.extOf(name)));
+        if (saved) {
+          snackBar('downloadedSuccess'.tr);
+          return;
+        }
+      } catch (_) {}
+      // purane Android/error — share-sheet fallback (data-loss nahi)
+      await Share.shareXFiles([XFile(filePath)],
+          text: widget.title.isNotEmpty ? widget.title : null);
+      return;
+    }
+    // (b) REMOTE server invoice url — bytes la kar Downloads me save
+    final url = normalizeWebUrl(widget.url);
+    final uri = Uri.tryParse(url);
+    if (uri == null || url.isEmpty) return;
+    final bytes = await DownloadService.fetchBytes(url);
+    if (bytes != null) {
+      var name =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+      if (name.isEmpty || !name.contains('.')) {
+        name =
+            'AlFurqan-Invoice-${DateTime.now().millisecondsSinceEpoch}.${DownloadService.extOf(uri.path, fallback: 'pdf')}';
+      }
+      final saved = await DownloadService.saveToDownloads(
+          bytes: bytes,
+          fileName: name,
+          mimeType: DownloadService.mimeOf(DownloadService.extOf(name)));
+      if (saved) {
+        snackBar('downloadedSuccess'.tr);
+        return;
+      }
+    }
+    // fail — browser kholo, waha se user save/print kar le
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+}
+
+/// External link ko app ke andar WebView page me kholo.
+/// `html`+`shareFilePath` dene par LOCAL page (invoice fallback) dikhta
+/// hai — url khaali chal sakta hai.
+/// 03/10 (Lalit point 4 — "entwino sample the, sirf LAST url use karna
+/// tha, domain DYNAMIC rakhna hai"): CMS page (about/privacy/terms/
+/// return-refund) ka DOMAIN hamesha env ke `baseUrl` (alfurqan.ae) se
+/// banta hai — path same rakha gaya hai (LIVE verify 03/10: same paths
+/// alfurqan.ae par exist karte hai). Backend domain badle to app ko
+/// code badalne ki zaroorat nahi.
+String storePageUrl(String path) {
+  var base = '';
+  try {
+    final cfg = environment['serverConfig'];
+    if (cfg is Map) base = (cfg['baseUrl'] ?? '').toString().trim();
+  } catch (_) {}
+  if (base.isEmpty) base = 'https://alfurqan.ae';
+  if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+  final p = path.startsWith('/') ? path : '/$path';
+  return '$base$p';
 }
 
 /// External link ko app ke andar WebView page me kholo.

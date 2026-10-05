@@ -39,18 +39,84 @@ class FilterController extends GetxController {
   /// Minimum rating filter (0 = without-filter; 1..4 = "N+ stars").
   double ratingMin = 0;
 
+  // ---------------- 03/10 Flipkart-style layout (Lalit screenshot) ----------------
+  /// Left list ka SELECTED section ('sort' | 'discount' | 'categories' |
+  /// 'price' | 'rating'). Discount sirf tab dikhta hai jab catalog me
+  /// sach me koi discounted product ho.
+  String selectedSectionId = 'sort';
+
+  /// Min DISCOUNT % (0 = filter nahi) — REAL sale vs price se.
+  double discountMin = 0;
+
+  /// Bottom button ka LIVE preview count ("See N products") — har
+  /// selection change par recompute (apply dabaye bina).
+  int previewCount = 0;
+
+  void selectSection(String id) {
+    selectedSectionId = id;
+    update();
+  }
+
+  /// Catalog me koi discounted product hai? Discount section DATA-DRIVEN
+  /// — koi discount nahi to section hi nahi dikhta (fake option kabhi
+  /// nahi).
+  bool get hasAnyDiscount {
+    if (!Get.isRegistered<ShopController>()) return false;
+    return Get.find<ShopController>()
+        .fullProducts
+        .any((p) => p.discountPct > 0);
+  }
+
+  /// Har selection change par — preview count dobara nikalo + UI update.
+  void onFiltersChanged() {
+    _refreshPreview();
+    update();
+  }
+
+  void setDiscountMin(double v) {
+    discountMin = discountMin == v ? 0 : v; // dobara tap = clear
+    onFiltersChanged();
+  }
+
+  void setSort(String v) {
+    dropDownVal = v; // internal value — translate NAHI karna
+    onFiltersChanged();
+  }
+
+  void setPriceRange(RangeValues v) {
+    currentRangeValues = v;
+    onFiltersChanged();
+  }
+
+  /// Current (abhi APPLY-NAHIN-huye) selections par kitne products
+  /// bachenge — shop ke asli engine (`countFor`) se, isliye button ka
+  /// number HAMESHA sach hota hai.
+  void _refreshPreview() {
+    if (!Get.isRegistered<ShopController>()) return;
+    final shop = Get.find<ShopController>();
+    final pr = (currentRangeValues.start <= 0 &&
+            currentRangeValues.end >= maxPriceVal)
+        ? ''
+        : '${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}';
+    previewCount = shop.countFor(
+        priceR: pr,
+        catSlugs: selectedCategorySlugs,
+        ratingMn: ratingMin,
+        discMn: discountMin);
+  }
+
   void toggleCategory(String slug) {
     if (selectedCategorySlugs.contains(slug)) {
       selectedCategorySlugs.remove(slug);
     } else {
       selectedCategorySlugs.add(slug);
     }
-    update();
+    onFiltersChanged();
   }
 
   void setRatingMin(double v) {
     ratingMin = ratingMin == v ? 0 : v; // dobara tap = clear
-    update();
+    onFiltersChanged();
   }
   var data = [
     {"val": "0.0"},
@@ -96,6 +162,8 @@ class FilterController extends GetxController {
         ..clear()
         ..addAll(selectedCategorySlugs);
       shop.ratingMin = ratingMin;
+      // 03/10 — DISCOUNT (min %) bhi
+      shop.discountMin = discountMin;
 
       // sort mapping — backend ke sort params IGNORE hote hain (live
       // verify), isliye ShopController ye CLIENT-SIDE apply karta hai:
@@ -134,7 +202,7 @@ class FilterController extends GetxController {
     currentRangeValues = RangeValues(0, maxPriceVal);
     selectedCategorySlugs.clear();
     ratingMin = 0;
-    update();
+    discountMin = 0;
     if (Get.isRegistered<ShopController>()) {
       final shop = Get.find<ShopController>();
       shop.priceRange = "";
@@ -142,10 +210,15 @@ class FilterController extends GetxController {
       shop.attribute = "";
       shop.filterCategorySlugs.clear();
       shop.ratingMin = 0;
+      shop.discountMin = 0;
       shop.sortField = ""; // Recommended = natural order
       shop.sortDirection = "asc";
       shop.applyClientFilters();
     }
+    // 03/10: shop.applyClientFilters ke baad preview dobara — button ab
+    // "See <poora count> products" dikhayega.
+    _refreshPreview();
+    update();
   }
 
   @override
@@ -188,8 +261,12 @@ class FilterController extends GetxController {
         ..clear()
         ..addAll(shop.filterCategorySlugs);
       ratingMin = shop.ratingMin;
+      discountMin = shop.discountMin; // 03/10 discount bhi re-hydrate
       update();
     }
+    // 03/10: page khulte hi bottom button ka SACH-wala count.
+    _refreshPreview();
+    update();
     colorList = AppArray().colorList;
     // Category chips ke liye REAL categories — cache ensure (async, baad
     // me loaded hone par bhi chips update ho jaye)

@@ -29,8 +29,8 @@ class CustomRangeSlider extends StatelessWidget {
           max: filterCtrl.maxPriceVal,
           divisions: (filterCtrl.maxPriceVal / 10).round().clamp(10, 60),
           onChanged: (RangeValues values) {
-            filterCtrl.currentRangeValues = values;
-            filterCtrl.update();
+            // 03/10: preview count ("See N products") bhi LIVE update.
+            filterCtrl.setPriceRange(values);
           },
         ),
       );

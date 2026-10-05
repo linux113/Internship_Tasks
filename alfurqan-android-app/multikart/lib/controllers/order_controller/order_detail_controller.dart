@@ -1051,13 +1051,60 @@ class OrderDetailController extends GetxController {
     // OrderMst.invoiceUrl (swagger v2 — LIVE verify 22/09). Admin jo
     // invoice generate karta hai uska url yaha aata hai; khaali ho to
     // InvoiceService REAL order data se HTML invoice banata hai.
+    // 03/10 (Lalit point 1 — "product table me field InvoiceUrl hai, wahi
+    // use karo"): server serialization PascalCase bhi ho sakta hai —
+    // sab casings + item-level rows tak check.
     invoiceUrl = jsonToString(j['invoice_url'] ??
             j['invoiceUrl'] ??
             j['invoiceURL'] ??
+            j['InvoiceUrl'] ??
             j['Invoice_Url'] ??
             j['download_invoice_url'] ??
-            j['downloadInvoiceUrl']) ??
+            j['downloadInvoiceUrl'] ??
+            j['DownloadInvoiceUrl']) ??
         '';
+    // 03/10 item-level fallback: order ke product rows (products[] /
+    // items[] / unke nested product map) me invoice field ho to wahi lo.
+    if (invoiceUrl.trim().isEmpty) {
+      const itemKeys = [
+        'products', 'Products', 'items', 'order_items', 'Order_Items'
+      ];
+      const invKeys = [
+        'invoice_url', 'invoiceUrl', 'invoiceURL', 'InvoiceUrl',
+        'download_invoice_url', 'downloadInvoiceUrl', 'DownloadInvoiceUrl'
+      ];
+      for (final key in itemKeys) {
+        if (invoiceUrl.trim().isNotEmpty) break;
+        final raw = j[key];
+        if (raw is! List) continue;
+        for (final e in raw) {
+          if (e is! Map) continue;
+          final it = Map<String, dynamic>.from(e);
+          for (final ik in invKeys) {
+            final v = jsonToString(it[ik]);
+            if (v != null && v.trim().isNotEmpty) {
+              invoiceUrl = v;
+              break;
+            }
+          }
+          if (invoiceUrl.trim().isEmpty) {
+            final pm = it['product'] is Map
+                ? Map<String, dynamic>.from(it['product'] as Map)
+                : (it['Product'] is Map
+                    ? Map<String, dynamic>.from(it['Product'] as Map)
+                    : <String, dynamic>{});
+            for (final ik in invKeys) {
+              final v = jsonToString(pm[ik]);
+              if (v != null && v.trim().isNotEmpty) {
+                invoiceUrl = v;
+                break;
+              }
+            }
+          }
+          if (invoiceUrl.trim().isNotEmpty) break;
+        }
+      }
+    }
 
     // ---- server khaali/slim de to prefill (REAL summary) restore ----
     if (items.isEmpty && _prefillItems.isNotEmpty) {

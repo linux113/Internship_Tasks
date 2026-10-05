@@ -47,6 +47,10 @@ class ShopController extends GetxController {
   /// `rating` — server rating_count/review_ratings se computed) par.
   double ratingMin = 0;
 
+  /// Min DISCOUNT % (0 = filter nahi) — 03/10 Flipkart-style filter page
+  /// ke Discount section se (REAL sale_price vs price se computed).
+  double discountMin = 0;
+
   /// Title ke liye REAL name (slug nahi — slug url-friendly hota hai, user
   /// ko padhne me ajeeb lagta hai). Filter ke liye `name`/slug hi use hota hai.
   String displayName = "";
@@ -155,6 +159,7 @@ class ShopController extends GetxController {
   bool get anyFilterActive =>
       priceRange.isNotEmpty ||
       ratingMin > 0 ||
+      discountMin > 0 ||
       filterCategorySlugs.isNotEmpty ||
       searchQuery.isNotEmpty;
 
@@ -175,6 +180,7 @@ class ShopController extends GetxController {
       attribute = '';
       filterCategorySlugs.clear();
       ratingMin = 0;
+      discountMin = 0;
       sortField = '';
       sortDirection = 'asc';
       applyClientFilters();
@@ -206,13 +212,31 @@ class ShopController extends GetxController {
     update();
   }
 
-  /// price filter + sort apply karke _filtered set karo.
-  void _applyFiltersAndSort() {
+  /// Filter/sort ENGINE — PURE function (03/10, Flipkart-style filter
+  /// page): koi param null ho to CURRENT applied value use hoti hai.
+  /// Shop ki ASLI list update + filter page ka LIVE "See N products"
+  /// count — dono isi function se nikalte hai, logic ek hi jagah.
+  List<ProductApiModel> _filteredWith({
+    String? priceR,
+    List<String>? catSlugs,
+    double? ratingMn,
+    double? discMn,
+    String? searchQ,
+    String? sortF,
+    String? sortDir,
+  }) {
+    final pr = priceR ?? priceRange;
+    final cats = catSlugs ?? filterCategorySlugs;
+    final rMin = ratingMn ?? ratingMin;
+    final dMin = discMn ?? discountMin;
+    final sq = searchQ ?? searchQuery;
+    final sf = sortF ?? sortField;
+    final sd = sortDir ?? sortDirection;
     List<ProductApiModel> list = List<ProductApiModel>.from(_fullList);
 
     // ---- price range ("min,max") — REAL finalPrice (sale_price>0 ? sale : price)
-    if (priceRange.isNotEmpty) {
-      final parts = priceRange.split(',');
+    if (pr.isNotEmpty) {
+      final parts = pr.split(',');
       double min = 0, max = double.infinity;
       if (parts.isNotEmpty) {
         min = double.tryParse(parts[0].trim()) ?? 0;
@@ -230,8 +254,8 @@ class ShopController extends GetxController {
     // ---- 21/09 (point 1): CATEGORY multi-select — product categories ka
     // koi bhi slug selected set me ho (server slug + normalized name dono
     // ke hisaab se; drizzle-slug format mismatch cover).
-    if (filterCategorySlugs.isNotEmpty) {
-      final wanted = filterCategorySlugs
+    if (cats.isNotEmpty) {
+      final wanted = cats
           .map((e) => e.trim().toLowerCase())
           .where((e) => e.isNotEmpty)
           .toSet();
@@ -251,10 +275,16 @@ class ShopController extends GetxController {
       list = list.where(catHit).toList();
     }
 
+    // ---- 03/10: min-DISCOUNT % — REAL sale_price vs price se (model
+    // `discountPct`). "30% or more" = discountPct >= 30.
+    if (dMin > 0) {
+      list = list.where((p) => p.discountPct >= dMin).toList();
+    }
+
     // ---- 21/09 (point 1): min-RATING — server ki REAL avg rating se
     // (rating_count, warna review_ratings ka average — model comment ke
     // mutabik backend rating_count aksar 0 rakhta hai).
-    if (ratingMin > 0) {
+    if (rMin > 0) {
       double avgOf(ProductApiModel p) {
         final c = (p.ratingCount ?? 0).toDouble();
         if (c > 0) return c;
@@ -263,19 +293,19 @@ class ShopController extends GetxController {
         return real.reduce((a, b) => a + b) / real.length;
       }
 
-      list = list.where((p) => avgOf(p) >= ratingMin).toList();
+      list = list.where((p) => avgOf(p) >= rMin).toList();
     }
 
     // ---- search text (shop page ka box) — name/desc/SKU/slug/category me
     // match (English+Arabic dono). Client-side kyunki backend ke
     // field/sort/price params server-side IGNORE hote hai (live verify).
-    if (searchQuery.isNotEmpty) {
+    if (sq.isNotEmpty) {
       // 17/09 DEEP FIX: pehle RAW lowercase contains() tha — FARSI keyboard
       // ki ye (الحدیث U+06CC) category page ke ANDAR bhi match nahi hoti thi
       // (main Search page to v1.6.30 me theek hua tha, ye jagah reh gayi
       // thi — Lalit ke screenshots ne pakdi). Ab shared normSearchText
       // DONO sides par (13 roop mappings, live-data verified).
-      final nq = normSearchText(searchQuery);
+      final nq = normSearchText(sq);
       list = list.where((p) {
         if (normSearchText(p.name).contains(nq)) return true;
         if (normSearchText(p.shortDescription).contains(nq)) return true;
@@ -302,14 +332,14 @@ class ShopController extends GetxController {
       return ad.compareTo(bd);
     }
 
-    switch (sortField) {
+    switch (sf) {
       case "price":
-        list.sort((a, b) => sortDirection == "desc"
+        list.sort((a, b) => sd == "desc"
             ? b.finalPrice.compareTo(a.finalPrice)
             : a.finalPrice.compareTo(b.finalPrice));
         break;
       case "created_at":
-        list.sort((a, b) => sortDirection == "desc"
+        list.sort((a, b) => sd == "desc"
             ? -byCreated(a, b)
             : byCreated(a, b));
         break;
@@ -319,8 +349,29 @@ class ShopController extends GetxController {
         break;
     }
 
-    _filtered = list;
+    return list;
   }
+
+  /// price filter + sort apply karke _filtered set karo.
+  void _applyFiltersAndSort() {
+    _filtered = _filteredWith();
+  }
+
+  /// Filter page ka LIVE preview count ("See N products") — diye gaye
+  /// CANDIDATE selections par kitne products bachenge (apply kiye bina).
+  /// Search text shop ka current hi rahega (filter page use badalti nahi).
+  int countFor({
+    String? priceR,
+    List<String>? catSlugs,
+    double? ratingMn,
+    double? discMn,
+  }) =>
+      _filteredWith(
+              priceR: priceR,
+              catSlugs: catSlugs,
+              ratingMn: ratingMn,
+              discMn: discMn)
+          .length;
 
   /// GetAllProductsFront api call.
   /// [reset] = true -> page 1 se fresh list, false -> agla page (pagination / load more)

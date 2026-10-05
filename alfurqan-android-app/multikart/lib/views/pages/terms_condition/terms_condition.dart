@@ -13,8 +13,9 @@ class TermsAndCondition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 03/10 (Lalit point 4): DOMAIN dynamic — env ke baseUrl + last path.
     return WebViewPage(
-      url: 'https://entwino.in/page/terms-and-conditions',
+      url: storePageUrl('/page/terms-and-conditions'),
       title: 'termsCondition'.tr,
     );
   }

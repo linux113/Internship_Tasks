@@ -323,14 +323,12 @@ class OrderDetailBody extends StatelessWidget {
           ],
 
           // ================= 22/09 (Lalit points 2/3): order actions =================
-          // INVOICE — 21/09 (Lalit: "download NAHI dikh raha"): button sirf
-          // delivered ya invoice_url wale orders par tha — server ab tak
-          // invoice_url bhejta hi nahi (backend pending), pending/cancelled
-          // orders par button hi COMPLETE GAYAB. Ab HAR status par dikho —
-          // server invoice_url ho to wahi asli copy khulti hai, warna app
-          // REAL order data (items/qty/total/address) ka HTML invoice banake
-          // save/share karati hai — local HTML path REAL data ka hi hai.
-          ...[
+          // INVOICE — 03/10 (Lalit point 3 — "Delivery ke alawa kisi ka
+          // bhi invoice na dikhe, abhi cancel me bhi show ho raha hai"):
+          // button ab SIRF DELIVERED order par. Server invoiceUrl aaya to
+          // wahi asli copy WebView me khulti hai, warna app REAL order
+          // data (items/qty/total/address) ka HTML invoice banati hai.
+          if (ctrl.isDelivered) ...[
             const Space(0, 20),
             const BorderLineLayout(),
             const Space(0, 16),

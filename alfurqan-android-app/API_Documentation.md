@@ -2644,3 +2644,80 @@ Version 1.6.47+76, label "v1.6.47 (76)", zip v1688.
 5. Cancel Order dialog ke buttons ab "No"/"Yes" (arabic me لا/نعم).
 
 Version 1.6.48+77, label "v1.6.48 (77)", zip v1689.
+
+## v1.6.49+78 (03/10/2026) — Flipkart-style FILTERS + invoice ke 3 points + dynamic domain
+
+### Lalit ke points (Flipkart screenshot ke saath)
+
+**0. FILTER page — Flipkart jaisa layout (screenshot ke mutabik)**
+- NAYA UI: LEFT side filter SECTIONS ki vertical list (selected par green
+  strip — RTL me bhi start-side), RIGHT side us section ke options —
+  checkbox (multi: Categories) / radio (single: Sort, Discount, Rating);
+  upar-right **Clear All Filters**; neeche full-width green **"See N
+  products"** — N LIVE count hai: har selection change par shop ke asli
+  engine (`ShopController.countFor`) se nikalta hai, apply dabaye bina
+  pata chalta hai kitne products bachenge.
+- Section sirf REAL data wale: **Sort** (Recommended/What's New/Price
+  L-H/H-L — DropDown hata kar radio list), **Discount** (NAYA — 10/20/30/
+  40/50 "% or more", REAL sale_price vs price se `discountPct`; koi bhi
+  discounted product nahi to section hi nahi dikhta — fake nahi),
+  **Categories** (REAL categories, multi), **Price** (wahi dynamic slider
+  + live value boxes), **Customer Ratings** (4★..1★ "& above" radio).
+- Engine refactor: shop ka `_applyFiltersAndSort` ab PURE `_filteredWith`
+  (nullable params — null = current applied) — list update + preview
+  count dono EK hi logic se. `discountMin` shop me bhi, `anyFilterActive`
+  + reset dono jagah cover, filter reopen par discount bhi re-hydrate.
+
+**1. "Invoice URL product ke sath aa raha hai — table me field InvoiceUrl hai, wahi use karo"**
+- ROOT: app sirf snake/camel keys dhoondhta tha (`invoice_url`,
+  `invoiceUrl`...) — PascalCase **`InvoiceUrl`/`DownloadInvoiceUrl`**
+  parse hi nahi karta tha. FIX: saare casings parse + **item-level
+  fallback** — order ke product rows (products[]/items[]/nested product
+  map) me invoice field ho to wahi uthti hai. (Live verify: GetOrder
+  endpoint 401 login-required = route exists; casing safe-side sab cover.)
+
+**2. "Download ki jgha share ho raha hai — web view ke baad download clear ho"**
+- FIX: ab **ASLI DOWNLOAD** — naya native channel (`MainActivity.kt`,
+  alfurqan/downloads) MediaStore se PUBLIC **Downloads folder** me file
+  save karta hai (Android 10+ ko permission nahi chahiye); `DownloadService`
+  (dart) bytes channel ko deta hai — remote invoice url ho to pehle bytes
+  fetch phir save (naam url se: .pdf/.html). Success par snackbar
+  "Downloaded — check your Downloads folder". Purane Android (26-28) ya
+  kisi error par fallback zinda: local→share-sheet, remote→browser
+  (file user tak HAR haal me pahunchegi).
+
+**3. "Delivered ke alawa kisi ka bhi invoice na dikhe (abhi cancelled me bhi)"**
+- FIX: DOWNLOAD INVOICE button ab SIRF `isDelivered` order par —
+  v1.6.45 ka "har status par dikhao" (tab server kabhi url nahi bhejta
+  tha) hata diya. Pending/Cancelled par button nahi.
+
+**4. "entwino URLs sirf sample the — sirf LAST path use karna tha, domain DYNAMIC"**
+- FIX: naya `storePageUrl(path)` (web_view_page.dart) — DOMAIN hamesha
+  env ke `baseUrl` se (abhi alfurqan.ae; backend badle to app saath
+  badlega, code change nahi). 4 jagah hardcoded `entwino.in` hataye:
+  About (/about-us), Privacy (/page/privacy-policy), Terms
+  (/page/terms-and-conditions), Return&Refund
+  (/page/return-and-refund-policy). LIVE verify 03/10: ye 4 paths
+  alfurqan.ae par EXIST karte hai.
+
+### Lang + version
+- +6 keys ×4 (408→414): `clearAllFilters`, `seeProducts`(@count),
+  `discount`, `percentOrMore`(@percent), `starsAndAbove`(@stars),
+  `downloadedSuccess` — audit2 CLEAN.
+- Audits: dart_clean, deep_check 554, audit2, 3/5/6/7/8/9 — 9/9 PASS +
+  verify_v1642 21/21.
+
+### Test notes (v1.6.49)
+1. `flutter clean` → `flutter pub get` → `flutter run --release`
+   (**poora fresh build ZAROORI — MainActivity.kt badla hai**).
+2. Shop → filter icon — naya Flipkart-jaisa page: left sections, right
+   options, CLEAR ALL FILTERS upar, neeche "See N products" (selection
+   badalte hi N badalta hai) → tap par list apply.
+3. DELIVERED order (#1111) → DOWNLOAD INVOICE → WebView me invoice +
+   DOWNLOAD → ab file seedha **Downloads folder** me aati hai (Files
+   app me dekho); pending/cancelled (#1112) par button HI nahi dikhega.
+4. Profile → About Us / Privacy Policy / Return & Refund / Terms — ab
+   sab **alfurqan.ae** domain par khulte hai (address bar me entwino
+   nahi).
+
+Version 1.6.49+78, label "v1.6.49 (78)", zip v1690.
