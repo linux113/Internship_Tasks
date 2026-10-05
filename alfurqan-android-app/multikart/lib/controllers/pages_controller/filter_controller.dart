@@ -48,9 +48,24 @@ class FilterController extends GetxController {
   /// Min DISCOUNT % (0 = filter nahi) — REAL sale vs price se.
   double discountMin = 0;
 
-  /// Bottom button ka LIVE preview count ("See N products") — har
-  /// selection change par recompute (apply dabaye bina).
-  int previewCount = 0;
+  /// Bottom button ka LIVE count ("See N products") — 05/10 FIX (Lalit
+  /// screenshots me page khulte hi "See 0 products" atka tha): pehle ye
+  /// VARIABLE tha jo sirf selection-change par update hota tha — page
+  /// reopen/timing par purana value dikhta tha. Ab GETTER hai: jab bhi UI
+  /// rebuild ho (koi bhi change), shop ke ASLI engine se FRESH count.
+  int get previewCount {
+    if (!Get.isRegistered<ShopController>()) return 0;
+    final shop = Get.find<ShopController>();
+    final pr = (currentRangeValues.start <= 0 &&
+            currentRangeValues.end >= maxPriceVal)
+        ? ''
+        : '${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}';
+    return shop.countFor(
+        priceR: pr,
+        catSlugs: selectedCategorySlugs,
+        ratingMn: ratingMin,
+        discMn: discountMin);
+  }
 
   void selectSection(String id) {
     selectedSectionId = id;
@@ -67,9 +82,9 @@ class FilterController extends GetxController {
         .any((p) => p.discountPct > 0);
   }
 
-  /// Har selection change par — preview count dobara nikalo + UI update.
+  /// Har selection change par — UI dobara banao (count GETTER apne aap
+  /// fresh ho jata hai).
   void onFiltersChanged() {
-    _refreshPreview();
     update();
   }
 
@@ -86,23 +101,6 @@ class FilterController extends GetxController {
   void setPriceRange(RangeValues v) {
     currentRangeValues = v;
     onFiltersChanged();
-  }
-
-  /// Current (abhi APPLY-NAHIN-huye) selections par kitne products
-  /// bachenge — shop ke asli engine (`countFor`) se, isliye button ka
-  /// number HAMESHA sach hota hai.
-  void _refreshPreview() {
-    if (!Get.isRegistered<ShopController>()) return;
-    final shop = Get.find<ShopController>();
-    final pr = (currentRangeValues.start <= 0 &&
-            currentRangeValues.end >= maxPriceVal)
-        ? ''
-        : '${currentRangeValues.start.toInt()},${currentRangeValues.end.toInt()}';
-    previewCount = shop.countFor(
-        priceR: pr,
-        catSlugs: selectedCategorySlugs,
-        ratingMn: ratingMin,
-        discMn: discountMin);
   }
 
   void toggleCategory(String slug) {
@@ -215,9 +213,8 @@ class FilterController extends GetxController {
       shop.sortDirection = "asc";
       shop.applyClientFilters();
     }
-    // 03/10: shop.applyClientFilters ke baad preview dobara — button ab
-    // "See <poora count> products" dikhayega.
-    _refreshPreview();
+    // 03/10: shop.applyClientFilters ke baad UI refresh — button apna
+    // fresh count getter se le lega (poora count).
     update();
   }
 
@@ -264,8 +261,6 @@ class FilterController extends GetxController {
       discountMin = shop.discountMin; // 03/10 discount bhi re-hydrate
       update();
     }
-    // 03/10: page khulte hi bottom button ka SACH-wala count.
-    _refreshPreview();
     update();
     colorList = AppArray().colorList;
     // Category chips ke liye REAL categories — cache ensure (async, baad

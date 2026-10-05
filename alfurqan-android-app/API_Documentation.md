@@ -2750,3 +2750,46 @@ Version 1.6.49+78, label "v1.6.49 (78)", zip v1690.
    invoice + Downloads folder, alfurqan.ae domain pages).
 
 Version 1.6.50+79, label "v1.6.50 (79)", zip v1691.
+
+## v1.6.51+80 (05/10/2026) — 24-SCREENSHOT report: See-0 count + "See 1 products" + Sort label
+
+### Lalit ke 24 screenshots se — VERIFY-WORKING (same rakha)
+- Filter page LIVE count: price 10-100 → "See 26", price 30-100 →
+  "See 20", rating 1★+ → 1, sort/category changes par sab sahi.
+- Shop header filter-count "1 / 26 Products".
+- Delivered #1037: DOWNLOAD INVOICE (sirf delivered par) + Return Order
+  confirm dialog "No/Yes" + invoice WebView (safed, arabic sahi) +
+  DOWNLOAD → snackbar "Downloaded — check your Downloads folder"
+  (ASLI Downloads folder save — MediaStore channel kaam kar raha hai).
+- Cancelled #1112 par invoice button NAHI (delivered-only gate sahi).
+- Timeline (delivered sab green, cancelled sirf Pending+Cancelled),
+  Profile menu (Terms/Privacy/Return&Refund/Help).
+- Server ne #1037 ka return reject kiya: "Return is not available for
+  this order" — order 03/09 ka (1+ mahina purana); honest server reply
+  dikhana sahi hai (return window backend ke paas).
+
+### FIX (3 chhote)
+1. **Filter page khulte hi "See 0 products"** — ROOT: previewCount
+   VARIABLE sirf selection-change par update hota tha; page ke
+   open/timing par purana (0) value dikh jata tha. FIX: ab GETTER —
+   har UI rebuild par shop ke asli engine se FRESH count nikalta hai,
+   atka hua state possible hi nahi.
+2. **"See 1 products" grammar-galat** — FIX: singular key
+   `seeProductOne` ("See 1 product") ×4 langs; 2+ par pehle jaisa.
+3. **"Short By:" label** — template ka machine-translated galat text
+   tha (ar "باختصار من قبل", hi "इससे छोटा", kr "짧은 작성자" —
+   sab "short"=chhota samajh kar!). FIX sab 4: en "Sort By:",
+   ar "ترتيب حسب:", hi "क्रम से:", kr "정렬 기준:".
+
+### Lang + version
+- +1 key ×4 (414→415): `seeProductOne`; `shortBy` values sahi ×4.
+- Audits: 9/9 PASS + verify_v1642 21/21; audit2 CLEAN (415×4, 367 .tr).
+
+### Test notes (v1.6.51)
+1. Naya folder → `flutter clean` → `flutter pub get` →
+   `flutter run --release`.
+2. Shop → filter icon — page KHULTE hi "See 26 products" (0 nahi).
+3. Rating 1★ & above — "See 1 product" (products nahi).
+4. Left list ka pehla section ab "Sort By:" likha.
+
+Version 1.6.51+80, label "v1.6.51 (80)", zip v1692.

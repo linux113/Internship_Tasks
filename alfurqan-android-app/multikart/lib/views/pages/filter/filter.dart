@@ -135,8 +135,12 @@ class Filter extends StatelessWidget {
                   ),
                   onPressed: () => c.applyToShop(),
                   child: Text(
-                    'seeProducts'
-                        .trParams({'count': '${c.previewCount}'}),
+                    // 05/10: singular/plural — "See 1 products" jaisa
+                    // grammar-galat text kabhi nahi (Lalit screenshot).
+                    c.previewCount == 1
+                        ? 'seeProductOne'.tr
+                        : 'seeProducts'
+                            .trParams({'count': '${c.previewCount}'}),
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
